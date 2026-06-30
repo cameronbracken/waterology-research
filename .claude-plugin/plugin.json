@@ -1,0 +1,24 @@
+{
+  "name": "waterology",
+  "version": "0.1.0",
+  "description": "A lean Claude Code plugin for computational-science and research-software work: R / Python / Fortran / Quarto / LaTeX conventions, reproducibility gates, and scriptable constraints.",
+  "author": {
+    "name": "Cam Bracken",
+    "email": "researcher@example.org",
+    "url": "https://github.com/cameronbracken"
+  },
+  "homepage": "https://github.com/cameronbracken/waterology-cc",
+  "repository": "https://github.com/cameronbracken/waterology-cc",
+  "license": "MIT",
+  "keywords": [
+    "research",
+    "reproducibility",
+    "r",
+    "python",
+    "fortran",
+    "quarto",
+    "latex",
+    "scientific-computing",
+    "hydrology"
+  ]
+}

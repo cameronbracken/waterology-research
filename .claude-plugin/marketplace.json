@@ -1,0 +1,14 @@
+{
+  "name": "waterology",
+  "owner": {
+    "name": "Cam Bracken",
+    "url": "https://github.com/cameronbracken"
+  },
+  "plugins": [
+    {
+      "name": "waterology",
+      "source": "./",
+      "description": "Computational-science conventions, reproducibility gates, and scriptable constraints for R / Python / Fortran / Quarto / LaTeX research code."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# macOS junk
+.DS_Store
+._*
+.Trashes
+.Spotlight-V100
+.fseventsd
+
+# AI tool files
+# NOTE: CLAUDE.md is intentionally tracked in this repo — it is project
+# guidance for a Claude Code plugin, not a stray dotfile.
+AGENTS.md
+.claude/
+.codex/
+.cursor/
+.aider*
+
+# IDE
+.vscode/
+.positron/
+
+# Secrets / env
+.env*
+.Renviron
+.envrc
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Constraint-runner scratch
+.planning/
