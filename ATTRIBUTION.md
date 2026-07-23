@@ -70,6 +70,27 @@ source carry a one-line credit at the top; this page is the canonical list.
   retargeted to the R / Quarto / hydrology-energy stack.
 - **Credit string:** *Adapted from Feynman (companion-inc/feynman, MIT).*
 
+### alphaXiv/openresearch-cli — experiment tree + research-loop refinements
+
+- **Author:** alphaXiv
+- **Repo:** <https://github.com/alphaXiv/openresearch-cli>
+- **License:** MIT *(declared in `Cargo.toml`; no standalone `LICENSE` file is
+  present in the repo as of July 2026 — cited in good faith)*
+- **What we adapt:** the experiment-tree discipline from the `orx` agent
+  skills and system prompt (`rules/experiment-tree.md` and `/autoresearch`
+  tree mode) — frozen baseline, fixed run contract, vary-code-not-knobs, one
+  branch for each hypothesis, "stacked bushes" tree shaping, no merge or
+  rebase of branches with recorded results; the multi-hop literature-search
+  protocol from its `lit-review` template (in `/lit`); and the
+  claim-by-claim replication ledger, fixed assessment vocabulary, careful
+  divergence language, and evidence-first report layout from its
+  `reproduce-paper` template (in `/replicate`). Everything coupled to the
+  `orx` CLI, its hosted API, compute backends, evidence database, and the
+  marimo/molab publishing path is dropped; branch mechanics are retargeted
+  to plain git and the R / Stan / hydrology-energy stack.
+- **Credit string:** *Adapted from openresearch-cli (alphaXiv/openresearch-cli,
+  MIT per Cargo.toml).*
+
 ## Original to this plugin
 
 Fortran support (discovery globs, `gfortran` runner, reproducibility header,

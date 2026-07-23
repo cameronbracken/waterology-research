@@ -21,7 +21,7 @@ agents/           research subagents: researcher, writer, verifier, reviewer
 commands/         research slash workflows: /deepresearch, /lit, /draft,
                   /review, /audit, /compare, /replicate, /recipe, /summarize, ...
 rules/            path-scoped conventions: R, Python, Fortran, Quarto/LaTeX,
-                  Stan, native builds (Makevars/configure)
+                  Stan, native builds (Makevars/configure), experiment trees
 constraints/      paired <name>.md + <name>.py checks, run by check-all.py
 ATTRIBUTION.md    citation ledger for adapted upstream material
 ```
