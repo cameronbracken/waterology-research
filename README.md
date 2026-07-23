@@ -76,14 +76,16 @@ for print, colorblind-safe).
 
 ## Install
 
-Once this repo is pushed to a remote:
+The plugin is used from the local working copy for now (see below). The
+canonical remote is a private Codeberg repo; installing from it uses the git
+URL rather than a GitHub-style shorthand:
 
 ```text
-/plugin marketplace add cameronbracken/waterology-cc
+/plugin marketplace add ssh://git@codeberg.org/waterology/waterology-cc.git
 /plugin install waterology@waterology
 ```
 
-### Local development (no remote needed)
+### Local development (the usual setup, no remote needed)
 
 The repo is its own marketplace — `.claude-plugin/marketplace.json` names the
 marketplace and the plugin `waterology`, with the source at the repo root. Add
