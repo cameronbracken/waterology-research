@@ -49,6 +49,27 @@ source carry a one-line credit at the top; this page is the canonical list.
 - **Credit string:** *Adapted from flonat/claude-research (MIT, © 2026 Florian
   Burnat).*
 
+### companion-inc/feynman — research agents, skills, and workflows
+
+- **Author:** Companion, Inc.
+- **Repo:** <https://github.com/companion-inc/feynman>
+- **License:** MIT — © 2026 Companion, Inc. *(standalone `LICENSE` file present)*
+- **What we adapt:** the four research subagents (`researcher`, `writer`,
+  `verifier`, `reviewer`), the general-research skills (`deep-research`,
+  `literature-review`, `paper-writing`, `paper-narrative`, `paper-code-audit`,
+  `research-review`, `source-comparison`, `figure-composer`, `figure-style`,
+  `replication`, `pdf-explore`, `eli5`, `ml-training-recipe`, `session-log`,
+  `watch`, `autoresearch`), and the matching slash-command workflows
+  (`/deepresearch`, `/lit`, `/draft`, `/review`, `/audit`, `/compare`,
+  `/replicate`, `/recipe`, `/autoresearch`, `/watch`, `/log`, `/summarize`).
+  Feynman's tool names (`web_search`, `fetch_content`, alphaXiv `alpha_*`, the
+  `subagent` dispatcher, Hugging Face `hf_*`) are remapped to Claude Code
+  equivalents (`WebSearch`/`WebFetch`, the Consensus MCP + OpenAlex/arXiv, the
+  `Task` tool); the computational-biology model wrappers and Feynman
+  product-internal skills are dropped; figures, papers, and examples are
+  retargeted to the R / Quarto / hydrology-energy stack.
+- **Credit string:** *Adapted from Feynman (companion-inc/feynman, MIT).*
+
 ## Original to this plugin
 
 Fortran support (discovery globs, `gfortran` runner, reproducibility header,
