@@ -14,8 +14,10 @@ conventions and checks superpowers can't know about.
 
 ```
 .claude-plugin/   plugin + marketplace manifests
-skills/           project-conventions  (the entry point)
-rules/            path-scoped conventions: R, Python, Fortran, Quarto/LaTeX
+skills/           project-conventions (entry point), setup-environment,
+                  publish-blog-post
+rules/            path-scoped conventions: R, Python, Fortran, Quarto/LaTeX,
+                  Stan, native builds (Makevars/configure)
 constraints/      paired <name>.md + <name>.py checks, run by check-all.py
 ATTRIBUTION.md    citation ledger for adapted upstream material
 ```
@@ -35,6 +37,7 @@ The design follows two ideas borrowed from Edwin Hu's *Workflow Philosophy*:
 |-------|------------------|
 | `no-absolute-paths` | No machine-specific paths baked into source |
 | `deterministic-seed` | Stochastic scripts set a seed |
+| `pixi-r-task-dollar` | R commands in `pixi.toml` tasks contain no `$` |
 
 Run them:
 
