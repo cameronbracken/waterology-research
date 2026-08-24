@@ -1,24 +1,19 @@
 {
   "name": "waterology",
-  "version": "0.1.0",
-  "description": "A lean Claude Code plugin for computational-science and research-software work: R / Python / Fortran / Quarto / LaTeX conventions, reproducibility gates, and scriptable constraints.",
+  "version": "0.2.0",
+  "description": "Reproducible computational research workflows for Claude Code, Codex, and OpenCode.",
   "author": {
-    "name": "Cam Bracken",
+    "name": "Cameron Bracken",
     "email": "researcher@example.org",
-    "url": "https://github.com/cameronbracken"
+    "url": "https://codeberg.org/waterology"
   },
-  "homepage": "https://github.com/cameronbracken/waterology-cc",
-  "repository": "https://github.com/cameronbracken/waterology-cc",
+  "homepage": "https://codeberg.org/waterology/waterology-cc",
+  "repository": "https://codeberg.org/waterology/waterology-cc",
   "license": "MIT",
   "keywords": [
     "research",
     "reproducibility",
-    "r",
-    "python",
-    "fortran",
-    "quarto",
-    "latex",
-    "scientific-computing",
-    "hydrology"
+    "hydrology",
+    "scientific-computing"
   ]
 }

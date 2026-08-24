@@ -1,0 +1,29 @@
+{
+  "name": "waterology",
+  "version": "0.2.0",
+  "description": "Reproducible computational research workflows for Claude Code, Codex, and OpenCode.",
+  "author": {
+    "name": "Cameron Bracken",
+    "email": "researcher@example.org",
+    "url": "https://codeberg.org/waterology"
+  },
+  "homepage": "https://codeberg.org/waterology/waterology-cc",
+  "repository": "https://codeberg.org/waterology/waterology-cc",
+  "license": "MIT",
+  "keywords": ["research", "reproducibility", "hydrology", "scientific-computing"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Waterology",
+    "shortDescription": "Reproducible computational research workflows",
+    "longDescription": "Research agents, skills, and reproducibility conventions for computational science.",
+    "developerName": "Cameron Bracken",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "brandColor": "#6B7D58",
+    "defaultPrompt": [
+      "Review this analysis for reproducibility.",
+      "Survey the literature and track every source.",
+      "Plan a bounded research experiment."
+    ]
+  }
+}

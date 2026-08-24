@@ -35,6 +35,7 @@ packages = ["src/waterology", "src/waterology_assets"]
 ".codex/agents" = "waterology_assets/.codex/agents"
 ".opencode/agents" = "waterology_assets/.opencode/agents"
 ".claude-plugin" = "waterology_assets/.claude-plugin"
+".codex-plugin" = "waterology_assets/.codex-plugin"
 "ATTRIBUTION.md" = "waterology_assets/ATTRIBUTION.md"
 "LICENSE" = "waterology_assets/LICENSE"
 

@@ -8,7 +8,7 @@
     {
       "name": "waterology",
       "source": "./",
-      "description": "Computational-science conventions, reproducibility gates, and scriptable constraints for R / Python / Fortran / Quarto / LaTeX research code."
+      "description": "Reproducible computational research workflows for Claude Code, Codex, and OpenCode."
     }
   ]
 }
