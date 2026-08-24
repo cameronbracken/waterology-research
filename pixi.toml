@@ -10,7 +10,7 @@ pip = ">=25"
 waterology = { path = ".", editable = true }
 
 [feature.dev.dependencies]
-build = ">=1.3"
+python-build = ">=1.3"
 pytest = ">=8.4"
 pytest-cov = ">=6.2"
 ruff = ">=0.12"
