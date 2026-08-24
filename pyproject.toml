@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "waterology"
+version = "0.2.0"
+description = "Research workflows for Claude Code, Codex, and OpenCode"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Cameron Bracken", email = "researcher@example.org" },
+]
+dependencies = [
+  "pydantic>=2.8,<3",
+  "pyyaml>=6.0,<7",
+  "rich>=13.9,<15",
+  "typer>=0.16,<1",
+]
+
+[project.scripts]
+waterology = "waterology.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/waterology", "src/waterology_assets"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
