@@ -1,5 +1,7 @@
+import hashlib
 import json
 import shutil
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -27,6 +29,14 @@ def make_plan(tmp_path: Path, mode: InstallMode = InstallMode.COPY) -> InstallPl
         mode,
         AssetCatalog.discover(),
     )
+
+
+def load_manifest(tmp_path: Path, root: str = ".opencode") -> dict:
+    return json.loads((tmp_path / root / ".waterology-install.json").read_text())
+
+
+def write_manifest(tmp_path: Path, data: dict, root: str = ".opencode") -> None:
+    (tmp_path / root / ".waterology-install.json").write_text(json.dumps(data) + "\n")
 
 
 def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
@@ -240,3 +250,379 @@ def test_directory_replacement_restores_the_owned_directory_when_rename_fails(
     assert destination.is_dir()
     assert marker.read_text() == "locally modified\n"
     assert {path.name for path in destination.parent.iterdir()} == original_siblings
+
+
+def test_project_install_rejects_a_symlinked_runtime_root(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    outside = tmp_path / "outside"
+    project.mkdir()
+    outside.mkdir()
+    (project / ".opencode").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(InstallConflictError) as caught:
+        apply_install_plan(make_plan(project))
+
+    assert caught.value.conflicts[0].destination == project / ".opencode"
+    assert not any(outside.iterdir())
+
+
+def test_project_install_rejects_a_nested_symlink_parent(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    outside = tmp_path / "outside"
+    (project / ".opencode").mkdir(parents=True)
+    outside.mkdir()
+    (project / ".opencode/skills").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(InstallConflictError) as caught:
+        apply_install_plan(make_plan(project))
+
+    assert caught.value.conflicts[0].destination == project / ".opencode/skills"
+    assert not any(outside.iterdir())
+    assert not (project / ".opencode/agents").exists()
+
+
+def test_user_install_rejects_a_symlinked_runtime_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    outside = tmp_path / "outside"
+    home.mkdir()
+    outside.mkdir()
+    (home / ".agents").symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    plan = build_install_plan(
+        Runtime.CODEX,
+        InstallScope.USER,
+        Path("unused"),
+        InstallMode.COPY,
+        AssetCatalog.discover(),
+    )
+
+    with pytest.raises(InstallConflictError):
+        apply_install_plan(plan)
+
+    assert not any(outside.iterdir())
+    assert not (home / ".codex").exists()
+
+
+def test_install_rejects_a_lexical_destination_escape(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    outside = tmp_path.parent / "outside.md"
+    escaped_action = replace(
+        plan.actions[-1],
+        destination=outside,
+        manifest=tmp_path / ".opencode/.waterology-install.json",
+    )
+    escaped_plan = replace(plan, actions=(escaped_action,))
+
+    with pytest.raises(InstallConflictError) as caught:
+        apply_install_plan(escaped_plan)
+
+    assert caught.value.conflicts[0].destination == outside
+    assert not outside.exists()
+
+
+def test_boolean_manifest_schema_is_rejected(tmp_path: Path) -> None:
+    manifest = tmp_path / ".opencode/.waterology-install.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text('{"schema": true, "runtime": "opencode", "mode": "copy", "assets": {}}\n')
+
+    with pytest.raises(ValueError, match="Unsupported install manifest schema"):
+        apply_install_plan(make_plan(tmp_path))
+
+    assert not (tmp_path / ".opencode/agents").exists()
+
+
+def test_manifest_runtime_must_match_the_plan(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    manifest["runtime"] = "codex"
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="runtime does not match"):
+        apply_install_plan(plan)
+
+
+def test_copy_to_link_mode_transition_is_rejected(tmp_path: Path) -> None:
+    apply_install_plan(make_plan(tmp_path, InstallMode.COPY))
+    destination = tmp_path / ".opencode/agents/researcher.md"
+
+    with pytest.raises(ValueError, match="mode does not match"):
+        apply_install_plan(make_plan(tmp_path, InstallMode.LINK))
+
+    assert not destination.is_symlink()
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        [],
+        {"source": ".opencode/agents/researcher.md", "kind": "file"},
+        {
+            "source": ".opencode/agents/researcher.md",
+            "sha256": "not-a-hash",
+            "kind": "file",
+        },
+        {
+            "source": ".opencode/agents/researcher.md",
+            "sha256": "0" * 64,
+            "kind": "file",
+            "extra": True,
+        },
+        {
+            "source": ".opencode/agents/researcher.md",
+            "sha256": "0" * 64,
+            "kind": [],
+        },
+        {
+            "source": ".opencode/agents/researcher.md",
+            "sha256": "0" * 64,
+            "kind": "device",
+        },
+    ],
+)
+def test_malformed_manifest_asset_records_are_rejected(tmp_path: Path, record: object) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    manifest["assets"]["agents/researcher.md"] = record
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="Invalid install manifest asset record"):
+        apply_install_plan(plan)
+
+
+def test_manifest_asset_keys_must_be_normalized_relative_paths(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    manifest["assets"]["../outside.md"] = {
+        "source": ".opencode/agents/researcher.md",
+        "sha256": "0" * 64,
+        "kind": "file",
+    }
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="normalized relative path"):
+        apply_install_plan(plan)
+
+
+def test_manifest_source_must_match_the_planned_source(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    manifest["assets"]["agents/researcher.md"]["source"] = "agents/other.md"
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="source does not match"):
+        apply_install_plan(plan, force=True)
+
+
+def test_manifest_kind_must_match_the_planned_kind(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    manifest["assets"]["agents/researcher.md"]["kind"] = "directory"
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="kind does not match"):
+        apply_install_plan(plan, force=True)
+
+
+def test_manifest_kind_must_match_the_actual_destination(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    destination = tmp_path / ".opencode/agents/researcher.md"
+    destination.unlink()
+    destination.mkdir()
+
+    with pytest.raises(ValueError, match="kind does not match the destination"):
+        apply_install_plan(plan, force=True)
+
+    assert destination.is_dir()
+
+
+def test_uppercase_manifest_hashes_are_valid(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    for record in manifest["assets"].values():
+        record["sha256"] = record["sha256"].upper()
+    write_manifest(tmp_path, manifest)
+
+    result = apply_install_plan(plan)
+
+    assert result.changed == ()
+
+
+def test_recorded_link_must_still_point_to_the_planned_source(tmp_path: Path) -> None:
+    plan = make_plan(tmp_path, InstallMode.LINK)
+    apply_install_plan(plan)
+    destination = tmp_path / ".opencode/skills/project-conventions"
+    destination.unlink()
+    destination.symlink_to(tmp_path / "other", target_is_directory=True)
+    manifest = load_manifest(tmp_path)
+    digest = hashlib.sha256(str(destination.resolve()).encode()).hexdigest()
+    manifest["assets"]["skills/project-conventions"]["sha256"] = digest
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(InstallConflictError) as caught:
+        apply_install_plan(plan)
+
+    assert caught.value.conflicts == (
+        InstallConflict(destination, "owned symlink points to a different source"),
+    )
+
+
+def test_late_action_failure_rolls_back_an_earlier_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    first = plan.actions[0].destination
+    failing = plan.actions[1].destination
+    real_replace = install_module.os.replace
+
+    def fail_second_action(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        if target == failing and ".waterology-stage-" in source.name:
+            raise OSError("injected late action failure")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", fail_second_action)
+
+    with pytest.raises(OSError, match="injected late action failure"):
+        apply_install_plan(plan)
+
+    assert not first.exists()
+    assert not failing.exists()
+    assert not any(tmp_path.iterdir())
+
+
+def test_late_action_failure_restores_an_earlier_owned_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    earlier = plan.actions[0].destination
+    marker = earlier / "SKILL.md"
+    marker.write_text("locally modified\n")
+    failing = plan.actions[1].destination
+    shutil.rmtree(failing)
+    manifest = tmp_path / ".opencode/.waterology-install.json"
+    prior_manifest = manifest.read_bytes()
+    real_replace = install_module.os.replace
+
+    def fail_second_action(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        if target == failing and ".waterology-stage-" in source.name:
+            raise OSError("injected owned action failure")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", fail_second_action)
+
+    with pytest.raises(OSError, match="injected owned action failure"):
+        apply_install_plan(plan, force=True)
+
+    assert marker.read_text() == "locally modified\n"
+    assert not failing.exists()
+    assert manifest.read_bytes() == prior_manifest
+    assert not list(tmp_path.rglob("*.waterology-stage-*"))
+    assert not list(tmp_path.rglob("*.waterology-backup-*"))
+
+
+def test_second_codex_manifest_failure_rolls_back_actions_and_first_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = build_install_plan(
+        Runtime.CODEX,
+        InstallScope.PROJECT,
+        tmp_path,
+        InstallMode.COPY,
+        AssetCatalog.discover(),
+    )
+    failing = tmp_path / ".codex/.waterology-install.json"
+    real_replace = install_module.os.replace
+
+    def fail_second_manifest(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        if target == failing and ".waterology-stage-" in source.name:
+            raise OSError("injected second manifest failure")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", fail_second_manifest)
+
+    with pytest.raises(OSError, match="injected second manifest failure"):
+        apply_install_plan(plan)
+
+    assert not (tmp_path / ".agents").exists()
+    assert not (tmp_path / ".codex").exists()
+
+
+def test_manifest_failure_restores_prior_manifests(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = build_install_plan(
+        Runtime.CODEX,
+        InstallScope.PROJECT,
+        tmp_path,
+        InstallMode.COPY,
+        AssetCatalog.discover(),
+    )
+    apply_install_plan(plan)
+    agents_manifest = tmp_path / ".agents/.waterology-install.json"
+    codex_manifest = tmp_path / ".codex/.waterology-install.json"
+    for path in (agents_manifest, codex_manifest):
+        data = json.loads(path.read_text())
+        data["waterology_version"] = "prior-version"
+        path.write_text(json.dumps(data) + "\n")
+    prior_agents = agents_manifest.read_bytes()
+    prior_codex = codex_manifest.read_bytes()
+    real_replace = install_module.os.replace
+
+    def fail_second_manifest(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        if target == codex_manifest and ".waterology-stage-" in source.name:
+            raise OSError("injected manifest update failure")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", fail_second_manifest)
+
+    with pytest.raises(OSError, match="injected manifest update failure"):
+        apply_install_plan(plan)
+
+    assert agents_manifest.read_bytes() == prior_agents
+    assert codex_manifest.read_bytes() == prior_codex
+    assert not list(tmp_path.rglob("*.waterology-stage-*"))
+    assert not list(tmp_path.rglob("*.waterology-backup-*"))
+
+
+def test_manifest_staging_failure_cleans_all_stages_and_created_parents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = build_install_plan(
+        Runtime.CODEX,
+        InstallScope.PROJECT,
+        tmp_path,
+        InstallMode.COPY,
+        AssetCatalog.discover(),
+    )
+    real_write_text = Path.write_text
+
+    def fail_second_manifest_stage(
+        path: Path, data: str, encoding: str | None = None, errors: str | None = None
+    ) -> int:
+        if path.parent == tmp_path / ".codex" and ".waterology-stage-" in path.name:
+            raise OSError("injected manifest staging failure")
+        return real_write_text(path, data, encoding=encoding, errors=errors)
+
+    monkeypatch.setattr(Path, "write_text", fail_second_manifest_stage)
+
+    with pytest.raises(OSError, match="injected manifest staging failure"):
+        apply_install_plan(plan)
+
+    assert not any(tmp_path.iterdir())

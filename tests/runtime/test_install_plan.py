@@ -24,6 +24,7 @@ def test_project_codex_plan_uses_shared_skills_and_codex_agents(tmp_path: Path) 
     assert ".agents/skills/project-conventions" in destinations
     assert ".codex/agents/researcher.toml" in destinations
     assert all(action.operation == "copy" for action in plan.actions)
+    assert plan.trusted_root == tmp_path.absolute()
 
 
 def test_project_claude_plan_keeps_command_shims(tmp_path: Path) -> None:
@@ -127,6 +128,7 @@ def test_user_codex_plan_uses_home_directories(tmp_path: Path, monkeypatch) -> N
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
     assert ".agents/skills/project-conventions" in destinations
     assert ".codex/agents/researcher.toml" in destinations
+    assert plan.trusted_root == tmp_path.absolute()
 
 
 def test_user_claude_plan_uses_home_directories(tmp_path: Path, monkeypatch) -> None:
@@ -168,6 +170,7 @@ def test_user_opencode_plan_honors_xdg_config_home(tmp_path: Path, monkeypatch) 
     }
     assert "opencode/skills/project-conventions" in destinations
     assert "opencode/agents/researcher.md" in destinations
+    assert plan.trusted_root == config_home.absolute()
 
 
 def test_user_opencode_plan_falls_back_when_xdg_config_home_is_empty(

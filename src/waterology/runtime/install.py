@@ -1,11 +1,12 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from waterology import __version__
 from waterology.runtime.assets import AssetCatalog
@@ -42,6 +43,7 @@ class InstallPlan:
     scope: InstallScope
     mode: InstallMode
     actions: tuple[InstallAction, ...]
+    trusted_root: Path
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,14 @@ class InstallResult:
     manifests: tuple[Path, ...]
 
 
+@dataclass
+class _PreparedChange:
+    destination: Path
+    staged: Path
+    backup: Path | None = None
+    installed: bool = False
+
+
 def build_install_plan(
     runtime: Runtime,
     scope: InstallScope,
@@ -70,16 +80,25 @@ def build_install_plan(
     mode: InstallMode,
     catalog: AssetCatalog,
 ) -> InstallPlan:
-    directories = _destination_directories(runtime, scope, target)
+    directories, trusted_root = _installation_layout(runtime, scope, target)
     actions = (
         _skill_actions(catalog, directories["skills"], mode)
         + _file_actions(catalog, _agent_directory(runtime), directories["agents"], mode)
         + _command_actions(catalog, directories.get("commands"), mode)
     )
-    return InstallPlan(runtime=runtime, scope=scope, mode=mode, actions=actions)
+    return InstallPlan(
+        runtime=runtime,
+        scope=scope,
+        mode=mode,
+        actions=actions,
+        trusted_root=trusted_root,
+    )
 
 
 def preflight(plan: InstallPlan, force: bool = False) -> tuple[InstallConflict, ...]:
+    path_conflicts = _plan_path_conflicts(plan)
+    if path_conflicts:
+        return path_conflicts
     records = _load_manifests(plan)
     conflicts = []
     blocked_parents: set[Path] = set()
@@ -104,10 +123,64 @@ def preflight(plan: InstallPlan, force: bool = False) -> tuple[InstallConflict, 
                 InstallConflict(action.destination, "manifest ownership record is invalid")
             )
             continue
-        unchanged_since_install = _fingerprint(action.destination) == prior_sha256
+        if (
+            action.operation == InstallMode.LINK.value
+            and action.destination.resolve() != action.source.resolve()
+            and not force
+        ):
+            conflicts.append(
+                InstallConflict(
+                    action.destination,
+                    "owned symlink points to a different source",
+                )
+            )
+            continue
+        unchanged_since_install = _fingerprint(action.destination).lower() == prior_sha256.lower()
         if not unchanged_since_install and not force:
             conflicts.append(InstallConflict(action.destination, "owned destination was modified"))
     return tuple(conflicts)
+
+
+def _plan_path_conflicts(plan: InstallPlan) -> tuple[InstallConflict, ...]:
+    trusted_root = _absolute_lexical(plan.trusted_root)
+    paths = [
+        *(action.destination for action in plan.actions),
+        *(sorted({action.manifest for action in plan.actions})),
+    ]
+    conflicts = []
+    relative_paths: dict[Path, Path] = {}
+    for path in paths:
+        lexical = _absolute_lexical(path)
+        try:
+            relative_paths[path] = lexical.relative_to(trusted_root)
+        except ValueError:
+            conflicts.append(InstallConflict(path, "path escapes the trusted root"))
+    for action in plan.actions:
+        try:
+            _absolute_lexical(action.destination).relative_to(
+                _absolute_lexical(action.manifest.parent)
+            )
+        except ValueError:
+            conflicts.append(
+                InstallConflict(action.destination, "destination is outside its manifest root")
+            )
+    if conflicts:
+        return tuple(conflicts)
+
+    linked_parents: set[Path] = set()
+    for path, relative in relative_paths.items():
+        current = trusted_root
+        for part in relative.parts[:-1]:
+            current /= part
+            if current.is_symlink() and current not in linked_parents:
+                conflicts.append(InstallConflict(current, "destination parent traverses a symlink"))
+                linked_parents.add(current)
+                break
+    return tuple(conflicts)
+
+
+def _absolute_lexical(path: Path) -> Path:
+    return Path(os.path.abspath(path))
 
 
 def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
@@ -115,13 +188,36 @@ def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
     if conflicts:
         raise InstallConflictError(conflicts)
 
-    changed, unchanged = _apply_actions(plan.actions)
-    manifests = _write_install_manifests(plan)
-    return InstallResult(tuple(changed), tuple(unchanged), tuple(manifests))
+    prepared: list[_PreparedChange] = []
+    created_parents: list[Path] = []
+    changed = []
+    unchanged = []
+    manifests = tuple(sorted({action.manifest for action in plan.actions}))
+    committed = False
+    try:
+        for action in plan.actions:
+            if _matches_planned_source(action):
+                unchanged.append(action.destination)
+                continue
+            staged = _stage_action(action, plan.trusted_root, created_parents)
+            prepared.append(_PreparedChange(action.destination, staged))
+            changed.append(action.destination)
+        staged_assets = {change.destination: change.staged for change in prepared}
+        prepared.extend(_stage_install_manifests(plan, staged_assets, created_parents))
+        _commit_prepared_changes(prepared)
+        committed = True
+    finally:
+        _cleanup_staged_paths(prepared)
+        if committed:
+            _cleanup_backups(prepared)
+        else:
+            _cleanup_created_parents(created_parents)
+    return InstallResult(tuple(changed), tuple(unchanged), manifests)
 
 
 def _load_manifests(plan: InstallPlan) -> dict[Path, dict]:
     records = {}
+    planned = _planned_actions_by_manifest(plan)
     for manifest in sorted({action.manifest for action in plan.actions}):
         if manifest.is_symlink():
             raise ValueError(f"Install manifest must be a regular file: {manifest}")
@@ -131,13 +227,98 @@ def _load_manifests(plan: InstallPlan) -> dict[Path, dict]:
         if not manifest.is_file():
             raise ValueError(f"Install manifest must be a regular file: {manifest}")
         data = json.loads(manifest.read_text(encoding="utf-8"))
-        if not isinstance(data, dict) or data.get("schema") != 1:
-            schema = data.get("schema") if isinstance(data, dict) else None
+        schema = data.get("schema") if isinstance(data, dict) else None
+        if not isinstance(data, dict) or type(schema) is not int or schema != 1:
             raise ValueError(f"Unsupported install manifest schema in {manifest}: {schema}")
+        if data.get("runtime") != plan.runtime.value:
+            raise ValueError(f"Install manifest runtime does not match the plan: {manifest}")
+        if data.get("mode") != plan.mode.value:
+            raise ValueError(f"Install manifest mode does not match the plan: {manifest}")
         if not isinstance(data.get("assets"), dict):
             raise TypeError(f"Install manifest assets must be an object: {manifest}")
+        _validate_manifest_assets(manifest, data["assets"], planned[manifest])
         records[manifest] = data
     return records
+
+
+def _planned_actions_by_manifest(plan: InstallPlan) -> dict[Path, dict[str, InstallAction]]:
+    planned = {manifest: {} for manifest in {action.manifest for action in plan.actions}}
+    for action in plan.actions:
+        key = action.destination.relative_to(action.manifest.parent).as_posix()
+        planned[action.manifest][key] = action
+    return planned
+
+
+def _validate_manifest_assets(
+    manifest: Path,
+    assets: dict,
+    planned: dict[str, InstallAction],
+) -> None:
+    for key, record in assets.items():
+        if not _is_normalized_relative_key(key):
+            raise ValueError(
+                f"Install manifest asset key must be a normalized relative path: {manifest}: {key}"
+            )
+        if not isinstance(record, dict) or set(record) != {"source", "sha256", "kind"}:
+            raise ValueError(f"Invalid install manifest asset record: {manifest}: {key}")
+        source = record.get("source")
+        sha256 = record.get("sha256")
+        kind = record.get("kind")
+        if (
+            not isinstance(source, str)
+            or not isinstance(sha256, str)
+            or re.fullmatch(r"[0-9a-fA-F]{64}", sha256) is None
+            or not isinstance(kind, str)
+            or kind not in {"file", "directory", "symlink"}
+        ):
+            raise ValueError(f"Invalid install manifest asset record: {manifest}: {key}")
+        action = planned.get(key)
+        if action is None:
+            raise ValueError(f"Install manifest asset is not in the plan: {manifest}: {key}")
+        if source != action.source_id:
+            raise ValueError(
+                f"Install manifest asset source does not match the plan: {manifest}: {key}"
+            )
+        expected_kind = _planned_kind(action)
+        if kind != expected_kind:
+            raise ValueError(
+                f"Install manifest asset kind does not match the plan: {manifest}: {key}"
+            )
+        actual_kind = _path_kind(action.destination)
+        destination_exists = action.destination.exists() or action.destination.is_symlink()
+        if destination_exists and actual_kind != kind:
+            raise ValueError(
+                f"Install manifest asset kind does not match the destination: {manifest}: {key}"
+            )
+
+
+def _is_normalized_relative_key(key: object) -> bool:
+    if not isinstance(key, str) or not key or "\\" in key:
+        return False
+    path = PurePosixPath(key)
+    return (
+        not path.is_absolute()
+        and all(part not in {"", ".", ".."} for part in path.parts)
+        and path.as_posix() == key
+    )
+
+
+def _planned_kind(action: InstallAction) -> str:
+    if action.operation == InstallMode.LINK.value:
+        return "symlink"
+    if action.operation != InstallMode.COPY.value:
+        raise ValueError(f"Unsupported install operation: {action.operation}")
+    return "directory" if action.source.is_dir() else "file"
+
+
+def _path_kind(path: Path) -> str | None:
+    if path.is_symlink():
+        return "symlink"
+    if path.is_dir():
+        return "directory"
+    if path.is_file():
+        return "file"
+    return None
 
 
 def _blocked_parent(parent: Path) -> Path | None:
@@ -151,20 +332,6 @@ def _blocked_parent(parent: Path) -> Path | None:
     return candidate
 
 
-def _apply_actions(
-    actions: tuple[InstallAction, ...],
-) -> tuple[list[Path], list[Path]]:
-    changed = []
-    unchanged = []
-    for action in actions:
-        if _matches_planned_source(action):
-            unchanged.append(action.destination)
-            continue
-        _apply_action(action)
-        changed.append(action.destination)
-    return changed, unchanged
-
-
 def _matches_planned_source(action: InstallAction) -> bool:
     destination = action.destination
     if action.operation == InstallMode.LINK.value:
@@ -176,8 +343,12 @@ def _matches_planned_source(action: InstallAction) -> bool:
     return destination.is_file() and _fingerprint(destination) == _fingerprint(action.source)
 
 
-def _apply_action(action: InstallAction) -> None:
-    action.destination.parent.mkdir(parents=True, exist_ok=True)
+def _stage_action(
+    action: InstallAction,
+    trusted_root: Path,
+    created_parents: list[Path],
+) -> Path:
+    _ensure_parent(action.destination.parent, trusted_root, created_parents)
     staged = _reserve_sibling(action.destination, "stage")
     try:
         if action.operation == InstallMode.COPY.value:
@@ -194,9 +365,22 @@ def _apply_action(action: InstallAction) -> None:
             )
         else:
             raise ValueError(f"Unsupported install operation: {action.operation}")
-        _replace_staged(staged, action.destination)
-    finally:
+    except BaseException:
         _remove_path(staged)
+        raise
+    return staged
+
+
+def _ensure_parent(parent: Path, trusted_root: Path, created_parents: list[Path]) -> None:
+    missing = []
+    candidate = parent
+    stop = _absolute_lexical(trusted_root).parent
+    while not candidate.exists() and not candidate.is_symlink() and candidate != stop:
+        missing.append(candidate)
+        candidate = candidate.parent
+    for directory in reversed(missing):
+        directory.mkdir()
+        created_parents.append(directory)
 
 
 def _reserve_sibling(destination: Path, purpose: str) -> Path:
@@ -208,23 +392,40 @@ def _reserve_sibling(destination: Path, purpose: str) -> Path:
     return Path(name)
 
 
-def _replace_staged(staged: Path, destination: Path) -> None:
-    destination_is_directory = destination.is_dir() and not destination.is_symlink()
-    staged_is_directory = staged.is_dir() and not staged.is_symlink()
-    destination_exists = destination.exists() or destination.is_symlink()
-    if not destination_exists or not (destination_is_directory or staged_is_directory):
-        os.replace(staged, destination)
-        return
-
-    backup = _reserve_sibling(destination, "backup")
-    backup.unlink()
-    os.replace(destination, backup)
+def _commit_prepared_changes(prepared: list[_PreparedChange]) -> None:
+    commit_log: list[_PreparedChange] = []
     try:
-        os.replace(staged, destination)
-    except BaseException:
-        os.replace(backup, destination)
+        for change in prepared:
+            if change.destination.exists() or change.destination.is_symlink():
+                backup = _reserve_sibling(change.destination, "backup")
+                backup.unlink()
+                try:
+                    os.replace(change.destination, backup)
+                except BaseException:
+                    _remove_path(backup)
+                    raise
+                change.backup = backup
+            commit_log.append(change)
+            os.replace(change.staged, change.destination)
+            change.installed = True
+    except BaseException as error:
+        rollback_errors = _rollback_changes(commit_log)
+        if rollback_errors:
+            error.add_note("Rollback errors: " + "; ".join(str(item) for item in rollback_errors))
         raise
-    _remove_path(backup)
+
+
+def _rollback_changes(commit_log: list[_PreparedChange]) -> list[OSError]:
+    errors = []
+    for change in reversed(commit_log):
+        try:
+            if change.destination.exists() or change.destination.is_symlink():
+                _remove_path(change.destination)
+            if change.backup is not None:
+                os.replace(change.backup, change.destination)
+        except OSError as error:
+            errors.append(error)
+    return errors
 
 
 def _remove_path(path: Path) -> None:
@@ -234,40 +435,64 @@ def _remove_path(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def _write_install_manifests(plan: InstallPlan) -> tuple[Path, ...]:
-    manifests = []
-    for manifest in sorted({action.manifest for action in plan.actions}):
-        actions = [action for action in plan.actions if action.manifest == manifest]
-        assets = {}
-        for action in actions:
-            key = action.destination.relative_to(manifest.parent).as_posix()
-            assets[key] = {
-                "source": action.source_id,
-                "sha256": _fingerprint(action.destination),
-                "kind": "symlink"
-                if action.destination.is_symlink()
-                else "directory"
-                if action.destination.is_dir()
-                else "file",
+def _stage_install_manifests(
+    plan: InstallPlan,
+    staged_assets: dict[Path, Path],
+    created_parents: list[Path],
+) -> list[_PreparedChange]:
+    prepared = []
+    try:
+        for manifest in sorted({action.manifest for action in plan.actions}):
+            actions = [action for action in plan.actions if action.manifest == manifest]
+            assets = {}
+            for action in actions:
+                key = action.destination.relative_to(manifest.parent).as_posix()
+                installed = staged_assets.get(action.destination, action.destination)
+                assets[key] = {
+                    "source": action.source_id,
+                    "sha256": _fingerprint(installed),
+                    "kind": _planned_kind(action),
+                }
+            payload = {
+                "schema": 1,
+                "waterology_version": __version__,
+                "runtime": plan.runtime.value,
+                "mode": plan.mode.value,
+                "assets": assets,
             }
-        payload = {
-            "schema": 1,
-            "waterology_version": __version__,
-            "runtime": plan.runtime.value,
-            "mode": plan.mode.value,
-            "assets": assets,
-        }
-        serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-        if not manifest.exists() or manifest.read_text(encoding="utf-8") != serialized:
-            manifest.parent.mkdir(parents=True, exist_ok=True)
-            temporary_path = _reserve_sibling(manifest, "stage")
-            try:
-                temporary_path.write_text(serialized, encoding="utf-8")
-                os.replace(temporary_path, manifest)
-            finally:
-                _remove_path(temporary_path)
-        manifests.append(manifest)
-    return tuple(manifests)
+            serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+            if not manifest.exists() or manifest.read_text(encoding="utf-8") != serialized:
+                _ensure_parent(manifest.parent, plan.trusted_root, created_parents)
+                staged = _reserve_sibling(manifest, "stage")
+                try:
+                    staged.write_text(serialized, encoding="utf-8")
+                except BaseException:
+                    _remove_path(staged)
+                    raise
+                prepared.append(_PreparedChange(manifest, staged))
+    except BaseException:
+        _cleanup_staged_paths(prepared)
+        raise
+    return prepared
+
+
+def _cleanup_staged_paths(prepared: list[_PreparedChange]) -> None:
+    for change in prepared:
+        _remove_path(change.staged)
+
+
+def _cleanup_backups(prepared: list[_PreparedChange]) -> None:
+    for change in prepared:
+        if change.backup is not None:
+            _remove_path(change.backup)
+
+
+def _cleanup_created_parents(created_parents: list[Path]) -> None:
+    for parent in reversed(created_parents):
+        try:
+            parent.rmdir()
+        except OSError:
+            pass
 
 
 def _fingerprint(path: Path) -> str:
@@ -284,26 +509,30 @@ def _fingerprint(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _destination_directories(
+def _installation_layout(
     runtime: Runtime,
     scope: InstallScope,
     target: Path,
-) -> dict[str, Path]:
+) -> tuple[dict[str, Path], Path]:
     if scope is InstallScope.PROJECT:
-        return _runtime_directories(runtime, target)
+        trusted_root = _absolute_lexical(target)
+        return _runtime_directories(runtime, trusted_root), trusted_root
 
     if runtime is Runtime.OPENCODE:
         config_home = os.environ.get("XDG_CONFIG_HOME")
         if config_home:
-            base = Path(config_home) / "opencode"
-            return {"skills": base / "skills", "agents": base / "agents"}
+            trusted_root = _absolute_lexical(Path(config_home))
+            base = trusted_root / "opencode"
+            return {"skills": base / "skills", "agents": base / "agents"}, trusted_root
 
-        base = Path.home() / ".config" / "opencode"
-        return {
-            "skills": base / "skills",
-            "agents": base / "agents",
-        }
-    return _runtime_directories(runtime, Path.home())
+        trusted_root = _absolute_lexical(Path.home())
+        base = trusted_root / ".config" / "opencode"
+        return (
+            {"skills": base / "skills", "agents": base / "agents"},
+            trusted_root,
+        )
+    trusted_root = _absolute_lexical(Path.home())
+    return _runtime_directories(runtime, trusted_root), trusted_root
 
 
 def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
