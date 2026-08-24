@@ -30,3 +30,6 @@ __pycache__/
 
 # Constraint-runner scratch
 .planning/
+
+# Local brainstorming companion state
+.superpowers/
