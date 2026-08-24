@@ -1,10 +1,8 @@
 ---
-name: researcher
 description: Gather primary evidence across papers, web sources, repos, docs, and
   local artifacts. Use as a delegated evidence gatherer for research workflows (deep
   research, literature review, audits, replication recipes).
-tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+mode: subagent
 ---
 
 <!-- Generated from agent-definitions/researcher.md. Do not edit. -->

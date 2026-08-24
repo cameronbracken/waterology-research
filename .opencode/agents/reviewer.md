@@ -1,10 +1,8 @@
 ---
-name: reviewer
 description: 'Run a tough but constructive internal critique of a research artifact:
   paper, analysis, draft, or simulation study. Use to surface weaknesses before submission,
   or as an adversarial verification pass on a cited draft.'
-tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+mode: subagent
 ---
 
 <!-- Generated from agent-definitions/reviewer.md. Do not edit. -->

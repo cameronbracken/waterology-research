@@ -1,9 +1,8 @@
 ---
-name: writer
 description: Turn research notes into clear, structured briefs and drafts. Use to
   synthesize already-gathered evidence into a readable document, without inventing
   sources or citations.
-tools: Read, Grep, Glob, Write, Edit, Bash
+mode: subagent
 ---
 
 <!-- Generated from agent-definitions/writer.md. Do not edit. -->

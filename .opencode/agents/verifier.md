@@ -1,10 +1,8 @@
 ---
-name: verifier
 description: Post-process a draft to add inline citations and verify every source
   URL. Use after a draft exists to anchor each claim to a source, check that URLs
   resolve, and remove unsupported claims.
-tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+mode: subagent
 ---
 
 <!-- Generated from agent-definitions/verifier.md. Do not edit. -->

@@ -10,7 +10,9 @@
 # guidance for a Claude Code plugin, not a stray dotfile.
 AGENTS.md
 .claude/
-.codex/
+.codex/*
+!.codex/agents/
+!.codex/agents/*.toml
 .cursor/
 .aider*
 
