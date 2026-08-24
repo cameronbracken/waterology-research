@@ -83,37 +83,53 @@ def _validate_skills(catalog: AssetCatalog) -> list[ValidationIssue]:
 
 def _validate_generated_agents(catalog: AssetCatalog) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
+    directories: dict[str, Path] = {}
+    unavailable: set[str] = set()
     for relative in GENERATED_AGENT_DIRECTORIES:
         try:
-            catalog.path(relative)
+            path = catalog.path(relative)
         except AssetNotFoundError:
             issues.append(
                 ValidationIssue(relative, "missing-asset", "required generated-agent directory is missing")
             )
-    if issues:
-        return issues
+            unavailable.add(relative)
+            continue
+        if not path.is_dir():
+            issues.append(
+                ValidationIssue(
+                    relative,
+                    "invalid-asset-type",
+                    "generated-agent asset must be a directory",
+                )
+            )
+            unavailable.add(relative)
+            continue
+        directories[relative] = path
     try:
         render_agents(catalog, catalog.root, check=True)
     except GeneratedAssetsStaleError as error:
-        issues.extend(
-            ValidationIssue(
-                path.relative_to(catalog.root).as_posix(),
-                "stale-generated-agent",
-                "rendered content differs",
-            )
-            for path in error.paths
-        )
-    for path in sorted(catalog.path(".codex/agents").glob("*.toml")):
-        try:
-            tomllib.loads(path.read_text(encoding="utf-8"))
-        except tomllib.TOMLDecodeError as error:
+        for path in error.paths:
+            relative = path.relative_to(catalog.root).as_posix()
+            if any(relative.startswith(f"{directory}/") for directory in unavailable):
+                continue
             issues.append(
-                ValidationIssue(
-                    path.relative_to(catalog.root).as_posix(), "invalid-toml", str(error)
-                )
+                ValidationIssue(relative, "stale-generated-agent", "rendered content differs")
             )
+    codex_directory = directories.get(".codex/agents")
+    if codex_directory is not None:
+        for path in sorted(codex_directory.glob("*.toml")):
+            try:
+                tomllib.loads(path.read_text(encoding="utf-8"))
+            except tomllib.TOMLDecodeError as error:
+                issues.append(
+                    ValidationIssue(
+                        path.relative_to(catalog.root).as_posix(), "invalid-toml", str(error)
+                    )
+                )
     for directory in ("agents", ".opencode/agents"):
-        for path in sorted(catalog.path(directory).glob("*.md")):
+        if directory not in directories:
+            continue
+        for path in sorted(directories[directory].glob("*.md")):
             try:
                 _frontmatter(path)
             except (ValueError, yaml.YAMLError) as error:
