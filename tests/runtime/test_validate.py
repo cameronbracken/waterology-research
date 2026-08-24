@@ -2,6 +2,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.validate import validate_assets
 
@@ -75,3 +77,54 @@ def test_validation_reports_stale_generated_agents_without_writing(tmp_path: Pat
         (issue.path, issue.code) for issue in issues
     }
     assert agent.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_validation_reports_malformed_manifest_json(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    manifest = catalog.path(".claude-plugin/plugin.json")
+    manifest.write_text("{", encoding="utf-8")
+
+    issues = validate_assets(catalog)
+
+    assert (".claude-plugin/plugin.json", "invalid-json") in {
+        (issue.path, issue.code) for issue in issues
+    }
+
+
+def test_validation_reports_a_non_object_manifest(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    manifest = catalog.path(".claude-plugin/plugin.json")
+    manifest.write_text("[]", encoding="utf-8")
+
+    issues = validate_assets(catalog)
+
+    assert (".claude-plugin/plugin.json", "invalid-manifest") in {
+        (issue.path, issue.code) for issue in issues
+    }
+
+
+def test_validation_reports_a_missing_manifest(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    manifest = catalog.path(".claude-plugin/plugin.json")
+    manifest.unlink()
+
+    issues = validate_assets(catalog)
+
+    assert (".claude-plugin/plugin.json", "missing-asset") in {
+        (issue.path, issue.code) for issue in issues
+    }
+    assert not manifest.exists()
+
+
+@pytest.mark.parametrize("directory", (".codex/agents", "agents", ".opencode/agents"))
+def test_validation_reports_a_missing_generated_agent_directory(
+    tmp_path: Path, directory: str
+) -> None:
+    catalog = copied_catalog(tmp_path)
+    agent_directory = catalog.path(directory)
+    shutil.rmtree(agent_directory)
+
+    issues = validate_assets(catalog)
+
+    assert (directory, "missing-asset") in {(issue.path, issue.code) for issue in issues}
+    assert not agent_directory.exists()

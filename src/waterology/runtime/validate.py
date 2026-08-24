@@ -7,11 +7,12 @@ from pathlib import Path
 import yaml
 
 from waterology import __version__
-from waterology.runtime.assets import AssetCatalog
+from waterology.runtime.assets import AssetCatalog, AssetNotFoundError
 from waterology.runtime.render import GeneratedAssetsStaleError, render_agents
 
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MANIFESTS = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
+GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents")
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,19 @@ class ValidationIssue:
 def _validate_manifests(catalog: AssetCatalog) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     for relative in MANIFESTS:
-        data = json.loads(catalog.path(relative).read_text(encoding="utf-8"))
+        try:
+            path = catalog.path(relative)
+        except AssetNotFoundError:
+            issues.append(ValidationIssue(relative, "missing-asset", "required manifest is missing"))
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            issues.append(ValidationIssue(relative, "invalid-json", str(error)))
+            continue
+        if not isinstance(data, dict):
+            issues.append(ValidationIssue(relative, "invalid-manifest", "manifest must be a JSON object"))
+            continue
         for field in ("name", "version", "description", "author", "license"):
             if not data.get(field):
                 issues.append(ValidationIssue(relative, "missing-field", field))
@@ -70,6 +83,15 @@ def _validate_skills(catalog: AssetCatalog) -> list[ValidationIssue]:
 
 def _validate_generated_agents(catalog: AssetCatalog) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
+    for relative in GENERATED_AGENT_DIRECTORIES:
+        try:
+            catalog.path(relative)
+        except AssetNotFoundError:
+            issues.append(
+                ValidationIssue(relative, "missing-asset", "required generated-agent directory is missing")
+            )
+    if issues:
+        return issues
     try:
         render_agents(catalog, catalog.root, check=True)
     except GeneratedAssetsStaleError as error:
