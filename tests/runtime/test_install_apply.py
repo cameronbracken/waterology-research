@@ -626,3 +626,171 @@ def test_manifest_staging_failure_cleans_all_stages_and_created_parents(
         apply_install_plan(plan)
 
     assert not any(tmp_path.iterdir())
+
+
+def test_destination_appearing_after_staging_is_not_overwritten(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    destination = next(action.destination for action in plan.actions if action.source.is_file())
+    real_commit = install_module._commit_prepared_changes
+
+    def create_collision_then_commit(*args: object, **kwargs: object) -> None:
+        destination.write_text("created during install\n")
+        real_commit(*args, **kwargs)
+
+    monkeypatch.setattr(
+        install_module,
+        "_commit_prepared_changes",
+        create_collision_then_commit,
+    )
+
+    with pytest.raises(InstallConflictError, match="conflict"):
+        apply_install_plan(plan)
+
+    assert destination.read_text() == "created during install\n"
+    assert not plan.actions[0].destination.exists()
+    assert not (tmp_path / ".opencode/.waterology-install.json").exists()
+
+
+def test_failed_stage_replacement_does_not_remove_a_new_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    destination = next(action.destination for action in plan.actions if action.source.is_file())
+    real_replace = install_module.os.replace
+
+    def create_collision_and_fail(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        if target == destination and ".waterology-stage-" in source.name:
+            destination.write_text("created during replacement\n")
+            raise OSError("injected replacement race")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", create_collision_and_fail)
+
+    with pytest.raises(OSError, match="injected replacement race"):
+        apply_install_plan(plan)
+
+    assert destination.read_text() == "created during replacement\n"
+    assert not plan.actions[0].destination.exists()
+    assert not (tmp_path / ".opencode/.waterology-install.json").exists()
+
+
+@pytest.mark.parametrize("mutation", ["disappear", "kind", "fingerprint"])
+def test_owned_destination_state_is_revalidated_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: str,
+) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    destination = next(action.destination for action in plan.actions if action.source.is_file())
+    real_commit = install_module._commit_prepared_changes
+
+    def mutate_then_commit(*args: object, **kwargs: object) -> None:
+        destination.unlink()
+        if mutation == "kind":
+            destination.mkdir()
+        elif mutation == "fingerprint":
+            destination.write_text("changed during install\n")
+        real_commit(*args, **kwargs)
+
+    monkeypatch.setattr(install_module, "_commit_prepared_changes", mutate_then_commit)
+
+    with pytest.raises(InstallConflictError, match="conflict"):
+        apply_install_plan(plan)
+
+    if mutation == "disappear":
+        assert not destination.exists()
+    elif mutation == "kind":
+        assert destination.is_dir()
+    else:
+        assert destination.read_text() == "changed during install\n"
+
+
+def test_owned_link_target_is_revalidated_before_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path, InstallMode.LINK)
+    apply_install_plan(plan)
+    destination = plan.actions[0].destination
+    raced_target = tmp_path / "other"
+    real_commit = install_module._commit_prepared_changes
+
+    def retarget_then_commit(*args: object, **kwargs: object) -> None:
+        destination.unlink()
+        destination.symlink_to(raced_target, target_is_directory=True)
+        real_commit(*args, **kwargs)
+
+    monkeypatch.setattr(install_module, "_commit_prepared_changes", retarget_then_commit)
+
+    with pytest.raises(InstallConflictError, match="conflict"):
+        apply_install_plan(plan)
+
+    assert destination.is_symlink()
+    assert destination.resolve() == raced_target
+
+
+def test_force_modified_destination_is_revalidated_before_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    destination = next(action.destination for action in plan.actions if action.source.is_file())
+    destination.write_text("modified before force install\n")
+    real_commit = install_module._commit_prepared_changes
+
+    def modify_again_then_commit(*args: object, **kwargs: object) -> None:
+        destination.write_text("modified after staging\n")
+        real_commit(*args, **kwargs)
+
+    monkeypatch.setattr(install_module, "_commit_prepared_changes", modify_again_then_commit)
+
+    with pytest.raises(InstallConflictError, match="conflict"):
+        apply_install_plan(plan, force=True)
+
+    assert destination.read_text() == "modified after staging\n"
+
+
+@pytest.mark.parametrize("path_kind", ["destination", "manifest"])
+def test_plan_paths_with_internal_parent_segments_are_rejected(
+    tmp_path: Path, path_kind: str
+) -> None:
+    plan = make_plan(tmp_path)
+    action = plan.actions[-1]
+    if path_kind == "destination":
+        action = replace(
+            action,
+            destination=tmp_path / ".opencode/agents/../agents/unnormalized.md",
+        )
+    else:
+        action = replace(
+            action,
+            manifest=tmp_path / ".opencode/nested/../.waterology-install.json",
+        )
+    plan = replace(plan, actions=(action,))
+
+    with pytest.raises(InstallConflictError, match="conflict") as caught:
+        apply_install_plan(plan)
+
+    assert caught.value.conflicts[0].reason == "path is not normalized"
+    assert not any(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("version", [None, "", 3])
+def test_manifest_waterology_version_must_be_a_nonempty_string(
+    tmp_path: Path, version: object
+) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    manifest = load_manifest(tmp_path)
+    if version is None:
+        manifest.pop("waterology_version")
+    else:
+        manifest["waterology_version"] = version
+    write_manifest(tmp_path, manifest)
+
+    with pytest.raises(ValueError, match="waterology_version"):
+        apply_install_plan(plan)

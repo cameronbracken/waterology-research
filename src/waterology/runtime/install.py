@@ -69,8 +69,15 @@ class InstallResult:
 class _PreparedChange:
     destination: Path
     staged: Path
+    expected: "_PathState"
     backup: Path | None = None
     installed: bool = False
+
+
+@dataclass(frozen=True)
+class _PathState:
+    kind: str
+    sha256: str | None
 
 
 def build_install_plan(
@@ -96,9 +103,17 @@ def build_install_plan(
 
 
 def preflight(plan: InstallPlan, force: bool = False) -> tuple[InstallConflict, ...]:
+    conflicts, _ = _preflight(plan, force=force)
+    return conflicts
+
+
+def _preflight(
+    plan: InstallPlan, force: bool = False
+) -> tuple[tuple[InstallConflict, ...], dict[Path, _PathState]]:
     path_conflicts = _plan_path_conflicts(plan)
     if path_conflicts:
-        return path_conflicts
+        return path_conflicts, {}
+    expected_states = _snapshot_plan_paths(plan)
     records = _load_manifests(plan)
     conflicts = []
     blocked_parents: set[Path] = set()
@@ -138,7 +153,8 @@ def preflight(plan: InstallPlan, force: bool = False) -> tuple[InstallConflict, 
         unchanged_since_install = _fingerprint(action.destination).lower() == prior_sha256.lower()
         if not unchanged_since_install and not force:
             conflicts.append(InstallConflict(action.destination, "owned destination was modified"))
-    return tuple(conflicts)
+    conflicts.extend(_state_conflicts(expected_states, "path changed during preflight"))
+    return tuple(conflicts), expected_states
 
 
 def _plan_path_conflicts(plan: InstallPlan) -> tuple[InstallConflict, ...]:
@@ -151,6 +167,9 @@ def _plan_path_conflicts(plan: InstallPlan) -> tuple[InstallConflict, ...]:
     relative_paths: dict[Path, Path] = {}
     for path in paths:
         lexical = _absolute_lexical(path)
+        if path != lexical:
+            conflicts.append(InstallConflict(path, "path is not normalized"))
+            continue
         try:
             relative_paths[path] = lexical.relative_to(trusted_root)
         except ValueError:
@@ -184,7 +203,7 @@ def _absolute_lexical(path: Path) -> Path:
 
 
 def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
-    conflicts = preflight(plan, force=force)
+    conflicts, expected_states = _preflight(plan, force=force)
     if conflicts:
         raise InstallConflictError(conflicts)
 
@@ -200,11 +219,24 @@ def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
                 unchanged.append(action.destination)
                 continue
             staged = _stage_action(action, plan.trusted_root, created_parents)
-            prepared.append(_PreparedChange(action.destination, staged))
+            prepared.append(
+                _PreparedChange(
+                    action.destination,
+                    staged,
+                    expected_states[action.destination],
+                )
+            )
             changed.append(action.destination)
         staged_assets = {change.destination: change.staged for change in prepared}
-        prepared.extend(_stage_install_manifests(plan, staged_assets, created_parents))
-        _commit_prepared_changes(prepared)
+        prepared.extend(
+            _stage_install_manifests(
+                plan,
+                staged_assets,
+                expected_states,
+                created_parents,
+            )
+        )
+        _commit_prepared_changes(prepared, expected_states)
         committed = True
     finally:
         _cleanup_staged_paths(prepared)
@@ -234,6 +266,11 @@ def _load_manifests(plan: InstallPlan) -> dict[Path, dict]:
             raise ValueError(f"Install manifest runtime does not match the plan: {manifest}")
         if data.get("mode") != plan.mode.value:
             raise ValueError(f"Install manifest mode does not match the plan: {manifest}")
+        version = data.get("waterology_version")
+        if not isinstance(version, str) or not version:
+            raise ValueError(
+                f"Install manifest waterology_version must be a nonempty string: {manifest}"
+            )
         if not isinstance(data.get("assets"), dict):
             raise TypeError(f"Install manifest assets must be an object: {manifest}")
         _validate_manifest_assets(manifest, data["assets"], planned[manifest])
@@ -321,6 +358,33 @@ def _path_kind(path: Path) -> str | None:
     return None
 
 
+def _path_state(path: Path) -> _PathState:
+    kind = _path_kind(path)
+    if kind is None:
+        if path.exists() or path.is_symlink():
+            return _PathState("other", None)
+        return _PathState("missing", None)
+    return _PathState(kind, _fingerprint(path))
+
+
+def _snapshot_plan_paths(plan: InstallPlan) -> dict[Path, _PathState]:
+    paths = [
+        *(action.destination for action in plan.actions),
+        *(sorted({action.manifest for action in plan.actions})),
+    ]
+    return {path: _path_state(path) for path in dict.fromkeys(paths)}
+
+
+def _state_conflicts(
+    expected_states: dict[Path, _PathState], reason: str
+) -> tuple[InstallConflict, ...]:
+    return tuple(
+        InstallConflict(path, reason)
+        for path, expected in expected_states.items()
+        if _path_state(path) != expected
+    )
+
+
 def _blocked_parent(parent: Path) -> Path | None:
     candidate = parent
     while not candidate.exists() and not candidate.is_symlink():
@@ -392,10 +456,24 @@ def _reserve_sibling(destination: Path, purpose: str) -> Path:
     return Path(name)
 
 
-def _commit_prepared_changes(prepared: list[_PreparedChange]) -> None:
+def _commit_prepared_changes(
+    prepared: list[_PreparedChange], expected_states: dict[Path, _PathState]
+) -> None:
     commit_log: list[_PreparedChange] = []
     try:
+        conflicts = _state_conflicts(expected_states, "path changed after preflight")
+        if conflicts:
+            raise InstallConflictError(conflicts)
         for change in prepared:
+            if _path_state(change.destination) != change.expected:
+                raise InstallConflictError(
+                    (
+                        InstallConflict(
+                            change.destination,
+                            "path changed after preflight",
+                        ),
+                    )
+                )
             if change.destination.exists() or change.destination.is_symlink():
                 backup = _reserve_sibling(change.destination, "backup")
                 backup.unlink()
@@ -419,9 +497,15 @@ def _rollback_changes(commit_log: list[_PreparedChange]) -> list[OSError]:
     errors = []
     for change in reversed(commit_log):
         try:
-            if change.destination.exists() or change.destination.is_symlink():
+            if change.installed and (
+                change.destination.exists() or change.destination.is_symlink()
+            ):
                 _remove_path(change.destination)
             if change.backup is not None:
+                if change.destination.exists() or change.destination.is_symlink():
+                    raise OSError(
+                        f"Cannot restore backup over a new destination: {change.destination}"
+                    )
                 os.replace(change.backup, change.destination)
         except OSError as error:
             errors.append(error)
@@ -438,6 +522,7 @@ def _remove_path(path: Path) -> None:
 def _stage_install_manifests(
     plan: InstallPlan,
     staged_assets: dict[Path, Path],
+    expected_states: dict[Path, _PathState],
     created_parents: list[Path],
 ) -> list[_PreparedChange]:
     prepared = []
@@ -469,7 +554,7 @@ def _stage_install_manifests(
                 except BaseException:
                     _remove_path(staged)
                     raise
-                prepared.append(_PreparedChange(manifest, staged))
+                prepared.append(_PreparedChange(manifest, staged, expected_states[manifest]))
     except BaseException:
         _cleanup_staged_paths(prepared)
         raise
