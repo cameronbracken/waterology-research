@@ -31,11 +31,7 @@ packages = ["src/waterology", "src/waterology_assets"]
 "rules" = "waterology_assets/rules"
 "constraints" = "waterology_assets/constraints"
 "agents" = "waterology_assets/agents"
-"agent-definitions" = "waterology_assets/agent-definitions"
 ".claude-plugin" = "waterology_assets/.claude-plugin"
-".codex-plugin" = "waterology_assets/.codex-plugin"
-".codex/agents" = "waterology_assets/.codex/agents"
-".opencode/agents" = "waterology_assets/.opencode/agents"
 "ATTRIBUTION.md" = "waterology_assets/ATTRIBUTION.md"
 "LICENSE" = "waterology_assets/LICENSE"
 
