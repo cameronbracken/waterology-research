@@ -63,18 +63,18 @@ def _destination_directories(
     if scope is InstallScope.PROJECT:
         return _runtime_directories(runtime, target)
 
-    home = Path.home()
     if runtime is Runtime.OPENCODE:
-        config_home = (
-            Path(os.environ["XDG_CONFIG_HOME"])
-            if os.environ.get("XDG_CONFIG_HOME")
-            else home / ".config"
-        )
+        config_home = os.environ.get("XDG_CONFIG_HOME")
+        if config_home:
+            base = Path(config_home) / "opencode"
+            return {"skills": base / "skills", "agents": base / "agents"}
+
+        base = Path.home() / ".config" / "opencode"
         return {
-            "skills": config_home / "opencode" / "skills",
-            "agents": config_home / "opencode" / "agents",
+            "skills": base / "skills",
+            "agents": base / "agents",
         }
-    return _runtime_directories(runtime, home)
+    return _runtime_directories(runtime, Path.home())
 
 
 def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
@@ -138,5 +138,5 @@ def _action(
         source_id=source_id,
         destination=destination,
         operation=mode.value,
-        manifest=destination.parent / ".waterology-install.json",
+        manifest=destination.parent.parent / ".waterology-install.json",
     )
