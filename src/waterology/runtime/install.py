@@ -11,6 +11,8 @@ from pathlib import Path, PurePosixPath
 from waterology import __version__
 from waterology.runtime.assets import AssetCatalog
 
+_INSTALL_LOCK_NAME = ".waterology-install.lock"
+
 
 class Runtime(StrEnum):
     CLAUDE = "claude"
@@ -71,6 +73,7 @@ class _PreparedChange:
     staged: Path
     expected: "_PathState"
     backup: Path | None = None
+    installed_state: "_PathState | None" = None
     installed: bool = False
 
 
@@ -203,10 +206,22 @@ def _absolute_lexical(path: Path) -> Path:
 
 
 def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
-    conflicts, expected_states = _preflight(plan, force=force)
+    conflicts, _ = _preflight(plan, force=force)
     if conflicts:
         raise InstallConflictError(conflicts)
 
+    lock, lock_parents = _acquire_install_lock(plan.trusted_root)
+    try:
+        conflicts, expected_states = _preflight(plan, force=force)
+        if conflicts:
+            raise InstallConflictError(conflicts)
+        return _apply_locked_plan(plan, expected_states)
+    finally:
+        lock.unlink(missing_ok=True)
+        _cleanup_created_parents(lock_parents)
+
+
+def _apply_locked_plan(plan: InstallPlan, expected_states: dict[Path, _PathState]) -> InstallResult:
     prepared: list[_PreparedChange] = []
     created_parents: list[Path] = []
     changed = []
@@ -245,6 +260,29 @@ def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
         else:
             _cleanup_created_parents(created_parents)
     return InstallResult(tuple(changed), tuple(unchanged), manifests)
+
+
+def _acquire_install_lock(trusted_root: Path) -> tuple[Path, list[Path]]:
+    created_parents: list[Path] = []
+    _ensure_parent(trusted_root, trusted_root.parent, created_parents)
+    lock = trusted_root / _INSTALL_LOCK_NAME
+    try:
+        descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError as error:
+        _cleanup_created_parents(created_parents)
+        raise InstallConflictError(
+            (InstallConflict(lock, "another Waterology install is in progress"),)
+        ) from error
+    except BaseException:
+        _cleanup_created_parents(created_parents)
+        raise
+    try:
+        os.close(descriptor)
+    except BaseException:
+        lock.unlink(missing_ok=True)
+        _cleanup_created_parents(created_parents)
+        raise
+    return lock, created_parents
 
 
 def _load_manifests(plan: InstallPlan) -> dict[Path, dict]:
@@ -474,6 +512,7 @@ def _commit_prepared_changes(
                         ),
                     )
                 )
+            commit_log.append(change)
             if change.destination.exists() or change.destination.is_symlink():
                 backup = _reserve_sibling(change.destination, "backup")
                 backup.unlink()
@@ -483,7 +522,16 @@ def _commit_prepared_changes(
                     _remove_path(backup)
                     raise
                 change.backup = backup
-            commit_log.append(change)
+                if _path_state(backup) != change.expected:
+                    raise InstallConflictError(
+                        (
+                            InstallConflict(
+                                change.destination,
+                                "destination changed while moving to backup",
+                            ),
+                        )
+                    )
+            change.installed_state = _path_state(change.staged)
             os.replace(change.staged, change.destination)
             change.installed = True
     except BaseException as error:
@@ -497,14 +545,24 @@ def _rollback_changes(commit_log: list[_PreparedChange]) -> list[OSError]:
     errors = []
     for change in reversed(commit_log):
         try:
-            if change.installed and (
-                change.destination.exists() or change.destination.is_symlink()
-            ):
+            if change.installed:
+                if (
+                    change.installed_state is None
+                    or _path_state(change.destination) != change.installed_state
+                ):
+                    backup_note = (
+                        f"; backup retained at {change.backup}" if change.backup is not None else ""
+                    )
+                    raise OSError(
+                        "Cannot remove an externally changed installed destination: "
+                        f"{change.destination}{backup_note}"
+                    )
                 _remove_path(change.destination)
             if change.backup is not None:
                 if change.destination.exists() or change.destination.is_symlink():
                     raise OSError(
-                        f"Cannot restore backup over a new destination: {change.destination}"
+                        f"Cannot restore backup {change.backup} over an unexpected destination: "
+                        f"{change.destination}"
                     )
                 os.replace(change.backup, change.destination)
         except OSError as error:

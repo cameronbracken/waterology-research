@@ -794,3 +794,198 @@ def test_manifest_waterology_version_must_be_a_nonempty_string(
 
     with pytest.raises(ValueError, match="waterology_version"):
         apply_install_plan(plan)
+
+
+def test_concurrent_waterology_install_lock_blocks_all_plan_writes(tmp_path: Path) -> None:
+    lock = tmp_path / ".waterology-install.lock"
+    lock.write_text("existing installer\n")
+
+    with pytest.raises(InstallConflictError) as caught:
+        apply_install_plan(make_plan(tmp_path))
+
+    assert caught.value.conflicts == (
+        InstallConflict(lock, "another Waterology install is in progress"),
+    )
+    assert lock.read_text() == "existing installer\n"
+    assert not (tmp_path / ".opencode").exists()
+
+
+def test_locked_preflight_detects_a_destination_created_during_lock_acquisition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    lock = tmp_path / ".waterology-install.lock"
+    collision = next(action.destination for action in plan.actions if action.source.is_file())
+    real_open = install_module.os.open
+
+    def create_collision_after_lock(
+        path: str | bytes | Path,
+        flags: int,
+        mode: int = 0o777,
+        *,
+        dir_fd: int | None = None,
+    ) -> int:
+        descriptor = real_open(path, flags, mode, dir_fd=dir_fd)
+        if Path(path) == lock:
+            collision.parent.mkdir(parents=True)
+            collision.write_text("created during lock acquisition\n")
+        return descriptor
+
+    monkeypatch.setattr(install_module.os, "open", create_collision_after_lock)
+
+    with pytest.raises(InstallConflictError):
+        apply_install_plan(plan)
+
+    assert collision.read_text() == "created during lock acquisition\n"
+    assert not plan.actions[0].destination.exists()
+    assert not (tmp_path / ".opencode/.waterology-install.json").exists()
+    assert not lock.exists()
+
+
+def test_install_lock_is_removed_after_staging_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    lock = tmp_path / ".waterology-install.lock"
+    lock_seen = False
+
+    def fail_staging(
+        action: object,
+        trusted_root: Path,
+        created_parents: list[Path],
+    ) -> Path:
+        nonlocal lock_seen
+        lock_seen = lock.is_file()
+        raise OSError("injected staging failure with lock")
+
+    monkeypatch.setattr(install_module, "_stage_action", fail_staging)
+
+    with pytest.raises(OSError, match="injected staging failure with lock"):
+        apply_install_plan(plan)
+
+    assert lock_seen
+    assert not lock.exists()
+    assert not any(tmp_path.iterdir())
+
+
+def test_install_lock_is_removed_after_commit_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    lock = tmp_path / ".waterology-install.lock"
+    lock_seen = False
+
+    def fail_commit(*args: object, **kwargs: object) -> None:
+        nonlocal lock_seen
+        lock_seen = lock.is_file()
+        raise OSError("injected commit failure with lock")
+
+    monkeypatch.setattr(install_module, "_commit_prepared_changes", fail_commit)
+
+    with pytest.raises(OSError, match="injected commit failure with lock"):
+        apply_install_plan(plan)
+
+    assert lock_seen
+    assert not lock.exists()
+    assert not any(tmp_path.iterdir())
+
+
+def test_moved_backup_is_verified_before_the_stage_is_installed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    destination = next(action.destination for action in plan.actions if action.source.is_file())
+    destination.write_text("authorized force change\n")
+    prior_manifest = (tmp_path / ".opencode/.waterology-install.json").read_bytes()
+    real_replace = install_module.os.replace
+
+    def mutate_moved_backup(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        real_replace(source, target)
+        if source == destination and ".waterology-backup-" in target.name:
+            target.write_text("changed while moving to backup\n")
+
+    monkeypatch.setattr(install_module.os, "replace", mutate_moved_backup)
+
+    with pytest.raises(InstallConflictError):
+        apply_install_plan(plan, force=True)
+
+    recovery_paths = [
+        destination,
+        *destination.parent.glob(f".{destination.name}.waterology-backup-*"),
+    ]
+    assert any(
+        path.is_file() and path.read_text() == "changed while moving to backup\n"
+        for path in recovery_paths
+    )
+    assert (tmp_path / ".opencode/.waterology-install.json").read_bytes() == prior_manifest
+    assert not (tmp_path / ".waterology-install.lock").exists()
+
+
+def test_rollback_preserves_an_externally_replaced_installed_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    installed_then_replaced = plan.actions[0].destination
+    failing = plan.actions[1].destination
+    real_replace = install_module.os.replace
+
+    def replace_first_then_fail(source: Path, target: Path) -> None:
+        source = Path(source)
+        target = Path(target)
+        if target == installed_then_replaced and ".waterology-stage-" in source.name:
+            real_replace(source, target)
+            shutil.rmtree(target)
+            target.write_text("external replacement\n")
+            return
+        if target == failing and ".waterology-stage-" in source.name:
+            raise OSError("injected failure after external replacement")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", replace_first_then_fail)
+
+    with pytest.raises(OSError, match="injected failure") as caught:
+        apply_install_plan(plan)
+
+    assert installed_then_replaced.read_text() == "external replacement\n"
+    assert any(
+        str(installed_then_replaced) in note for note in getattr(caught.value, "__notes__", ())
+    )
+    assert not (tmp_path / ".waterology-install.lock").exists()
+
+
+def test_rollback_preserves_a_new_destination_and_reports_its_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plan = make_plan(tmp_path)
+    apply_install_plan(plan)
+    destination = next(action.destination for action in plan.actions if action.source.is_file())
+    destination.write_text("authorized force change\n")
+    real_replace = install_module.os.replace
+    backup: Path | None = None
+
+    def create_destination_before_restore(source: Path, target: Path) -> None:
+        nonlocal backup
+        source = Path(source)
+        target = Path(target)
+        if source == destination and ".waterology-backup-" in target.name:
+            backup = target
+            real_replace(source, target)
+            return
+        if target == destination and ".waterology-stage-" in source.name:
+            destination.write_text("appeared before backup restoration\n")
+            raise OSError("injected replacement failure before restore")
+        real_replace(source, target)
+
+    monkeypatch.setattr(install_module.os, "replace", create_destination_before_restore)
+
+    with pytest.raises(OSError, match="injected replacement failure") as caught:
+        apply_install_plan(plan, force=True)
+
+    assert destination.read_text() == "appeared before backup restoration\n"
+    assert backup is not None
+    assert backup.read_text() == "authorized force change\n"
+    assert any(str(backup) in note for note in getattr(caught.value, "__notes__", ()))
+    assert not (tmp_path / ".waterology-install.lock").exists()
