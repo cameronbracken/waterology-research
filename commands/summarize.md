@@ -29,11 +29,11 @@ Validate `window-size > overlap` and `tier1-threshold < tier2-threshold`; if inv
 Run all guards before any tier logic. A failure here is cheap; a failure mid-Tier-3 is not.
 
 - **GitHub repo URL** (`https://github.com/owner/repo`, exactly 4 slashes): fetch the raw README instead — try `https://raw.githubusercontent.com/{owner}/{repo}/main/README.md`, then `/master/README.md`.
-- **Remote URL**: fetch to disk with `curl -sL -o outputs/.notes/<slug>-raw.txt <url>`. Do NOT use `WebFetch` here — its return value enters context directly, defeating the on-disk principle.
-- **Local file or PDF**: copy or extract to `outputs/.notes/<slug>-raw.txt`. For PDFs, extract text via `pdftotext` first.
+- **Remote URL**: fetch to disk with `curl -sL -o docs/.notes/<slug>-raw.txt <url>`. Do NOT use `WebFetch` here — its return value enters context directly, defeating the on-disk principle.
+- **Local file or PDF**: copy or extract to `docs/.notes/<slug>-raw.txt`. For PDFs, extract text via `pdftotext` first.
 - **Empty or failed fetch**: if the file is < 50 bytes, stop and surface the error — do not proceed to tier selection.
 - **Binary content**: if the file is > 1 KB but has < 100 readable text characters, stop and report that the content appears binary or unextracted.
-- **Existing output**: if `outputs/<slug>-summary.md` already exists, ask whether to overwrite or use a different slug.
+- **Existing output**: if `docs/<slug>-summary.md` already exists, ask whether to overwrite or use a different slug.
 
 Measure decoded text characters (not bytes). Log: `[summarize] source=<source> slug=<slug> chars=<count>`.
 
@@ -49,19 +49,19 @@ Log: `[summarize] tier=<N> chars=<count>`.
 
 ## Tier 1 — Direct read
 
-Read `outputs/.notes/<slug>-raw.txt` in full, summarize using the output format, write to `outputs/<slug>-summary.md`.
+Read `docs/.notes/<slug>-raw.txt` in full, summarize using the output format, write to `docs/<slug>-summary.md`.
 
 ## Tier 2 — Windowed read
 
 The document stays on disk. Extract `<window-size>`-char windows with bash (the Read tool uses line offsets, not char offsets, so bash is required for exact char-boundary windows):
 
 ```python
-with open("outputs/.notes/<slug>-raw.txt", encoding="utf-8") as f:
+with open("docs/.notes/<slug>-raw.txt", encoding="utf-8") as f:
     f.seek(n * WINDOW_SIZE)
     window = f.read(WINDOW_SIZE)
 ```
 
-For each window: extract key claims and evidence, append them to `outputs/.notes/<slug>-notes.md` before reading the next window (the checkpoint — processed windows survive an interruption), and log `[summarize] window <N>/<total> done`. Synthesize the notes into `outputs/<slug>-summary.md`.
+For each window: extract key claims and evidence, append them to `docs/.notes/<slug>-notes.md` before reading the next window (the checkpoint — processed windows survive an interruption), and log `[summarize] window <N>/<total> done`. Synthesize the notes into `docs/<slug>-summary.md`.
 
 ## Tier 3 — Parallel chunks
 
@@ -71,8 +71,8 @@ Chunk the document with bash (zero-pad indices so files sort correctly):
 
 ```python
 import os
-os.makedirs("outputs/.notes", exist_ok=True)
-with open("outputs/.notes/<slug>-raw.txt", encoding="utf-8") as f:
+os.makedirs("docs/.notes", exist_ok=True)
+with open("docs/.notes/<slug>-raw.txt", encoding="utf-8") as f:
     text = f.read()
 chunk_size, overlap = WINDOW_SIZE, OVERLAP
 chunks, i = [], 0
@@ -80,18 +80,18 @@ while i < len(text):
     chunks.append(text[i : i + chunk_size])
     i += chunk_size - overlap
 for n, chunk in enumerate(chunks):
-    with open(f"outputs/.notes/<slug>-chunk-{n:03d}.txt", "w", encoding="utf-8") as f:
+    with open(f"docs/.notes/<slug>-chunk-{n:03d}.txt", "w", encoding="utf-8") as f:
         f.write(chunk)
 print(f"[summarize] chunks={len(chunks)} chunk_size={chunk_size} overlap={overlap}")
 ```
 
-Briefly note "Source is ~<chars> chars -> <N> chunks -> <N> researcher subagents. Continuing." then continue automatically. Launch one `researcher` per chunk via the `Task` tool, each told to read ONLY its chunk file, extract (1) key claims, (2) methodology, (3) cited evidence, mark any boundary-spanning claim `BOUNDARY PARTIAL`, and write to `outputs/.notes/<slug>-summary-chunk-NNN.md`. Do not have them search the web — this is single-source summarization.
+Briefly note "Source is ~<chars> chars -> <N> chunks -> <N> researcher subagents. Continuing." then continue automatically. Launch one `researcher` per chunk via the `Task` tool, each told to read ONLY its chunk file, extract (1) key claims, (2) methodology, (3) cited evidence, mark any boundary-spanning claim `BOUNDARY PARTIAL`, and write to `docs/.notes/<slug>-summary-chunk-NNN.md`. Do not have them search the web — this is single-source summarization.
 
-After all return, verify every expected chunk-summary file exists; note missing indices for the Coverage gaps section. When synthesizing, deduplicate claims (keep the most complete formulation), resolve boundary conflicts in favor of the version with more context, and drop `BOUNDARY PARTIAL` markers where a complete version exists in a neighbor. Write to `outputs/<slug>-summary.md`.
+After all return, verify every expected chunk-summary file exists; note missing indices for the Coverage gaps section. When synthesizing, deduplicate claims (keep the most complete formulation), resolve boundary conflicts in favor of the version with more context, and drop `BOUNDARY PARTIAL` markers where a complete version exists in a neighbor. Write to `docs/<slug>-summary.md`.
 
 ## Output format
 
-All tiers produce `outputs/<slug>-summary.md`:
+All tiers produce `docs/<slug>-summary.md`:
 
 ```markdown
 # Summary: [document title or source filename]
@@ -128,4 +128,4 @@ All tiers produce `outputs/<slug>-summary.md`:
 [Missing chunk indices and approximate byte ranges]
 ```
 
-Before stopping, verify on disk that `outputs/<slug>-summary.md` exists. Sources contains only the single source confirmed reachable in Step 1 — no verifier pass is needed because no URLs were constructed from memory.
+Before stopping, verify on disk that `docs/<slug>-summary.md` exists. Sources contains only the single source confirmed reachable in Step 1 — no verifier pass is needed because no URLs were constructed from memory.

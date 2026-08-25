@@ -12,7 +12,7 @@ Tools: `WebSearch`/`WebFetch` for sources; the `Task` tool to launch the `writer
 Derive a short slug from the topic (lowercase, hyphens, no filler words, at most 5 words). Use it for all files in this run.
 
 Requirements:
-- Before writing, outline the draft: proposed title, sections, key claims, source material to draw from, and a verification log for the critical claims, figures, and calculations. Write the outline to `outputs/.plans/<slug>.md`. Summarize it briefly and continue immediately unless the user asked to review it first.
+- Before writing, outline the draft: proposed title, sections, key claims, source material to draw from, and a verification log for the critical claims, figures, and calculations. Write the outline to `docs/.plans/<slug>.md`. Summarize it briefly and continue immediately unless the user asked to review it first.
 - Use the `writer` subagent to produce the draft from already-collected notes, then the `verifier` subagent to add inline citations and verify sources.
 - Include at minimum: title, abstract, problem statement, related work, method or synthesis, evidence or experiments, limitations, conclusion.
 - Write in Quarto or LaTeX where the target is a real manuscript; use LaTeX math where equations materially help. Never hand-type a computed number — reference it with `\input{}` or an inline code result so it stays tied to the analysis that produced it.

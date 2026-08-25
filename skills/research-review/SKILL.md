@@ -21,7 +21,7 @@ statistical-extremes analyses, and Monte Carlo studies — including the
 coverage-against-the-estimate error and dropped non-converged replicates.
 
 Agents used: `researcher`, `reviewer` (when the artifact is large enough to benefit).
-Output: `outputs/<slug>-review.md`.
+Output: `docs/<slug>-review.md`.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*

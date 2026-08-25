@@ -12,7 +12,7 @@ Use `writing-style` for the durable log.
 
 Run the `/log` workflow. It summarizes what was done, captures the strongest
 findings and decisions, lists open questions and concrete next steps, references
-artifacts written under `notes/`, `outputs/`, `experiments/`, or `papers/`, and
+artifacts written under `notes/`, `docs/`, `experiments/`, or `papers/`, and
 saves a dated Markdown log to `notes/`.
 
 Output: `notes/<date>-session.md`.

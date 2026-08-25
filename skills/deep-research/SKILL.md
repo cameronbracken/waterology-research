@@ -16,7 +16,7 @@ active session — plan, scale, gather, draft, cite, review, deliver — do not 
 to read a prompt-template path from this skill directory.
 
 Agents used: `researcher`, `verifier`, `reviewer`.
-Output: a cited brief in `outputs/` (or `papers/`) with a `.provenance.md` sidecar.
+Output: a cited brief in `docs/` (or `papers/`) with a `.provenance.md` sidecar.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*

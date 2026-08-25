@@ -15,7 +15,7 @@ Run the `/audit` workflow. It plans which claims to check, reads the actual code
 missing code, method/default mismatches, unstated seeds, and reproduction risks.
 
 Agents used: `researcher`, `verifier` (for non-trivial audits).
-Output: `outputs/<slug>-audit.md`.
+Output: `docs/<slug>-audit.md`.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*

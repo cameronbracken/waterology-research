@@ -17,7 +17,7 @@ Claude Code has no in-session scheduler, so a recurring watch runs through the
 `loop` skill (`/loop <interval> /watch <topic>`) or a cron entry. The baseline
 artifact records the exact refresh command and notes `Scheduling: manual`.
 
-Output: `outputs/<slug>-baseline.md`.
+Output: `docs/<slug>-baseline.md`.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*

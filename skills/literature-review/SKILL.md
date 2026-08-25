@@ -23,7 +23,7 @@ review: resolve identity, collect the reachable publication list, then map the
 research trajectory.
 
 Agents used: `researcher`, `verifier`, `reviewer`.
-Output: `outputs/<slug>.md` with `outputs/<slug>.provenance.md`.
+Output: `docs/<slug>.md` with `docs/<slug>.provenance.md`.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT); multi-hop search from

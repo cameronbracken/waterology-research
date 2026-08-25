@@ -21,7 +21,7 @@ Use when a PDF answer depends on more than one page or section.
    numbers.
 3. Cross-check claims against methods, captions, supplement text, and cited
    papers when the conclusion depends on them.
-4. Save extracted notes and provenance as artifacts under `notes/` or `outputs/`.
+4. Save extracted notes and provenance as artifacts under `notes/` or `docs/`.
 
 Do not answer from a single visible page when the question spans methods,
 figures, or supplements. For a whole-document summary of a long PDF, run

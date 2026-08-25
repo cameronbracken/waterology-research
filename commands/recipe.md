@@ -14,21 +14,21 @@ Tools: `WebSearch`/`WebFetch` and paper search; `gh` and `Bash` to inspect datas
 Derive a short slug from the task (lowercase, hyphens, no filler words, at most 5 words). Use it for all files in this run.
 
 ## Required artifacts
-- `outputs/.plans/<slug>-recipe.md`
-- `outputs/.drafts/<slug>-recipe-research.md`
-- `outputs/<slug>-recipe.md`
-- `outputs/<slug>-recipe.provenance.md`
+- `docs/.plans/<slug>-recipe.md`
+- `docs/.drafts/<slug>-recipe-research.md`
+- `docs/<slug>-recipe.md`
+- `docs/<slug>-recipe.provenance.md`
 
 ## Workflow
 
-1. **Plan** — Write `outputs/.plans/<slug>-recipe.md` with the target task, benchmark or desired behavior, candidate source types, feasibility constraints, and a task ledger. Continue automatically after writing it.
+1. **Plan** — Write `docs/.plans/<slug>-recipe.md` with the target task, benchmark or desired behavior, candidate source types, feasibility constraints, and a task ledger. Continue automatically after writing it.
 2. **Research** — Use the `researcher` subagent for a broad paper/code sweep; for narrow tasks gather directly. Start from evidence of results, not from example scripts alone. For energy, climate, or hydrology ML (streamflow, load, or weather forecasting), prefer sources reporting a concrete skill metric on a named dataset.
 3. **Recipe extraction** — For each promising approach, link the observed result to the exact recipe: paper or report, benchmark/result, dataset, training method, key hyperparameters, compute assumptions, implementation code path, current docs.
 4. **Dataset validation** — Check each dataset's availability, splits/columns, and whether the format matches the method. Mark unchecked schema or availability `unverified`; do not imply it is usable.
 5. **Implementation grounding** — Find working code or official docs for the chosen path. Prefer current docs and actively maintained repos. Record exact file paths, function and class names, and command patterns.
-6. **Synthesis** — Write `outputs/.drafts/<slug>-recipe-research.md` first, then promote a concise ranked brief to `outputs/<slug>-recipe.md`.
+6. **Synthesis** — Write `docs/.drafts/<slug>-recipe-research.md` first, then promote a concise ranked brief to `docs/<slug>-recipe.md`.
 7. **Verification** — For the top-ranked recipe, verify the key source URLs and the dataset/code availability before delivery. Keep unverifiable items only with an explicit `blocked` or `unverified` label.
-8. **Provenance** — Write `outputs/<slug>-recipe.provenance.md` with date, sources consulted, sources accepted/rejected, verification status, and artifact paths.
+8. **Provenance** — Write `docs/<slug>-recipe.provenance.md` with date, sources consulted, sources accepted/rejected, verification status, and artifact paths.
 
 ## Required final shape
 

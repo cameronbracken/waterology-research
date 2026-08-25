@@ -17,7 +17,7 @@ compute, and code path that produced it, validates dataset availability and
 schema, and delivers a ranked recipe table with a recommendation and known gaps.
 
 Agents used: `researcher`.
-Output: `outputs/<slug>-recipe.md` with `outputs/<slug>-recipe.provenance.md`.
+Output: `docs/<slug>-recipe.md` with `docs/<slug>-recipe.provenance.md`.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*
