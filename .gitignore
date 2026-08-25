@@ -6,9 +6,8 @@
 .fseventsd
 
 # AI tool files
-# NOTE: CLAUDE.md is intentionally tracked in this repo — it is project
-# guidance for a Claude Code plugin, not a stray dotfile.
-AGENTS.md
+# NOTE: CLAUDE.md and AGENTS.md are tracked project guidance.
+!AGENTS.md
 .claude/
 .codex/*
 !.codex/agents/
