@@ -21,13 +21,17 @@ pixi run waterology render --check
 python3 constraints/check-all.py .
 ```
 
-## TDD
+## Quality
 
-Write a failing test before implementation.
+Use `research-software-quality` for testing, debugging, verification, review,
+and worktree decisions. Prefer a failing test first for clear behavior changes.
+Match completion claims to fresh evidence.
 
 ## Skill edits
 
-Use `superpowers:writing-skills`. Edit one skill at a time.
+Use `writing-style` for prose. Treat skill and agent instruction edits as
+behavior changes that require an isolated worktree. Edit and validate one skill
+at a time.
 
 ## Attribution
 

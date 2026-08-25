@@ -13,6 +13,9 @@ Run the `/review` workflow. It plans the review criteria, inspects the artifact
 (local file, PDF, arXiv ID, or URL), writes evidence notes, and produces a
 structured review with severity-graded findings and inline annotations.
 
+Use the `writing-style` skill to check claim strength, terminology, and prose
+clarity without replacing the evidence review.
+
 The `reviewer` agent covers not only AI/ML work but hydrology model evaluations,
 statistical-extremes analyses, and Monte Carlo studies — including the
 coverage-against-the-estimate error and dropped non-converged replicates.

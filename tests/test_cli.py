@@ -5,10 +5,10 @@ from waterology.cli import app
 runner = CliRunner()
 
 
-def test_version_is_0_2_0() -> None:
+def test_version_is_0_3_0() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.2.0"
+    assert result.stdout.strip() == "0.3.0"
 
 
 def test_help_names_the_research_package() -> None:

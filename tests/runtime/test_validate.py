@@ -32,7 +32,7 @@ def test_runtime_manifests_have_matching_identity() -> None:
     codex = json.loads(catalog.path(".codex-plugin/plugin.json").read_text())
 
     assert claude["name"] == codex["name"] == "waterology"
-    assert claude["version"] == codex["version"] == "0.2.0"
+    assert claude["version"] == codex["version"] == "0.3.0"
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
         assert claude[field] == codex[field]
     assert "Claude Code plugin" not in claude["description"]
@@ -67,6 +67,24 @@ def test_validation_reports_duplicate_skill_names(tmp_path: Path) -> None:
     assert ("skills/eli5/SKILL.md", "duplicate-name", "autoresearch") in {
         (issue.path, issue.code, issue.message) for issue in issues
     }
+
+
+def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    skill = catalog.path("skills/eli5/SKILL.md")
+    skill.write_text(
+        skill.read_text(encoding="utf-8")
+        + "\n[Missing reference](references/missing.md)\n",
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert (
+        "skills/eli5/SKILL.md",
+        "missing-skill-reference",
+        "references/missing.md",
+    ) in {(issue.path, issue.code, issue.message) for issue in issues}
 
 
 def test_validation_reports_malformed_codex_toml(tmp_path: Path) -> None:

@@ -101,6 +101,10 @@ python3 constraints/check-all.py --only deterministic-seed src/
 The research bundle provides four agents (`researcher`, `writer`, `verifier`,
 and `reviewer`), research skills, and Claude Code compatibility commands.
 
+The `writing-style` skill supplies shared prose guidance and a scientific
+writing layer. The `research-software-quality` skill scales testing, debugging,
+verification, review, and worktree isolation to the task.
+
 | Command | Does |
 | --- | --- |
 | `/deepresearch` | Multi source investigation to a cited brief with provenance |

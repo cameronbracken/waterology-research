@@ -10,6 +10,9 @@ description: >
 
 Improve the argument a paper makes, not just its prose.
 
+Use the `writing-style` skill's scientific layer when shaping claims and
+revising the manuscript text.
+
 1. Extract the central claim, the audience, the evidence chain, the figure
    order, and the decision each figure must support.
 2. Find the gaps: a figure that claims more than the data proves, a missing

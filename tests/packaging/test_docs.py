@@ -51,7 +51,7 @@ def test_canonical_guidance_has_required_commands() -> None:
         "## Purpose",
         "## Source layout",
         "## Development",
-        "## TDD",
+        "## Quality",
         "## Skill edits",
         "## Attribution",
         "## Git",

@@ -13,6 +13,9 @@ Run the `/draft` workflow. It outlines the structure, produces the draft from
 collected notes with the `writer` agent, then adds inline citations and verifies
 sources with the `verifier`.
 
+Use the `writing-style` skill and its scientific prose layer for the draft and
+final edit.
+
 Write real manuscripts in Quarto or LaTeX. Never hand-type a computed number —
 reference it with `\input{}` or an inline code result so it stays tied to the
 analysis. See `rules/quarto-conventions.md` for the document conventions and the

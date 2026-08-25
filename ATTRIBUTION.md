@@ -91,6 +91,46 @@ source carry a one-line credit at the top; this page is the canonical list.
 - **Credit string:** *Adapted from openresearch-cli (alphaXiv/openresearch-cli,
   MIT per Cargo.toml).*
 
+### William Strunk Jr. - concise prose principles
+
+- **Author:** William Strunk Jr.
+- **Source:** <https://www.gutenberg.org/ebooks/37134>
+- **License:** Public domain in the United States, as recorded by Project
+  Gutenberg.
+- **What we adapt:** a compact summary of relevant composition principles in
+  `skills/writing-style`. The complete book is not bundled.
+- **Credit string:** *Prose principles adapted from William Strunk Jr., The
+  Elements of Style (1918, public domain).*
+
+### Cameron Bracken - published scientific voice
+
+- **Author:** Cameron Bracken and coauthors
+- **Sources:** <https://doi.org/10.1002/2015JD023205>,
+  <https://doi.org/10.1016/j.renene.2023.119550>,
+  <https://doi.org/10.1029/2024EF005313>, and
+  <https://doi.org/10.1038/s41597-025-05097-3>
+- **What we adapt:** an original analysis of recurring structure, claim
+  calibration, quantitative scope, limitations, and reproducibility details in
+  four first-author papers. No paper passages are copied. Collaborative and
+  publisher editing limits any inference about sole-author style.
+- **Credit string:** *Scientific prose guidance informed by an original
+  analysis of Cameron Bracken's published work.*
+
+### obra/superpowers - proportional software quality
+
+- **Author:** Jesse Vincent
+- **Repo:** <https://github.com/obra/superpowers>
+- **Version:** 6.3.0
+- **License:** MIT - Copyright (c) 2025 Jesse Vincent
+- **What we adapt:** evidence-first debugging, focused regression testing,
+  fresh verification before completion claims, risk-based independent review,
+  and Git worktree safety from `systematic-debugging`,
+  `test-driven-development`, `verification-before-completion`,
+  `requesting-code-review`, and `using-git-worktrees`. Waterology replaces the
+  mandatory ceremony with a proportional workflow and a clear worktree cutoff.
+- **Credit string:** *Software quality guidance adapted from Superpowers 6.3.0
+  (obra/superpowers, MIT).*
+
 ## Original to this plugin
 
 Fortran support (discovery globs, `gfortran` runner, reproducibility header,
