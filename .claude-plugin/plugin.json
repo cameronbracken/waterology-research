@@ -7,8 +7,8 @@
     "email": "researcher@example.org",
     "url": "https://codeberg.org/waterology"
   },
-  "homepage": "https://codeberg.org/waterology/waterology-cc",
-  "repository": "https://codeberg.org/waterology/waterology-cc",
+  "homepage": "https://codeberg.org/waterology/waterology-research",
+  "repository": "https://codeberg.org/waterology/waterology-research",
   "license": "MIT",
   "keywords": [
     "research",

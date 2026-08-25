@@ -63,7 +63,7 @@ The Claude Code marketplace remains available for local development. Add the
 repository as a marketplace, then install the plugin:
 
 ```text
-/plugin marketplace add ~/projects/waterology-cc
+/plugin marketplace add ~/projects/waterology-research
 /plugin install waterology@waterology
 ```
 
@@ -74,7 +74,7 @@ The canonical remote is a private Codeberg repository. Install from the Git URL
 when working from the remote:
 
 ```text
-/plugin marketplace add ssh://git@codeberg.org/waterology/waterology-cc.git
+/plugin marketplace add ssh://git@codeberg.org/waterology/waterology-research.git
 /plugin install waterology@waterology
 ```
 

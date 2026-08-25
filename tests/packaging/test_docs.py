@@ -1,6 +1,28 @@
+import json
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_distribution_name_preserves_waterology_cli() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    pixi = tomllib.loads((ROOT / "pixi.toml").read_text())
+
+    assert project["project"]["name"] == "waterology-research"
+    assert project["project"]["scripts"] == {"waterology": "waterology.cli:app"}
+    assert "waterology-research" in pixi["pypi-dependencies"]
+    assert "waterology" not in pixi["pypi-dependencies"]
+
+    repository = "https://codeberg.org/waterology/waterology-research"
+    for path in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+        manifest = json.loads((ROOT / path).read_text())
+        assert manifest["name"] == "waterology"
+        assert manifest["homepage"] == repository
+        assert manifest["repository"] == repository
+
+    readme = (ROOT / "README.md").read_text()
+    assert "ssh://git@codeberg.org/waterology/waterology-research.git" in readme
 
 
 def test_readme_documents_all_runtimes_and_cli() -> None:
