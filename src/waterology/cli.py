@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from waterology import __version__
+from waterology.agents.supervisor import interrupt_session, launch_session, reconcile_session
 from waterology.core.archive import (
     ArchiveNotFoundError,
     list_archives,
@@ -37,6 +38,12 @@ from waterology.core.profiles import load_machine_config, machine_config_path, t
 from waterology.core.project import initialize_project, inspect_project
 from waterology.core.records import RunManifest
 from waterology.core.repair import repair_index
+from waterology.core.sessions import (
+    create_session,
+    list_sessions,
+    load_session,
+    read_session_logs,
+)
 from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.doctor import run_diagnostics
 from waterology.runtime.install import (
@@ -50,6 +57,7 @@ from waterology.runtime.install import (
     build_install_plan,
     preflight,
 )
+from waterology.runtime.mcp import registration_command, runtime_mcp_config
 from waterology.runtime.render import GeneratedAssetsStaleError, render_assets
 from waterology.runtime.validate import ValidationIssue, validate_assets
 from waterology.torc.runs import cancel_torc_run, inspect_torc_run, start_torc_run
@@ -62,12 +70,16 @@ experiment_app = typer.Typer(help="Create and inspect research experiments.")
 worktree_app = typer.Typer(help="Inspect experiment worktrees.")
 archive_app = typer.Typer(help="Inspect and verify sealed run archives.")
 run_app = typer.Typer(help="Run committed experiment variants.")
+agent_app = typer.Typer(help="Launch and inspect top level agent sessions.")
+mcp_app = typer.Typer(help="Inspect local MCP server registration.")
 compute_app = typer.Typer(help="Inspect machine local compute profiles.")
 profile_app = typer.Typer(help="List, inspect, and trust compute profiles.")
 app.add_typer(experiment_app, name="experiment")
 app.add_typer(worktree_app, name="worktree")
 app.add_typer(archive_app, name="archive")
 app.add_typer(run_app, name="run")
+app.add_typer(agent_app, name="agent")
+app.add_typer(mcp_app, name="mcp")
 app.add_typer(compute_app, name="compute")
 compute_app.add_typer(profile_app, name="profile")
 
@@ -77,6 +89,8 @@ _INSTALL_MODE_OPTION = typer.Option(InstallMode.COPY, "--mode")
 _DOCTOR_RUNTIME_OPTION = typer.Option(None, "--runtime")
 _PROJECT_PATH_OPTION = typer.Option(Path("."), "--path")
 _EVIDENCE_OPTION = typer.Option(None, "--evidence")
+_AGENT_TASK_FILE_OPTION = typer.Option(None, "--task-file")
+_MCP_RUNTIME_ARGUMENT = typer.Argument(...)
 
 
 def _version(value: bool) -> None:
@@ -947,6 +961,202 @@ def run_assess_command(
     )
 
 
+def _agent_task(task: str | None, task_file: Path | None) -> str:
+    if (task is None) == (task_file is None):
+        raise InvalidInputError("Provide exactly one task argument or --task-file")
+    if task_file is not None:
+        if task_file.is_symlink() or not task_file.is_file():
+            raise InvalidInputError(f"Task file does not exist or is a symlink: {task_file}")
+        return task_file.read_text(encoding="utf-8")
+    assert task is not None
+    return task
+
+
+@agent_app.command("start")
+def agent_start_command(
+    experiment_id: str = typer.Argument(...),
+    task: str | None = typer.Argument(None),
+    path: Path = _PROJECT_PATH_OPTION,
+    task_file: Path | None = _AGENT_TASK_FILE_OPTION,
+    runtime: str = typer.Option("codex", "--runtime"),
+    role: str = typer.Option("researcher", "--role"),
+    profile: str = typer.Option("local", "--profile"),
+    session_id: str | None = typer.Option(None, "--id"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Launch a top level agent in an experiment worktree."""
+    try:
+        prompt = _agent_task(task, task_file)
+        session = create_session(
+            path,
+            experiment_id=experiment_id,
+            runtime=runtime,
+            role=role,
+            task=prompt,
+            compute_profile=profile,
+            session_id=session_id,
+        )
+        session = launch_session(path, session.id, prompt=prompt)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Agent launch failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"session": _record_payload(session), "status": "pass"})
+        return
+    _show_table(
+        "Agent launched",
+        ("Session", "Experiment", "Runtime", "State"),
+        ((session.id, session.experiment_id, session.runtime, session.state),),
+    )
+
+
+@agent_app.command("list")
+def agent_list_command(
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """List durable agent sessions."""
+    try:
+        sessions = tuple(
+            reconcile_session(path, session.id)
+            if session.state in {"running", "waiting"}
+            else session
+            for session in list_sessions(path)
+        )
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Agent listing failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json(
+            {"sessions": [_record_payload(session) for session in sessions], "status": "pass"}
+        )
+        return
+    _show_table(
+        "Agent sessions",
+        ("Session", "Experiment", "Runtime", "State"),
+        (
+            (session.id, session.experiment_id, session.runtime, session.state)
+            for session in sessions
+        ),
+    )
+
+
+@agent_app.command("status")
+def agent_status_command(
+    session_id: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Show one agent session and reconcile active process state."""
+    try:
+        session = load_session(path, session_id)
+        if session.state in {"running", "waiting"}:
+            session = reconcile_session(path, session_id)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Agent lookup failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"session": _record_payload(session), "status": "pass"})
+        return
+    _show_table(
+        "Agent session",
+        ("Session", "Experiment", "Runtime", "Role", "State", "Native ID"),
+        (
+            (
+                session.id,
+                session.experiment_id,
+                session.runtime,
+                session.role,
+                session.state,
+                session.native_session_id or "",
+            ),
+        ),
+    )
+
+
+@agent_app.command("logs")
+def agent_logs_command(
+    session_id: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Read structured event and stderr logs for an agent session."""
+    try:
+        attempts = read_session_logs(path, session_id)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Agent log lookup failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"attempts": list(attempts), "session_id": session_id, "status": "pass"})
+        return
+    for attempt in attempts:
+        _console().print(f"attempt {attempt['attempt']} events:")
+        typer.echo(str(attempt["events"]), nl=not str(attempt["events"]).endswith("\n"))
+        if attempt["stderr"]:
+            _console().print(f"attempt {attempt['attempt']} stderr:")
+            typer.echo(str(attempt["stderr"]), nl=not str(attempt["stderr"]).endswith("\n"))
+
+
+@agent_app.command("resume")
+def agent_resume_command(
+    session_id: str = typer.Argument(...),
+    prompt: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Resume an agent through its runtime native session mechanism."""
+    try:
+        session = launch_session(path, session_id, prompt=prompt)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Agent resume failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"session": _record_payload(session), "status": "pass"})
+        return
+    _console().print(f"Resumed agent session: {session.id}")
+
+
+@agent_app.command("stop")
+def agent_stop_command(
+    session_id: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Stop the verified process group for an active agent session."""
+    try:
+        session = interrupt_session(path, session_id)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Agent stop failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"session": _record_payload(session), "status": "pass"})
+        return
+    _console().print(f"Agent session is {session.state}: {session.id}")
+
+
+@mcp_app.command("config")
+def mcp_config_command(
+    runtime: Runtime = _MCP_RUNTIME_ARGUMENT,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Print a machine neutral MCP registration snippet for one runtime."""
+    config = runtime_mcp_config(runtime)
+    command = registration_command(runtime)
+    if json_output:
+        _emit_json(
+            {
+                "command": list(command) if command else None,
+                "config": config,
+                "runtime": runtime.value,
+                "status": "pass",
+            }
+        )
+        return
+    if command:
+        typer.echo(shlex.join(command))
+    typer.echo(json.dumps(config, indent=2, sort_keys=True))
+
+
 @app.command()
 def render(
     check: bool = typer.Option(False, "--check", help="Check generated assets without writing."),
@@ -1080,12 +1290,21 @@ def doctor(
         for diagnostic in diagnostics
         if diagnostic.name.startswith("torc:")
     }
+    mcp = {
+        diagnostic.name.removeprefix("mcp:"): {
+            "message": diagnostic.message,
+            "status": diagnostic.status,
+        }
+        for diagnostic in diagnostics
+        if diagnostic.name.startswith("mcp:")
+    }
     if json_output:
         _emit_json(
             {
                 "assets": {"message": assets.message, "status": assets.status},
                 "requested_runtime": requested_runtime,
                 "requested_torc_profile": torc_profile,
+                "mcp": mcp,
                 "runtimes": runtimes,
                 "torc": torc,
             }

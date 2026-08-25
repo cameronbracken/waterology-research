@@ -1,6 +1,9 @@
 import json
 
-from waterology.core.records import ExecutorReference, RunManifest
+import pytest
+from pydantic import ValidationError
+
+from waterology.core.records import AgentAttemptRecord, ExecutorReference, RunManifest
 
 
 def _manifest_payload() -> dict[str, object]:
@@ -56,3 +59,15 @@ def test_torc_manifest_records_managed_executor_reference() -> None:
         job_ids=("8",),
         torc_version="torc 0.39.0",
     )
+
+
+def test_agent_attempt_rejects_nonportable_log_paths() -> None:
+    with pytest.raises(ValidationError, match="relative project paths"):
+        AgentAttemptRecord(
+            number=1,
+            state="running",
+            prompt_path=".waterology/sessions/session-1111111111111111/attempt-001/prompt.md",
+            events_path="../outside.jsonl",
+            stderr_path=".waterology/sessions/session-1111111111111111/attempt-001/stderr.log",
+            initial_commit="a" * 40,
+        )

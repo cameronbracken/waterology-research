@@ -13,6 +13,7 @@ Thumbs.db
 .codex/*
 !.codex/agents/
 !.codex/agents/*.toml
+!.codex/config.toml
 .cursor/
 .aider*
 

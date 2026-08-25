@@ -27,6 +27,10 @@ def _portable_record_paths(values: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(validated)
 
 
+def _portable_record_path(value: str) -> str:
+    return _portable_record_paths((value,))[0]
+
+
 class ExperimentRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -64,6 +68,145 @@ class WorktreeRecord(BaseModel):
     path: str
     owner: str | None = None
     exists: bool
+
+
+SessionState = Literal[
+    "created",
+    "running",
+    "waiting",
+    "completed",
+    "failed",
+    "cancelled",
+    "lost",
+]
+
+
+class AgentAttemptRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    number: int = Field(ge=1)
+    state: SessionState
+    prompt_path: str
+    events_path: str
+    stderr_path: str
+    started_at: str | None = None
+    finished_at: str | None = None
+    supervisor_pid: int | None = Field(default=None, ge=1)
+    process_pid: int | None = Field(default=None, ge=1)
+    native_session_id: str | None = None
+    exit_code: int | None = None
+    initial_commit: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    resulting_commit: str | None = Field(default=None, pattern=r"^[0-9a-f]{40,64}$")
+
+    _validate_paths = field_validator("prompt_path", "events_path", "stderr_path")(
+        _portable_record_path
+    )
+
+
+class AgentSessionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^session-[0-9a-f]{16}$")
+    project_id: str = Field(min_length=1)
+    experiment_id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+    runtime: Literal["claude", "codex", "opencode"]
+    role: str = Field(min_length=1)
+    compute_profile: str = Field(min_length=1)
+    worktree: str = Field(min_length=1)
+    task_path: str = Field(min_length=1)
+    state: SessionState = "created"
+    native_session_id: str | None = None
+    supervisor_pid: int | None = Field(default=None, ge=1)
+    process_pid: int | None = Field(default=None, ge=1)
+    created_at: str
+    updated_at: str
+    finished_at: str | None = None
+    exit_code: int | None = None
+    initial_commit: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    resulting_commits: tuple[str, ...] = ()
+    attempts: tuple[AgentAttemptRecord, ...] = ()
+
+    _validate_paths = field_validator("worktree", "task_path")(_portable_record_path)
+
+    @field_validator("role", "compute_profile")
+    @classmethod
+    def _nonblank_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+        return stripped
+
+
+class AgentProcessRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    pid: int = Field(ge=1, strict=True)
+    started_at: str
+    native_session_id: str | None = None
+
+
+class AgentStartingRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    started_at: str
+    containment: Literal["process_group", "windows_job"]
+
+
+class AgentResultRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    state: Literal["completed", "failed", "cancelled"]
+    exit_code: int = Field(strict=True)
+    finished_at: str
+    native_session_id: str | None = None
+    process_pid: int | None = Field(default=None, ge=1, strict=True)
+    resulting_commit: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+
+
+class SessionNoteRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^note-[0-9a-f]{16}$")
+    session_id: str = Field(pattern=r"^session-[0-9a-f]{16}$")
+    text: str = Field(min_length=1)
+    author: str | None = None
+    created_at: str
+
+
+class EvidenceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^evidence-[0-9a-f]{16}$")
+    experiment_id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+    claim: str = Field(min_length=1)
+    kind: Literal["note", "metric", "source", "artifact"] = "note"
+    path: str | None = None
+    run_id: str | None = Field(default=None, pattern=r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+    session_id: str | None = Field(default=None, pattern=r"^session-[0-9a-f]{16}$")
+    created_at: str
+
+    @field_validator("path")
+    @classmethod
+    def _validate_optional_path(cls, value: str | None) -> str | None:
+        return _portable_record_path(value) if value is not None else None
+
+
+class ArtifactReferenceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^artifact-[0-9a-f]{16}$")
+    experiment_id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+    path: str = Field(min_length=1)
+    label: str | None = None
+    run_id: str | None = Field(default=None, pattern=r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+    session_id: str | None = Field(default=None, pattern=r"^session-[0-9a-f]{16}$")
+    created_at: str
+
+    _validate_path = field_validator("path")(_portable_record_path)
 
 
 class ExecutorReference(BaseModel):
@@ -168,5 +311,9 @@ class RepairResult(BaseModel):
     runs: int
     assessments: int
     artifacts: int
+    sessions: int = 0
+    session_notes: int = 0
+    evidence: int = 0
+    artifact_references: int = 0
     rejected_records: int = 0
     warnings: tuple[str, ...] = ()

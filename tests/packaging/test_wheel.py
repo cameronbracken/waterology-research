@@ -22,6 +22,10 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
     required = {
         "waterology/core/migrations/001_initial.sql",
         "waterology/core/migrations/002_torc_execution.sql",
+        "waterology/core/migrations/003_agent_sessions.sql",
+        "waterology/mcp/server.py",
+        "waterology_assets/.mcp.json",
+        "waterology_assets/opencode.json",
         "waterology_assets/skills/project-conventions/SKILL.md",
         "waterology_assets/skills/writing-style/SKILL.md",
         "waterology_assets/skills/writing-style/references/scientific-prose.md",
@@ -37,6 +41,7 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         "waterology_assets/commands/summarize.md",
         "waterology_assets/agents/researcher.md",
         "waterology_assets/.codex/agents/researcher.toml",
+        "waterology_assets/.codex/config.toml",
         "waterology_assets/.opencode/agents/researcher.md",
         "waterology_assets/.claude-plugin/plugin.json",
         "waterology_assets/.codex-plugin/plugin.json",
@@ -61,11 +66,26 @@ def _assert_manifest_covers_installed_destinations(manifest_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("runtime", "agent_path", "skill_path"),
+    ("runtime", "agent_path", "skill_path", "mcp_path"),
     [
-        ("claude", ".claude/agents/researcher.md", ".claude/skills/project-conventions"),
-        ("codex", ".codex/agents/researcher.toml", ".agents/skills/project-conventions"),
-        ("opencode", ".opencode/agents/researcher.md", ".opencode/skills/project-conventions"),
+        (
+            "claude",
+            ".claude/agents/researcher.md",
+            ".claude/skills/project-conventions",
+            ".mcp.json",
+        ),
+        (
+            "codex",
+            ".codex/agents/researcher.toml",
+            ".agents/skills/project-conventions",
+            ".codex/config.toml",
+        ),
+        (
+            "opencode",
+            ".opencode/agents/researcher.md",
+            ".opencode/skills/project-conventions",
+            "opencode.json",
+        ),
     ],
 )
 def test_project_install_smoke(
@@ -73,11 +93,13 @@ def test_project_install_smoke(
     runtime: str,
     agent_path: str,
     skill_path: str,
+    mcp_path: str,
 ) -> None:
     result = runner.invoke(app, ["install", runtime, "--target", str(tmp_path)])
 
     assert result.exit_code == 0, result.stdout
     assert (tmp_path / skill_path / "SKILL.md").is_file()
+    assert (tmp_path / mcp_path).is_file()
     installed_agent = tmp_path / agent_path
     if installed_agent.suffix == ".toml":
         assert tomllib.loads(installed_agent.read_text(encoding="utf-8"))["name"] == "researcher"

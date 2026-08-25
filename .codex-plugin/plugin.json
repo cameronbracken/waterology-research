@@ -12,6 +12,7 @@
   "license": "MIT",
   "keywords": ["research", "reproducibility", "hydrology", "scientific-computing"],
   "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Waterology",
     "shortDescription": "Reproducible computational research workflows",

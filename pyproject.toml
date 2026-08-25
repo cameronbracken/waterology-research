@@ -20,8 +20,12 @@ dependencies = [
   "zstandard>=0.23,<1",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp>=2,<3"]
+
 [project.scripts]
 waterology = "waterology.cli:app"
+waterology-mcp = "waterology.mcp.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/waterology", "src/waterology_assets"]
@@ -34,9 +38,12 @@ packages = ["src/waterology", "src/waterology_assets"]
 "agents" = "waterology_assets/agents"
 "agent-definitions" = "waterology_assets/agent-definitions"
 ".codex/agents" = "waterology_assets/.codex/agents"
+".codex/config.toml" = "waterology_assets/.codex/config.toml"
 ".opencode/agents" = "waterology_assets/.opencode/agents"
 ".claude-plugin" = "waterology_assets/.claude-plugin"
 ".codex-plugin" = "waterology_assets/.codex-plugin"
+".mcp.json" = "waterology_assets/.mcp.json"
+"opencode.json" = "waterology_assets/opencode.json"
 "ATTRIBUTION.md" = "waterology_assets/ATTRIBUTION.md"
 "LICENSE" = "waterology_assets/LICENSE"
 

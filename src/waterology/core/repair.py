@@ -10,18 +10,44 @@ from waterology.core.archive import ArchiveError, list_archives, verify_project_
 from waterology.core.assessments import AssessmentError, list_assessments
 from waterology.core.database import Database, open_database, validate_database_path
 from waterology.core.errors import WaterologyError
+from waterology.core.evidence import (
+    EvidencePathError,
+    EvidenceRelationshipError,
+    list_artifact_references,
+    list_evidence,
+    validate_evidence_reference_path,
+)
 from waterology.core.experiments import ensure_experiment_index, list_experiments
-from waterology.core.project import Project, discover_project
+from waterology.core.project import Project, discover_project, project_state_lock
 from waterology.core.records import (
+    AgentProcessRecord,
+    AgentResultRecord,
+    AgentSessionRecord,
+    AgentStartingRecord,
+    ArtifactReferenceRecord,
     AssessmentRecord,
+    EvidenceRecord,
     ExperimentRecord,
     RepairResult,
     RunManifest,
+    SessionNoteRecord,
+)
+from waterology.core.sessions import (
+    SessionConflictError,
+    SessionNotFoundError,
+    ensure_session_index,
+    list_session_notes,
+    list_sessions,
 )
 
 _EXPERIMENT_DIRECTORY = re.compile(r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
 _RUN_DIRECTORY = re.compile(r"^run-[a-z0-9][a-z0-9-]{0,62}$")
 _ASSESSMENT_FILE = re.compile(r"^assessment-[0-9a-f]{16}\.json$")
+_SESSION_DIRECTORY = re.compile(r"^session-[0-9a-f]{16}$")
+_ATTEMPT_DIRECTORY = re.compile(r"^attempt-[0-9]{3}$")
+_NOTE_FILE = re.compile(r"^note-[0-9a-f]{16}\.json$")
+_EVIDENCE_FILE = re.compile(r"^(?:evidence|artifact)-[0-9a-f]{16}\.json$")
+_ATOMIC_STAGING_FILE = re.compile(r"^\..+\.waterology-stage-[A-Za-z0-9_-]+$")
 
 
 class RepairRecordError(WaterologyError):
@@ -30,6 +56,11 @@ class RepairRecordError(WaterologyError):
 
 def repair_index(start: Path) -> RepairResult:
     project = discover_project(start)
+    with project_state_lock(project.root):
+        return _repair_index_locked(project)
+
+
+def _repair_index_locked(project: Project) -> RepairResult:
     validate_database_path(project.paths.database)
     _validate_durable_layout(project)
     experiments = list_experiments(project.root)
@@ -38,12 +69,33 @@ def repair_index(start: Path) -> RepairResult:
     _validate_record_relationships(project, experiments, runs)
     assessments = _load_assessments(project, runs)
     artifacts = tuple(artifact for run in runs for artifact in _archive_artifacts(project, run))
+    try:
+        sessions = list_sessions(project.root)
+        session_notes = tuple(
+            note for session in sessions for note in list_session_notes(project.root, session.id)
+        )
+    except (SessionConflictError, SessionNotFoundError, ValueError) as error:
+        raise RepairRecordError(str(error)) from error
+    evidence = list_evidence(project.root)
+    artifact_references = list_artifact_references(project.root)
+    _validate_slice_five_relationships(
+        project,
+        experiments,
+        runs,
+        sessions,
+        evidence,
+        artifact_references,
+    )
     result = RepairResult(
         projects=1,
         experiments=len(experiments),
         runs=len(runs),
         assessments=len(assessments),
         artifacts=len(artifacts),
+        sessions=len(sessions),
+        session_notes=len(session_notes),
+        evidence=len(evidence),
+        artifact_references=len(artifact_references),
     )
 
     temporary = project.paths.database.with_name(f".state.sqlite.repair-{uuid4().hex[:12]}.sqlite")
@@ -64,6 +116,14 @@ def repair_index(start: Path) -> RepairResult:
                 _import_assessment(database, assessment)
             for artifact in artifacts:
                 _import_artifact(database, *artifact)
+            for session in sessions:
+                ensure_session_index(database, session)
+            for note in session_notes:
+                _import_session_note(database, note)
+            for record in evidence:
+                _import_evidence(database, record)
+            for record in artifact_references:
+                _import_artifact_reference(database, record)
             integrity = database.connection.execute("PRAGMA integrity_check").fetchone()[0]
             if integrity != "ok":
                 raise sqlite3.IntegrityError(
@@ -122,12 +182,122 @@ def _validate_durable_layout(project: Project) -> None:
             ):
                 rejected.append(record.relative_to(project.root).as_posix())
 
+    for directory in project.paths.sessions.iterdir():
+        if directory.name == ".DS_Store":
+            continue
+        record = directory / "session.json"
+        task = directory / "task.md"
+        if (
+            directory.is_symlink()
+            or not directory.is_dir()
+            or _SESSION_DIRECTORY.fullmatch(directory.name) is None
+            or record.is_symlink()
+            or not record.is_file()
+            or task.is_symlink()
+            or not task.is_file()
+        ):
+            rejected.append(directory.relative_to(project.root).as_posix())
+            continue
+        try:
+            payload = json.loads(record.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict) or payload.get("id") != directory.name:
+            rejected.append(record.relative_to(project.root).as_posix())
+        allowed_root_files = {".lock", "session.json", "task.md"}
+        for child in directory.iterdir():
+            relative = child.relative_to(project.root).as_posix()
+            if _is_atomic_staging_file(child):
+                continue
+            if child.is_symlink():
+                rejected.append(relative)
+            elif child.name in allowed_root_files and child.is_file():
+                continue
+            elif child.name == "notes" and child.is_dir():
+                for note in child.iterdir():
+                    if _is_atomic_staging_file(note):
+                        continue
+                    if (
+                        note.is_symlink()
+                        or not note.is_file()
+                        or _NOTE_FILE.fullmatch(note.name) is None
+                    ):
+                        rejected.append(note.relative_to(project.root).as_posix())
+                        continue
+                    try:
+                        note_payload = json.loads(note.read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        continue
+                    if (
+                        not isinstance(note_payload, dict)
+                        or note_payload.get("id") != note.stem
+                        or note_payload.get("session_id") != directory.name
+                    ):
+                        rejected.append(note.relative_to(project.root).as_posix())
+            elif _ATTEMPT_DIRECTORY.fullmatch(child.name) and child.is_dir():
+                required = {"events.jsonl", "prompt.md", "stderr.log"}
+                optional = {
+                    "launch.ready",
+                    "process.json",
+                    "result.json",
+                    "runtime-starting.json",
+                }
+                items = tuple(
+                    item for item in child.iterdir() if not _is_atomic_staging_file(item)
+                )
+                names = {item.name for item in items}
+                if not required.issubset(names) or not names.issubset(required | optional):
+                    rejected.append(relative)
+                for item in items:
+                    if item.is_symlink() or not item.is_file():
+                        rejected.append(item.relative_to(project.root).as_posix())
+                        continue
+                    record_type = {
+                        "process.json": AgentProcessRecord,
+                        "result.json": AgentResultRecord,
+                        "runtime-starting.json": AgentStartingRecord,
+                    }.get(item.name)
+                    if record_type is not None:
+                        try:
+                            record_type.model_validate_json(item.read_text(encoding="utf-8"))
+                        except (OSError, ValueError):
+                            rejected.append(item.relative_to(project.root).as_posix())
+            else:
+                rejected.append(relative)
+
+    for record in project.paths.evidence.iterdir():
+        if record.name == ".DS_Store":
+            continue
+        if _is_atomic_staging_file(record):
+            continue
+        if (
+            record.is_symlink()
+            or not record.is_file()
+            or _EVIDENCE_FILE.fullmatch(record.name) is None
+        ):
+            rejected.append(record.relative_to(project.root).as_posix())
+            continue
+        try:
+            payload = json.loads(record.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict) or payload.get("id") != record.stem:
+            rejected.append(record.relative_to(project.root).as_posix())
+
     if rejected:
         paths = tuple(sorted(rejected))
         raise RepairRecordError(
             f"Repair rejected {len(paths)} malformed durable record location(s)",
             details={"paths": list(paths), "rejected_records": len(paths)},
         )
+
+
+def _is_atomic_staging_file(path: Path) -> bool:
+    return (
+        not path.is_symlink()
+        and path.is_file()
+        and _ATOMIC_STAGING_FILE.fullmatch(path.name) is not None
+    )
 
 
 def _validate_record_relationships(
@@ -144,6 +314,80 @@ def _validate_record_relationships(
             raise ArchiveError(f"Run project does not match configuration: {run.run_id}")
         if run.experiment_id not in experiment_ids:
             raise ArchiveError(f"Run references an unknown experiment: {run.run_id}")
+
+
+def _validate_slice_five_relationships(
+    project: Project,
+    experiments: tuple[ExperimentRecord, ...],
+    runs: tuple[RunManifest, ...],
+    sessions: tuple[AgentSessionRecord, ...],
+    evidence: tuple[EvidenceRecord, ...],
+    artifact_references: tuple[ArtifactReferenceRecord, ...],
+) -> None:
+    experiment_by_id = {record.id: record for record in experiments}
+    run_by_id = {record.run_id: record for record in runs}
+    session_by_id = {record.id: record for record in sessions}
+    for session in sessions:
+        experiment = experiment_by_id.get(session.experiment_id)
+        if experiment is None:
+            raise RepairRecordError(f"Session references an unknown experiment: {session.id}")
+        if session.project_id != project.config.name:
+            raise RepairRecordError(f"Session project does not match configuration: {session.id}")
+        if session.worktree != experiment.worktree:
+            raise RepairRecordError(f"Session worktree does not match experiment: {session.id}")
+        prefix = f".waterology/sessions/{session.id}"
+        if session.task_path != f"{prefix}/task.md":
+            raise RepairRecordError(f"Session task path does not match layout: {session.id}")
+        for expected_number, attempt in enumerate(session.attempts, start=1):
+            attempt_prefix = f"{prefix}/attempt-{expected_number:03d}"
+            if attempt.number != expected_number or (
+                attempt.prompt_path,
+                attempt.events_path,
+                attempt.stderr_path,
+            ) != (
+                f"{attempt_prefix}/prompt.md",
+                f"{attempt_prefix}/events.jsonl",
+                f"{attempt_prefix}/stderr.log",
+            ):
+                raise RepairRecordError(f"Session attempt path does not match layout: {session.id}")
+        directory = project.paths.sessions / session.id
+        actual_attempts = {
+            child.name
+            for child in directory.iterdir()
+            if child.is_dir() and _ATTEMPT_DIRECTORY.fullmatch(child.name)
+        }
+        expected_attempts = {
+            f"attempt-{number:03d}" for number in range(1, len(session.attempts) + 1)
+        }
+        if actual_attempts != expected_attempts:
+            raise RepairRecordError(f"Session attempt directories do not match record: {session.id}")
+    for record in (*evidence, *artifact_references):
+        if record.experiment_id not in experiment_by_id:
+            raise RepairRecordError(f"Record references an unknown experiment: {record.id}")
+        if record.path is not None:
+            try:
+                validate_evidence_reference_path(
+                    project,
+                    experiment_by_id[record.experiment_id],
+                    record.path,
+                    run_id=record.run_id,
+                )
+            except (EvidencePathError, EvidenceRelationshipError) as error:
+                raise RepairRecordError(f"Invalid evidence path relationship: {record.id}") from error
+        if record.run_id is not None:
+            run = run_by_id.get(record.run_id)
+            if run is None:
+                raise RepairRecordError(f"Record references an unknown run: {record.id}")
+            if run.experiment_id != record.experiment_id:
+                raise RepairRecordError(f"Record run belongs to another experiment: {record.id}")
+        if record.session_id is not None:
+            session = session_by_id.get(record.session_id)
+            if session is None:
+                raise RepairRecordError(f"Record references an unknown session: {record.id}")
+            if session.experiment_id != record.experiment_id:
+                raise RepairRecordError(
+                    f"Record session belongs to another experiment: {record.id}"
+                )
 
 
 def _load_assessments(
@@ -286,6 +530,58 @@ def _import_artifact(database: Database, run_id: str, path: str, size: int) -> N
         database.connection.execute(
             "INSERT INTO artifacts (id, run_id, path, sha256, size) VALUES (?, ?, ?, ?, ?)",
             (identifier, run_id, path, _sha256(payload), size),
+        )
+
+
+def _import_session_note(database: Database, note: SessionNoteRecord) -> None:
+    with database.connection:
+        database.connection.execute(
+            """
+            INSERT INTO session_notes (id, session_id, text, author, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (note.id, note.session_id, note.text, note.author, note.created_at),
+        )
+
+
+def _import_evidence(database: Database, record: EvidenceRecord) -> None:
+    with database.connection:
+        database.connection.execute(
+            """
+            INSERT INTO evidence (
+                id, experiment_id, claim, kind, path, run_id, session_id, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                record.id,
+                record.experiment_id,
+                record.claim,
+                record.kind,
+                record.path,
+                record.run_id,
+                record.session_id,
+                record.created_at,
+            ),
+        )
+
+
+def _import_artifact_reference(database: Database, record: ArtifactReferenceRecord) -> None:
+    with database.connection:
+        database.connection.execute(
+            """
+            INSERT INTO artifact_references (
+                id, experiment_id, path, label, run_id, session_id, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                record.id,
+                record.experiment_id,
+                record.path,
+                record.label,
+                record.run_id,
+                record.session_id,
+                record.created_at,
+            ),
         )
 
 

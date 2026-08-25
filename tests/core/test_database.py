@@ -28,7 +28,7 @@ def test_open_database_applies_migrations_once(tmp_path: Path) -> None:
             )
         }
 
-    assert [row[0] for row in first_versions] == [1, 2]
+    assert [row[0] for row in first_versions] == [1, 2, 3]
     assert second_versions == first_versions
     assert {
         "projects",
@@ -37,6 +37,11 @@ def test_open_database_applies_migrations_once(tmp_path: Path) -> None:
         "assessments",
         "artifacts",
         "events",
+        "sessions",
+        "session_attempts",
+        "session_notes",
+        "evidence",
+        "artifact_references",
     } <= tables
 
     with open_database(path) as database:

@@ -23,6 +23,7 @@ def test_project_codex_plan_uses_shared_skills_and_codex_agents(tmp_path: Path) 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
     assert ".agents/skills/project-conventions" in destinations
     assert ".codex/agents/researcher.toml" in destinations
+    assert ".codex/config.toml" in destinations
     assert all(action.operation == "copy" for action in plan.actions)
     assert plan.trusted_root == tmp_path.absolute()
 
@@ -40,7 +41,10 @@ def test_project_claude_plan_keeps_command_shims(tmp_path: Path) -> None:
     assert ".claude/skills/deep-research" in destinations
     assert ".claude/agents/researcher.md" in destinations
     assert ".claude/commands/deepresearch.md" in destinations
-    assert all(action.operation == "link" for action in plan.actions)
+    assert ".mcp.json" in destinations
+    assert next(action for action in plan.actions if action.destination.name == ".mcp.json").operation == (
+        "copy"
+    )
 
 
 def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
@@ -55,17 +59,27 @@ def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
     assert ".opencode/skills/project-conventions" in destinations
     assert ".opencode/agents/researcher.md" in destinations
+    assert "opencode.json" in destinations
 
 
 @pytest.mark.parametrize(
     ("runtime", "expected_manifests"),
     [
-        (Runtime.CLAUDE, {".claude/.waterology-install.json"}),
+        (
+            Runtime.CLAUDE,
+            {".claude/.waterology-install.json", ".waterology-claude-install.json"},
+        ),
         (
             Runtime.CODEX,
-            {".agents/.waterology-install.json", ".codex/.waterology-install.json"},
+            {
+                ".agents/.waterology-install.json",
+                ".codex/.waterology-install.json",
+            },
         ),
-        (Runtime.OPENCODE, {".opencode/.waterology-install.json"}),
+        (
+            Runtime.OPENCODE,
+            {".opencode/.waterology-install.json", ".waterology-opencode-install.json"},
+        ),
     ],
 )
 def test_project_plans_put_manifests_at_runtime_roots(
@@ -99,8 +113,9 @@ def test_plan_actions_are_deterministic_catalog_relative_and_dry(tmp_path: Path)
     skill_ids = [source_id for source_id in source_ids if source_id.startswith("skills/")]
     agent_ids = [source_id for source_id in source_ids if source_id.startswith("agents/")]
     command_ids = [source_id for source_id in source_ids if source_id.startswith("commands/")]
+    config_ids = [source_id for source_id in source_ids if source_id == ".mcp.json"]
 
-    assert source_ids == skill_ids + agent_ids + command_ids
+    assert source_ids == skill_ids + agent_ids + command_ids + config_ids
     assert skill_ids == sorted(skill_ids)
     assert agent_ids == sorted(agent_ids)
     assert command_ids == sorted(command_ids)

@@ -223,7 +223,10 @@ def test_codex_install_writes_separate_root_relative_manifests(tmp_path: Path) -
     assert agents_manifest["assets"]
     assert all(key.startswith("skills/") for key in agents_manifest["assets"])
     assert codex_manifest["assets"]
-    assert all(key.startswith("agents/") for key in codex_manifest["assets"])
+    assert set(codex_manifest["assets"]) >= {"agents/researcher.toml", "config.toml"}
+    assert (tmp_path / ".codex/config.toml").read_text(encoding="utf-8") == (
+        '[mcp_servers.waterology]\ncommand = "waterology-mcp"\n'
+    )
 
 
 def test_force_refuses_an_unowned_broken_symlink(tmp_path: Path) -> None:

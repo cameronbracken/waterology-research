@@ -34,6 +34,8 @@ def test_initialize_project_writes_portable_layout(tmp_path: Path) -> None:
     assert (root / "artifacts").is_dir()
     assert (root / ".waterology" / "experiments").is_dir()
     assert (root / ".waterology" / "runs").is_dir()
+    assert (root / ".waterology" / "sessions").is_dir()
+    assert (root / ".waterology" / "evidence").is_dir()
     assert (root / ".waterology" / "assessments").is_dir()
     assert (root / ".waterology" / "staging").is_dir()
     assert (root / ".waterology" / "worktrees").is_dir()
@@ -78,6 +80,18 @@ def test_discover_project_walks_from_a_nested_path(tmp_path: Path) -> None:
     assert project.config.name == "study"
 
 
+def test_discover_project_upgrades_pre_session_state_layout(tmp_path: Path) -> None:
+    root = make_git_repository(tmp_path / "study")
+    initialize_project(root)
+    (root / ".waterology" / "sessions").rmdir()
+    (root / ".waterology" / "evidence").rmdir()
+
+    project = discover_project(root)
+
+    assert project.paths.sessions.is_dir()
+    assert project.paths.evidence.is_dir()
+
+
 def test_discover_project_inside_experiment_worktree_uses_owning_state(tmp_path: Path) -> None:
     root = make_git_repository(tmp_path / "study")
     initialize_project(root)
@@ -103,7 +117,9 @@ def test_initialize_rejects_symlinked_local_state(tmp_path: Path) -> None:
         initialize_project(root)
 
 
-@pytest.mark.parametrize("directory", ["experiments", "runs", "staging", "worktrees"])
+@pytest.mark.parametrize(
+    "directory", ["experiments", "runs", "sessions", "evidence", "staging", "worktrees"]
+)
 def test_discover_rejects_symlinked_state_subdirectory(tmp_path: Path, directory: str) -> None:
     root = make_git_repository(tmp_path / "study")
     initialize_project(root)

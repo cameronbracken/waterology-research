@@ -22,6 +22,9 @@ agents/              generated Claude Code agents
 commands/           Claude Code compatibility commands
 rules/              path scoped conventions
 constraints/        paired checks run by check-all.py
+.mcp.json           Claude Code and Codex plugin MCP registration
+.codex/config.toml  Codex project MCP registration
+opencode.json       OpenCode project MCP registration
 ATTRIBUTION.md      citation ledger for adapted upstream material
 ```
 
@@ -185,6 +188,54 @@ binary and profile availability while leaving direct execution usable. Run
 `waterology doctor --torc-profile <profile>` to check the installed version and
 API connection for one profile.
 
+## Agent sessions and MCP
+
+Waterology can launch Claude Code, Codex, or OpenCode in an experiment worktree. Each top level
+session receives a task brief, role, compute profile, artifact location, project guidance, and MCP
+instructions. The database prevents two active sessions from writing to the same worktree.
+
+```console
+pixi run waterology agent start <experiment-id> "Compare the calibration variants" \
+  --runtime codex --role researcher
+pixi run waterology agent list
+pixi run waterology agent status <session-id>
+pixi run waterology agent logs <session-id>
+pixi run waterology agent resume <session-id> "Check the residual diagnostics"
+pixi run waterology agent stop <session-id>
+```
+
+Claude Code, Codex, and OpenCode keep their native sessions and structured events. Waterology stores
+the native identifier, process metadata, task brief, attempt logs, timestamps, and resulting commits
+under `.waterology/sessions/<session-id>/`. Resume uses the runtime's native mechanism. A missing
+process becomes `lost`, while its worktree and logs remain available. `waterology repair-index`
+rebuilds session, note, evidence, and artifact reference rows from these durable records.
+
+Install the optional MCP dependency when Waterology is installed outside the Pixi development
+environment:
+
+```console
+pip install 'waterology-research[mcp]'
+waterology-mcp
+```
+
+The server uses local stdio and offers bounded tools for experiments, runs, archives, metrics,
+evidence, artifact references, and session notes. It does not expose shell execution, arbitrary file
+reads, Git publication, or remote deletion. The plugin `.mcp.json` registers the server for Claude
+Code and Codex plugins. `.codex/config.toml` and `opencode.json` contain project registrations for
+Codex and OpenCode. A project scoped `waterology install` copies the matching registration when its
+destination is absent or already owned by Waterology. Print a machine neutral registration snippet
+or supported CLI command with:
+
+```console
+waterology mcp config claude
+waterology mcp config codex
+waterology mcp config opencode
+```
+
+The runtime command must be able to find `waterology-mcp` on `PATH`. The installer refuses to replace
+project configuration it does not own. Merge the printed snippet manually when another configuration
+already owns the destination.
+
 ## Constraints
 
 | Check | What it enforces |
@@ -227,8 +278,8 @@ source text on disk and reads it in bounded windows.
 
 ## Status
 
-The cross runtime foundation, research methods migration, experiment core, and
-TORC managed execution are complete.
+The cross runtime foundation, research methods migration, experiment core, TORC managed execution,
+and agent session and MCP slices are complete.
 The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 

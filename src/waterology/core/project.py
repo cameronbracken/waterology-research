@@ -1,7 +1,10 @@
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from waterology.core.atomic import exclusive_file_lock
 from waterology.core.config import (
     ProjectConfig,
     default_project_config,
@@ -10,7 +13,16 @@ from waterology.core.config import (
 )
 from waterology.core.errors import WaterologyError
 
-_STATE_DIRECTORIES = ("assessments", "experiments", "runs", "staging", "worktrees")
+_STATE_DIRECTORIES = (
+    "assessments",
+    "evidence",
+    "experiments",
+    "runs",
+    "sessions",
+    "staging",
+    "worktrees",
+)
+_SLICE_FIVE_DIRECTORIES = ("evidence", "sessions")
 
 
 class ProjectNotFoundError(WaterologyError):
@@ -32,8 +44,10 @@ class ProjectPaths:
     state: Path
     database: Path
     assessments: Path
+    evidence: Path
     experiments: Path
     runs: Path
+    sessions: Path
     staging: Path
     worktrees: Path
 
@@ -70,8 +84,10 @@ def project_paths(root: Path) -> ProjectPaths:
         state=state,
         database=state / "state.sqlite",
         assessments=state / "assessments",
+        evidence=state / "evidence",
         experiments=state / "experiments",
         runs=state / "runs",
+        sessions=state / "sessions",
         staging=state / "staging",
         worktrees=state / "worktrees",
     )
@@ -112,6 +128,13 @@ def discover_project(start: Path) -> Project:
             configured_path = configured_path or candidate
             if paths.state.is_dir():
                 project = Project(candidate, load_project_config(paths.config_file), paths)
+                _validate_state_directory(paths.state, project.root)
+                for directory in _SLICE_FIVE_DIRECTORIES:
+                    added = paths.state / directory
+                    if added.exists() or added.is_symlink():
+                        _validate_state_directory(added, project.root)
+                    else:
+                        _ensure_state_directory(added, project.root)
                 validate_project_state(project)
                 return project
     if configured_path is not None:
@@ -125,6 +148,16 @@ def validate_project_state(project: Project) -> None:
     _validate_state_directory(project.paths.state, project.root)
     for directory in _STATE_DIRECTORIES:
         _validate_state_directory(project.paths.state / directory, project.root)
+
+
+@contextmanager
+def project_state_lock(start: Path) -> Iterator[None]:
+    project = discover_project(start)
+    lock_path = project.paths.state / ".project.lock"
+    if lock_path.is_symlink():
+        raise ProjectInitializationError(f"Local state lock must not be a symlink: {lock_path}")
+    with exclusive_file_lock(lock_path):
+        yield
 
 
 def inspect_project(start: Path) -> ProjectStatus:

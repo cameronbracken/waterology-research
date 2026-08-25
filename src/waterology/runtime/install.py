@@ -95,6 +95,7 @@ def build_install_plan(
         _skill_actions(catalog, directories["skills"], mode)
         + _file_actions(catalog, _agent_directory(runtime), directories["agents"], mode)
         + _command_actions(catalog, directories.get("commands"), mode)
+        + _mcp_configuration_actions(catalog, runtime, scope, trusted_root)
     )
     return InstallPlan(
         runtime=runtime,
@@ -728,6 +729,37 @@ def _command_actions(
         return ()
     sources = sorted(catalog.path("commands").glob("*.md"))
     return tuple(_action(catalog, source, destination / source.name, mode) for source in sources)
+
+
+def _mcp_configuration_actions(
+    catalog: AssetCatalog,
+    runtime: Runtime,
+    scope: InstallScope,
+    trusted_root: Path,
+) -> tuple[InstallAction, ...]:
+    if scope is not InstallScope.PROJECT:
+        return ()
+    source_id, relative = {
+        Runtime.CLAUDE: (".mcp.json", ".mcp.json"),
+        Runtime.CODEX: (".codex/config.toml", ".codex/config.toml"),
+        Runtime.OPENCODE: ("opencode.json", "opencode.json"),
+    }[runtime]
+    source = catalog.path(source_id)
+    destination = trusted_root / relative
+    manifest = (
+        destination.parent / ".waterology-install.json"
+        if runtime is Runtime.CODEX
+        else trusted_root / f".waterology-{runtime.value}-install.json"
+    )
+    return (
+        InstallAction(
+            source=source,
+            source_id=source_id,
+            destination=destination,
+            operation=InstallMode.COPY.value,
+            manifest=manifest,
+        ),
+    )
 
 
 def _action(

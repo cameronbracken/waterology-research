@@ -10,7 +10,11 @@ def test_distribution_name_preserves_waterology_cli() -> None:
     pixi = tomllib.loads((ROOT / "pixi.toml").read_text())
 
     assert project["project"]["name"] == "waterology-research"
-    assert project["project"]["scripts"] == {"waterology": "waterology.cli:app"}
+    assert project["project"]["scripts"] == {
+        "waterology": "waterology.cli:app",
+        "waterology-mcp": "waterology.mcp.server:main",
+    }
+    assert project["project"]["optional-dependencies"]["mcp"] == ["mcp>=2,<3"]
     assert "waterology-research" in pixi["pypi-dependencies"]
     assert "waterology" not in pixi["pypi-dependencies"]
 
@@ -109,15 +113,16 @@ def test_roadmap_marks_platform_slices_complete() -> None:
     roadmap = (ROOT / "ROADMAP.md").read_text()
 
     assert (
-        "The cross runtime foundation, research methods migration, experiment core, and\n"
-        "TORC managed execution are complete."
+        "The cross runtime foundation, research methods migration, experiment core, TORC managed execution,\n"
+        "and agent session and MCP slices are complete."
     ) in readme
     assert "Research workflows are runtime neutral." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
     assert "- [x] **Slice 2: research methods**" in roadmap
     assert "- [x] **Slice 3: experiment core**" in roadmap
     assert "- [x] **Slice 4: TORC integration**" in roadmap
-    assert roadmap.count("- [x]") == 4
+    assert "- [x] **Slice 5: agent sessions and MCP**" in roadmap
+    assert roadmap.count("- [x]") == 5
     assert "Task 10 owns the remaining acceptance checks." not in roadmap
     assert "Later skill migration remains planned for Slice 2." not in roadmap
     assert "## Research feature roadmap" in roadmap

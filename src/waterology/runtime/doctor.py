@@ -1,5 +1,6 @@
 import shutil
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Literal
 
@@ -46,6 +47,22 @@ def run_diagnostics(
             "torc:binary",
             "pass" if torc_path else "warn",
             torc_path or "torc command was not found; direct execution remains available",
+        )
+    )
+    mcp_available = find_spec("mcp") is not None
+    diagnostics.append(
+        Diagnostic(
+            "mcp:sdk",
+            "pass" if mcp_available else "warn",
+            "MCP Python SDK is installed" if mcp_available else "Install the mcp package extra",
+        )
+    )
+    mcp_server = shutil.which("waterology-mcp")
+    diagnostics.append(
+        Diagnostic(
+            "mcp:server",
+            "pass" if mcp_server else "warn",
+            mcp_server or "waterology-mcp entry point was not found",
         )
     )
     try:
