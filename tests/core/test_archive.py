@@ -26,6 +26,7 @@ from waterology.core.config import (
 )
 from waterology.core.experiments import create_experiment
 from waterology.core.project import initialize_project
+from waterology.core.records import ExecutorReference
 
 runner = CliRunner()
 
@@ -99,6 +100,51 @@ def test_build_and_verify_run_archive(tmp_path: Path) -> None:
     verification = verify_archive(archive)
     assert verification.valid is True
     assert verification.missing == verification.changed == verification.unexpected == ()
+
+
+def test_torc_archive_preserves_executor_reference_and_workflow(tmp_path: Path) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    output = worktree / "artifacts" / "result.json"
+    output.parent.mkdir()
+    output.write_text("{}\n", encoding="utf-8")
+    staging = root / ".waterology" / "staging" / "run-torc"
+    staging.mkdir()
+    (staging / "torc-workflow.yaml").write_text("name: managed\n", encoding="utf-8")
+    reference = ExecutorReference(
+        compute_profile="cluster",
+        api_url="http://localhost:8085/torc-service/v1",
+        execution_mode="slurm",
+        workflow_id="42",
+        job_ids=("9",),
+        torc_version="torc 0.39.0",
+        workflow_spec_sha256="a" * 64,
+    )
+
+    archive = build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-torc",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:01:00Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="managed\n",
+        stderr="",
+        metrics={},
+        executor_reference=reference,
+        compute_profile="cluster",
+    )
+
+    manifest = load_archive(root, "run-torc")
+    environment = json.loads((archive / "environment.json").read_text(encoding="utf-8"))
+    assert manifest.executor == "torc"
+    assert manifest.executor_reference == reference
+    assert environment["compute_profile"] == "cluster"
+    assert (archive / "torc-workflow.yaml").read_text(encoding="utf-8") == "name: managed\n"
+    assert verify_archive(archive).valid is True
 
 
 def test_verify_archive_reports_changed_payload(tmp_path: Path) -> None:

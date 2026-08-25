@@ -124,6 +124,67 @@ pixi run waterology repair-index
 Project status and all experiment, worktree, run, archive, assessment, and
 repair commands support structured JSON where automation needs it.
 
+## TORC managed execution
+
+Direct execution remains available without TORC. Managed execution uses the
+TORC command line client and its JSON output. Install TORC 0.39.0 or newer
+from the official [TORC repository](https://github.com/NatLabRockies/torc),
+then define machine local profiles in `~/.config/waterology/config.toml`:
+
+```toml
+[profiles.local]
+provider = "torc"
+mode = "local"
+api_url = "http://localhost:8080/torc-service/v1"
+
+[profiles.cluster]
+provider = "torc"
+mode = "slurm"
+api_url = "http://localhost:8085/torc-service/v1"
+torc_profile = "kestrel"
+slurm_account = "your-project"
+target_shell = "posix"
+dashboard_url = "http://localhost:8085/dashboard"
+```
+
+Profiles may also use `mode = "remote"` with an `ssh_alias`. Keep passwords,
+tokens, SSH settings, and TORC credentials outside this file. Set
+`WATEROLOGY_CONFIG` to use another machine configuration path. Profiles default
+to the host shell and may set `target_shell = "posix"` or `"windows"` when the
+workers use a different operating system.
+
+List profiles and start a managed run with:
+
+```console
+pixi run waterology compute profile list
+pixi run waterology run start <experiment-id> --profile local
+pixi run waterology run watch <run-id>
+pixi run waterology run cancel <run-id>
+```
+
+The first remote or Slurm launch requires `--confirm-remote`. Waterology then
+records the trusted profile name in machine configuration. Project
+configuration cannot grant this trust.
+
+Waterology generates and validates a TORC workflow from the committed command
+and resource request. TORC handles local workers, remote workers, Slurm
+generation, scheduling, and retries. Waterology records workflow and job IDs,
+maps executor state, collects terminal logs and declared artifacts, then seals
+the standard run archive. Time series resource databases are retained and
+summarized in the archive metrics. An unreachable TORC service reports
+`unknown`; it does not turn the run into a failure.
+
+TORC submits from the experiment worktree and the generated job changes to
+`TORC_WORKFLOW_SUBMISSION_DIR` before running the fixed command. Remote workers
+therefore need the experiment worktree at the same shared path. Waterology does
+not add a separate SSH file transfer layer.
+
+Use `waterology compute inspect <profile>` for the configured TUI command, or
+add `--dashboard` to print the dashboard URL. `waterology doctor` reports TORC
+binary and profile availability while leaving direct execution usable. Run
+`waterology doctor --torc-profile <profile>` to check the installed version and
+API connection for one profile.
+
 ## Constraints
 
 | Check | What it enforces |
@@ -166,8 +227,8 @@ source text on disk and reads it in bounded windows.
 
 ## Status
 
-The cross runtime foundation, research methods migration, and experiment core
-are complete.
+The cross runtime foundation, research methods migration, experiment core, and
+TORC managed execution are complete.
 The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 

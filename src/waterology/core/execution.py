@@ -2,6 +2,7 @@ import json
 import re
 import sqlite3
 import subprocess
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -16,8 +17,8 @@ from waterology.core.experiments import (
     load_worktree,
 )
 from waterology.core.git import current_branch, current_commit, is_ancestor, is_clean
-from waterology.core.project import discover_project
-from waterology.core.records import RunManifest
+from waterology.core.project import Project, discover_project
+from waterology.core.records import ExperimentRecord, RunManifest
 
 _RUN_ID = re.compile(r"^run-[a-z0-9][a-z0-9-]{0,62}$")
 
@@ -34,43 +35,29 @@ class MetricExtractionError(WaterologyError):
     code = "metric_extraction_failed"
 
 
+@dataclass(frozen=True)
+class RunInputs:
+    project: Project
+    experiment: ExperimentRecord
+    worktree: Path
+    config: ProjectConfig
+    run_id: str
+    commit_sha: str
+
+
 def start_direct_run(
     start: Path,
     experiment_id: str,
     *,
     run_id: str | None = None,
 ) -> RunManifest:
-    project = discover_project(start)
-    experiment = load_experiment(project.root, experiment_id)
-    worktree_record = load_worktree(project.root, experiment_id)
-    worktree = Path(worktree_record.path)
-    identifier = run_id or f"run-{uuid4().hex[:12]}"
-    if _RUN_ID.fullmatch(identifier) is None:
-        raise ValueError(f"Invalid run identifier: {identifier}")
-    if experiment.status == "frozen":
-        raise RunPreparationError(f"Experiment is frozen: {experiment_id}")
-    if not worktree_record.exists:
-        raise RunPreparationError(f"Experiment worktree is missing: {experiment_id}")
-    config = load_project_config(worktree / "waterology.toml")
-    if config.name != experiment.project_id:
-        raise RunPreparationError(
-            f"Experiment project {experiment.project_id} does not match waterology.toml"
-        )
-    if not config.command:
-        raise RunPreparationError("waterology.toml does not define a run command")
-    if not is_clean(worktree):
-        raise RunPreparationError(f"Experiment worktree must be clean: {experiment_id}")
-    if current_branch(worktree) != experiment.branch:
-        raise RunPreparationError(
-            f"Experiment worktree is not on its recorded branch: {experiment.branch}"
-        )
-    commit_sha = current_commit(worktree)
-    if not is_ancestor(worktree, experiment.base_commit, commit_sha):
-        raise RunPreparationError(
-            f"Experiment commit is not descended from its base commit: {experiment_id}"
-        )
-    if commit_sha == experiment.base_commit:
-        raise RunPreparationError(f"Experiment must contain a committed variant: {experiment_id}")
+    inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
+    project = inputs.project
+    experiment = inputs.experiment
+    worktree = inputs.worktree
+    config = inputs.config
+    identifier = inputs.run_id
+    commit_sha = inputs.commit_sha
 
     started_at = _utc_now()
     with open_database(project.paths.database) as database:
@@ -222,6 +209,47 @@ def start_direct_run(
     return load_archive(project.root, identifier)
 
 
+def prepare_run_inputs(
+    start: Path,
+    experiment_id: str,
+    *,
+    run_id: str | None = None,
+) -> RunInputs:
+    project = discover_project(start)
+    experiment = load_experiment(project.root, experiment_id)
+    worktree_record = load_worktree(project.root, experiment_id)
+    worktree = Path(worktree_record.path)
+    identifier = run_id or f"run-{uuid4().hex[:12]}"
+    if _RUN_ID.fullmatch(identifier) is None:
+        raise ValueError(f"Invalid run identifier: {identifier}")
+    if experiment.status == "frozen":
+        raise RunPreparationError(f"Experiment is frozen: {experiment_id}")
+    if not worktree_record.exists:
+        raise RunPreparationError(f"Experiment worktree is missing: {experiment_id}")
+    config = load_project_config(worktree / "waterology.toml")
+    if config.name != experiment.project_id:
+        raise RunPreparationError(
+            f"Experiment project {experiment.project_id} does not match waterology.toml"
+        )
+    if not config.command:
+        raise RunPreparationError("waterology.toml does not define a run command")
+    if not is_clean(worktree):
+        raise RunPreparationError(f"Experiment worktree must be clean: {experiment_id}")
+    if current_branch(worktree) != experiment.branch:
+        raise RunPreparationError(
+            f"Experiment worktree is not on its recorded branch: {experiment.branch}"
+        )
+    commit_sha = current_commit(worktree)
+    if not is_ancestor(worktree, experiment.base_commit, commit_sha):
+        raise RunPreparationError(
+            f"Experiment commit is not descended from its base commit: {experiment_id}"
+        )
+    if commit_sha == experiment.base_commit:
+        raise RunPreparationError(f"Experiment must contain a committed variant: {experiment_id}")
+
+    return RunInputs(project, experiment, worktree, config, identifier, commit_sha)
+
+
 def _launch(
     command: tuple[str, ...],
     worktree: Path,
@@ -306,6 +334,8 @@ def _reserve_run(
     started_at: str,
     *,
     max_runs: int,
+    executor: str = "direct",
+    compute_profile: str | None = None,
 ) -> None:
     active_states = ("queued", "preparing", "running", "collecting", "unknown")
     try:
@@ -332,10 +362,11 @@ def _reserve_run(
         database.connection.execute(
             """
             INSERT INTO runs (
-                id, experiment_id, commit_sha, operational_state, executor, started_at
-            ) VALUES (?, ?, ?, 'queued', 'direct', ?)
+                id, experiment_id, commit_sha, operational_state, executor,
+                compute_profile, started_at
+            ) VALUES (?, ?, ?, 'queued', ?, ?, ?)
             """,
-            (run_id, experiment_id, commit_sha, started_at),
+            (run_id, experiment_id, commit_sha, executor, compute_profile, started_at),
         )
         database.connection.commit()
     except sqlite3.IntegrityError as error:

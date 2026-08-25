@@ -28,7 +28,7 @@ def test_open_database_applies_migrations_once(tmp_path: Path) -> None:
             )
         }
 
-    assert [row[0] for row in first_versions] == [1]
+    assert [row[0] for row in first_versions] == [1, 2]
     assert second_versions == first_versions
     assert {
         "projects",
@@ -38,6 +38,20 @@ def test_open_database_applies_migrations_once(tmp_path: Path) -> None:
         "artifacts",
         "events",
     } <= tables
+
+    with open_database(path) as database:
+        run_columns = {
+            row[1] for row in database.connection.execute("PRAGMA table_info(runs)").fetchall()
+        }
+    assert {
+        "compute_profile",
+        "workflow_id",
+        "job_ids_json",
+        "execution_mode",
+        "torc_version",
+        "last_observed_at",
+        "prior_operational_state",
+    } <= run_columns
 
 
 def test_open_database_configures_wal_foreign_keys_and_busy_timeout(tmp_path: Path) -> None:

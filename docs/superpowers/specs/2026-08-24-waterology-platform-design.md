@@ -266,8 +266,8 @@ flags.
 
 `~/.config/waterology/config.toml` will map portable compute profile names to
 machine settings. A profile can name a TORC API URL, execution mode, TORC site
-profile, SSH alias, and local output root. Credentials will remain in SSH,
-TORC, or provider configuration.
+profile, Slurm account, target shell, SSH alias, and local output root.
+Credentials will remain in SSH, TORC, or provider configuration.
 
 An illustrative configuration is:
 
@@ -282,6 +282,8 @@ provider = "torc"
 mode = "slurm"
 api_url = "http://localhost:8085/torc-service/v1"
 torc_profile = "cluster"
+slurm_account = "your-project"
+target_shell = "posix"
 ```
 
 Project files will refer to `local` or `cluster`, not to machine paths or

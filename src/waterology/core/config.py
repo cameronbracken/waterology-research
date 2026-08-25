@@ -33,6 +33,15 @@ class ConcurrencyConfig(BaseModel):
     max_runs: int = Field(default=1, ge=1)
 
 
+class ResourceConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    cpus: int = Field(default=1, ge=1)
+    memory_mb: int = Field(default=1024, ge=1)
+    walltime_minutes: int | None = Field(default=None, ge=1)
+    gpus: int = Field(default=0, ge=0)
+
+
 class ArchiveConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -75,6 +84,7 @@ class ProjectConfig(BaseModel):
     outputs: tuple[str, ...] = ()
     default_compute_profile: str = Field(default="direct", min_length=1)
     concurrency: ConcurrencyConfig = ConcurrencyConfig()
+    resources: ResourceConfig = ResourceConfig()
     archive: ArchiveConfig = ArchiveConfig()
     metrics: tuple[MetricExtractor, ...] = ()
 
@@ -138,11 +148,22 @@ def project_config_toml(config: ProjectConfig) -> str:
         "[concurrency]",
         f"max_runs = {config.concurrency.max_runs}",
         "",
-        "[archive]",
-        f"allow_missing_outputs = {str(config.archive.allow_missing_outputs).lower()}",
-        f"environment_allowlist = {_toml_array(config.archive.environment_allowlist)}",
-        f"log_redactions = {_toml_array(config.archive.log_redactions)}",
+        "[resources]",
+        f"cpus = {config.resources.cpus}",
+        f"gpus = {config.resources.gpus}",
     ]
+    lines.append(f"memory_mb = {config.resources.memory_mb}")
+    if config.resources.walltime_minutes is not None:
+        lines.append(f"walltime_minutes = {config.resources.walltime_minutes}")
+    lines.extend(
+        [
+            "",
+            "[archive]",
+            f"allow_missing_outputs = {str(config.archive.allow_missing_outputs).lower()}",
+            f"environment_allowlist = {_toml_array(config.archive.environment_allowlist)}",
+            f"log_redactions = {_toml_array(config.archive.log_redactions)}",
+        ]
+    )
     for metric in config.metrics:
         lines.extend(
             [

@@ -21,6 +21,7 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
 
     required = {
         "waterology/core/migrations/001_initial.sql",
+        "waterology/core/migrations/002_torc_execution.sql",
         "waterology_assets/skills/project-conventions/SKILL.md",
         "waterology_assets/skills/writing-style/SKILL.md",
         "waterology_assets/skills/writing-style/references/scientific-prose.md",
@@ -52,8 +53,7 @@ def _assert_manifest_covers_installed_destinations(manifest_path: Path) -> None:
             continue
         destinations = path.iterdir() if path.is_dir() else (path,)
         installed_destinations.update(
-            destination.relative_to(manifest_path.parent).as_posix()
-            for destination in destinations
+            destination.relative_to(manifest_path.parent).as_posix() for destination in destinations
         )
 
     assert set(manifest["assets"]) == installed_destinations

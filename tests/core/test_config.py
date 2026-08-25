@@ -44,6 +44,10 @@ field = "rmse"
     assert config.metrics[0].field == "rmse"
 
 
+def test_project_config_has_torc_compatible_default_memory() -> None:
+    assert ProjectConfig(name="study").resources.memory_mb == 1024
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

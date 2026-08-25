@@ -147,6 +147,19 @@ source carry a one-line credit at the top; this page is the canonical list.
 - **Credit string:** *Software quality guidance adapted from Superpowers 6.3.0
   (obra/superpowers, MIT).*
 
+### NatLabRockies/torc - managed execution integration
+
+- **Organization:** National Laboratory of the Rockies
+- **Repo:** <https://github.com/NatLabRockies/torc>
+- **License:** BSD 3-Clause
+- **What we use:** TORC is an optional external integration target. Waterology
+  generates workflow specifications and invokes the public TORC CLI for local,
+  remote worker, and Slurm execution. TORC retains responsibility for
+  scheduling, workers, retries, resource accounting, its TUI, and its
+  dashboard. No TORC source code is copied into this repository.
+- **Credit string:** *Managed execution integrates with TORC
+  (NatLabRockies/torc, BSD 3-Clause).*
+
 ## Original to this plugin
 
 Fortran support (discovery globs, `gfortran` runner, reproducibility header,

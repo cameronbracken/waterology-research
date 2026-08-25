@@ -1,5 +1,6 @@
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -59,6 +60,71 @@ def test_doctor_json_reports_runtime_commands(monkeypatch, tmp_path: Path) -> No
     assert payload["assets"]["status"] == "pass"
     assert payload["runtimes"]["codex"]["status"] == "pass"
     assert payload["runtimes"]["claude"]["status"] == "warn"
+    assert payload["torc"]["binary"]["status"] == "warn"
+
+
+def test_doctor_reports_valid_optional_torc_profiles(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        '[profiles.local]\nmode = "local"\napi_url = "http://localhost:8080"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("WATEROLOGY_CONFIG", str(config))
+    monkeypatch.setattr("shutil.which", lambda name: f"/bin/{name}" if name == "torc" else None)
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["torc"]["binary"]["status"] == "pass"
+    assert payload["torc"]["profiles"]["status"] == "pass"
+
+
+def test_doctor_checks_requested_torc_version_and_api(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        '[profiles.local]\nmode = "local"\napi_url = "http://localhost:8080"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("WATEROLOGY_CONFIG", str(config))
+    monkeypatch.setattr("shutil.which", lambda name: "/bin/torc" if name == "torc" else None)
+
+    def fake_run(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        stdout = "torc 0.39.0\n" if "--version" in arguments else '{"items": []}\n'
+        return subprocess.CompletedProcess(arguments, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = runner.invoke(app, ["doctor", "--torc-profile", "local", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["torc"]["connectivity"]["status"] == "pass"
+    assert "0.39.0" in payload["torc"]["connectivity"]["message"]
+
+
+def test_doctor_rejects_incompatible_torc_version(monkeypatch, tmp_path: Path) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text(
+        '[profiles.local]\nmode = "local"\napi_url = "http://localhost:8080"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("WATEROLOGY_CONFIG", str(config))
+    monkeypatch.setattr("shutil.which", lambda name: "/bin/torc" if name == "torc" else None)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args[0], 0, stdout="torc 0.35.0\n", stderr=""
+        ),
+    )
+
+    result = runner.invoke(app, ["doctor", "--torc-profile", "local", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["torc"]["connectivity"]["status"] == "fail"
+    assert "0.39.0 or newer" in payload["torc"]["connectivity"]["message"]
 
 
 def test_doctor_returns_exit_one_when_requested_runtime_is_missing(monkeypatch) -> None:

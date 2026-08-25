@@ -1,4 +1,8 @@
 import json
+import os
+import shlex
+import subprocess
+import time
 from collections.abc import Iterable
 from dataclasses import asdict
 from pathlib import Path
@@ -10,12 +14,14 @@ from rich.table import Table
 
 from waterology import __version__
 from waterology.core.archive import (
+    ArchiveNotFoundError,
     list_archives,
     load_archive,
     read_archive_logs,
     verify_project_archive,
 )
 from waterology.core.assessments import assess_run
+from waterology.core.config import load_project_config
 from waterology.core.errors import InvalidInputError, WaterologyError
 from waterology.core.execution import start_direct_run
 from waterology.core.experiments import (
@@ -27,7 +33,9 @@ from waterology.core.experiments import (
     load_experiment,
     load_worktree,
 )
+from waterology.core.profiles import load_machine_config, machine_config_path, trust_profile
 from waterology.core.project import initialize_project, inspect_project
+from waterology.core.records import RunManifest
 from waterology.core.repair import repair_index
 from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.doctor import run_diagnostics
@@ -44,6 +52,7 @@ from waterology.runtime.install import (
 )
 from waterology.runtime.render import GeneratedAssetsStaleError, render_assets
 from waterology.runtime.validate import ValidationIssue, validate_assets
+from waterology.torc.runs import cancel_torc_run, inspect_torc_run, start_torc_run
 
 app = typer.Typer(
     help="Waterology research workflows for Claude Code, Codex, and OpenCode.",
@@ -53,10 +62,14 @@ experiment_app = typer.Typer(help="Create and inspect research experiments.")
 worktree_app = typer.Typer(help="Inspect experiment worktrees.")
 archive_app = typer.Typer(help="Inspect and verify sealed run archives.")
 run_app = typer.Typer(help="Run committed experiment variants.")
+compute_app = typer.Typer(help="Inspect machine local compute profiles.")
+profile_app = typer.Typer(help="List, inspect, and trust compute profiles.")
 app.add_typer(experiment_app, name="experiment")
 app.add_typer(worktree_app, name="worktree")
 app.add_typer(archive_app, name="archive")
 app.add_typer(run_app, name="run")
+app.add_typer(compute_app, name="compute")
+compute_app.add_typer(profile_app, name="profile")
 
 _INSTALL_SCOPE_OPTION = typer.Option(InstallScope.PROJECT, "--scope")
 _INSTALL_TARGET_OPTION = typer.Option(Path("."), "--target")
@@ -621,24 +634,147 @@ def run_start_command(
     experiment_id: str = typer.Argument(...),
     path: Path = _PROJECT_PATH_OPTION,
     run_id: str | None = typer.Option(None, "--id"),
+    profile: str | None = typer.Option(None, "--profile"),
+    confirm_remote: bool = typer.Option(False, "--confirm-remote"),
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
-    """Run a clean committed variant with the direct provider."""
-    if not json_output:
-        _console().print(f"Starting direct run for {experiment_id}...")
+    """Run a clean committed variant directly or through TORC."""
     try:
-        run = start_direct_run(path, experiment_id, run_id=run_id)
+        if profile is None:
+            worktree = load_worktree(path, experiment_id)
+            profile = load_project_config(
+                Path(worktree.path) / "waterology.toml"
+            ).default_compute_profile
+        provider_name = "direct" if profile == "direct" else "torc"
+        if not json_output:
+            _console().print(f"Starting {provider_name} run for {experiment_id}...")
+        if provider_name == "direct":
+            run = start_direct_run(path, experiment_id, run_id=run_id)
+        else:
+            run = start_torc_run(
+                path,
+                experiment_id,
+                profile_name=profile or "",
+                machine_config_file=machine_config_path(),
+                run_id=run_id,
+                confirm_remote=confirm_remote,
+            )
     except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run failed")
         raise typer.Exit(1) from error
     if json_output:
         _emit_json({"run": _record_payload(run), "status": "pass"})
         return
+    if provider_name == "direct":
+        state = run.terminal_state
+        exit_code = run.exit_code
+        terminal = True
+    else:
+        state = run.operational_state
+        exit_code = None
+        terminal = False
     _show_table(
-        "Run complete",
+        "Run complete" if terminal else "Run launched",
         ("Run", "Experiment", "State", "Exit code"),
-        ((run.run_id, run.experiment_id, run.terminal_state, str(run.exit_code)),),
+        ((run.run_id, run.experiment_id, state, str(exit_code)),),
     )
+
+
+@profile_app.command("list")
+def compute_profile_list_command(
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """List configured TORC profiles without exposing credentials."""
+    try:
+        config = load_machine_config()
+        profiles = [
+            {"name": name, **config.profile(name).model_dump(mode="json")}
+            for name in sorted(config.profiles)
+        ]
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Profile listing failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"profiles": profiles, "status": "pass"})
+        return
+    _show_table(
+        "Compute profiles",
+        ("Name", "Mode", "API URL", "Trusted"),
+        ((item["name"], item["mode"], item["api_url"], str(item["trusted"])) for item in profiles),
+    )
+
+
+@profile_app.command("show")
+def compute_profile_show_command(
+    name: str = typer.Argument(...),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Show one configured TORC profile."""
+    try:
+        profile = load_machine_config().profile(name)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Profile lookup failed")
+        raise typer.Exit(1) from error
+    payload = {"name": name, **profile.model_dump(mode="json")}
+    if json_output:
+        _emit_json({"profile": payload, "status": "pass"})
+        return
+    _show_table(
+        "Compute profile",
+        ("Name", "Mode", "API URL", "Trusted"),
+        ((name, profile.mode, profile.api_url, str(profile.trusted)),),
+    )
+
+
+@profile_app.command("trust")
+def compute_profile_trust_command(
+    name: str = typer.Argument(...),
+    confirmed: bool = typer.Option(False, "--yes"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Trust a remote profile after explicit confirmation."""
+    if not confirmed:
+        error = InvalidInputError("Profile trust requires --yes")
+        _show_core_failure(error, json_output=json_output, title="Profile trust failed")
+        raise typer.Exit(1)
+    try:
+        profile = trust_profile(machine_config_path(), name).profile(name)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Profile trust failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"profile": {"name": name, **profile.model_dump(mode="json")}, "status": "pass"})
+        return
+    _console().print(f"Trusted compute profile: {name}")
+
+
+@compute_app.command("inspect")
+def compute_inspect_command(
+    name: str = typer.Argument(...),
+    dashboard: bool = typer.Option(False, "--dashboard"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Show the TORC TUI command or configured dashboard URL."""
+    try:
+        profile = load_machine_config().profile(name)
+        if dashboard:
+            if not profile.dashboard_url:
+                raise InvalidInputError(f"Profile has no dashboard URL: {name}")
+            target = profile.dashboard_url
+            kind = "dashboard"
+        else:
+            arguments = ["torc", "--url", profile.api_url, "tui"]
+            target = (
+                subprocess.list2cmdline(arguments) if os.name == "nt" else shlex.join(arguments)
+            )
+            kind = "tui"
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="TORC inspection failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"kind": kind, "profile": name, "status": "pass", "target": target})
+        return
+    typer.echo(target)
 
 
 @run_app.command("list")
@@ -670,18 +806,83 @@ def run_status_command(
 ) -> None:
     """Show terminal run state."""
     try:
-        run = load_archive(path, run_id)
+        try:
+            run = load_archive(path, run_id)
+        except ArchiveNotFoundError:
+            run = inspect_torc_run(
+                path,
+                run_id,
+                machine_config_file=machine_config_path(),
+            )
     except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run lookup failed")
         raise typer.Exit(1) from error
     if json_output:
         _emit_json({"run": _record_payload(run), "status": "pass"})
         return
+    if isinstance(run, RunManifest):
+        state = run.terminal_state
+        exit_code = run.exit_code
+    else:
+        state = run.operational_state
+        exit_code = None
     _show_table(
         "Run status",
         ("Run", "Experiment", "State", "Exit code"),
-        ((run.run_id, run.experiment_id, run.terminal_state, str(run.exit_code)),),
+        ((run.run_id, run.experiment_id, state, str(exit_code)),),
     )
+
+
+@run_app.command("watch")
+def run_watch_command(
+    run_id: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    interval: float = typer.Option(5.0, "--interval", min=0.1),
+    once: bool = typer.Option(False, "--once"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Reconcile a managed run until it reaches a terminal archive."""
+    while True:
+        try:
+            run = inspect_torc_run(
+                path,
+                run_id,
+                machine_config_file=machine_config_path(),
+            )
+        except Exception as error:
+            _show_core_failure(error, json_output=json_output, title="Run watch failed")
+            raise typer.Exit(1) from error
+        payload = _record_payload(run)
+        state = payload.get("terminal_state", payload.get("operational_state"))
+        if json_output:
+            _emit_json({"event": "run.observed", "run": payload, "status": "pass"})
+        else:
+            _console().print(f"{run_id}: {state}")
+        if "terminal_state" in payload or once:
+            return
+        time.sleep(interval)
+
+
+@run_app.command("cancel")
+def run_cancel_command(
+    run_id: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Request cancellation of a managed TORC run."""
+    try:
+        run = cancel_torc_run(
+            path,
+            run_id,
+            machine_config_file=machine_config_path(),
+        )
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Run cancellation failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"run": _record_payload(run), "status": "pass"})
+        return
+    _console().print(f"Cancellation requested for {run_id}")
 
 
 @run_app.command("logs")
@@ -852,11 +1053,16 @@ def install(
 @app.command()
 def doctor(
     runtime: Runtime | None = _DOCTOR_RUNTIME_OPTION,
+    torc_profile: str | None = typer.Option(None, "--torc-profile"),
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Check runtime commands and packaged assets."""
     requested_runtime = runtime.value if runtime is not None else None
-    diagnostics = run_diagnostics(AssetCatalog.discover(), requested_runtime)
+    diagnostics = run_diagnostics(
+        AssetCatalog.discover(),
+        requested_runtime,
+        torc_profile=torc_profile,
+    )
     assets = next(diagnostic for diagnostic in diagnostics if diagnostic.name == "assets")
     runtimes = {
         diagnostic.name.removeprefix("runtime:"): {
@@ -866,12 +1072,22 @@ def doctor(
         for diagnostic in diagnostics
         if diagnostic.name.startswith("runtime:")
     }
+    torc = {
+        diagnostic.name.removeprefix("torc:"): {
+            "message": diagnostic.message,
+            "status": diagnostic.status,
+        }
+        for diagnostic in diagnostics
+        if diagnostic.name.startswith("torc:")
+    }
     if json_output:
         _emit_json(
             {
                 "assets": {"message": assets.message, "status": assets.status},
                 "requested_runtime": requested_runtime,
+                "requested_torc_profile": torc_profile,
                 "runtimes": runtimes,
+                "torc": torc,
             }
         )
     else:

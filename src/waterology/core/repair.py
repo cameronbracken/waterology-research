@@ -216,13 +216,16 @@ def _import_project(
 
 
 def _import_run(database: Database, run: RunManifest) -> None:
+    reference = run.executor_reference
     with database.connection:
         database.connection.execute(
             """
             INSERT INTO runs (
                 id, experiment_id, commit_sha, operational_state, archive_path,
-                executor, process_id, started_at, finished_at, exit_code
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                executor, process_id, started_at, finished_at, exit_code,
+                compute_profile, workflow_id, job_ids_json, api_url,
+                execution_mode, torc_version, workflow_spec_sha256, last_observed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run.run_id,
@@ -235,6 +238,14 @@ def _import_run(database: Database, run: RunManifest) -> None:
                 run.started_at,
                 run.finished_at,
                 run.exit_code,
+                reference.compute_profile if reference else None,
+                reference.workflow_id if reference else None,
+                json.dumps(reference.job_ids if reference else ()),
+                reference.api_url if reference else None,
+                reference.execution_mode if reference else None,
+                reference.torc_version if reference else None,
+                reference.workflow_spec_sha256 if reference else None,
+                run.finished_at if reference else None,
             ),
         )
 

@@ -16,7 +16,7 @@ from waterology.core.errors import WaterologyError
 from waterology.core.experiments import load_experiment, load_worktree
 from waterology.core.git import resolve_commit
 from waterology.core.project import Project, discover_project
-from waterology.core.records import ArchiveVerification, RunManifest
+from waterology.core.records import ArchiveVerification, ExecutorReference, RunManifest
 
 _RUN_ID = re.compile(r"^run-[a-z0-9][a-z0-9-]{0,62}$")
 _CHECKSUM_LINE = re.compile(r"^(?P<sha256>[0-9a-f]{64})  (?P<path>.+)$")
@@ -34,6 +34,10 @@ _STAGING_PAYLOADS = {
     "source.tar.zst",
     "stderr.log",
     "stdout.log",
+    "torc-output",
+    "torc-slurm-workflow.yaml",
+    "torc.json",
+    "torc-workflow.yaml",
 }
 
 
@@ -72,6 +76,8 @@ def build_run_archive(
     stderr: str,
     metrics: dict[str, object],
     process_id: int | None = None,
+    executor_reference: ExecutorReference | None = None,
+    compute_profile: str | None = None,
     config: ProjectConfig | None = None,
 ) -> Path:
     if _RUN_ID.fullmatch(run_id) is None:
@@ -120,6 +126,8 @@ def build_run_archive(
         started_at=started_at,
         finished_at=finished_at,
         process_id=process_id,
+        executor="torc" if executor_reference is not None else "direct",
+        executor_reference=executor_reference,
         terminal_state=terminal_state,
         exit_code=exit_code,
         declared_artifacts=project.config.outputs,
@@ -128,7 +136,10 @@ def build_run_archive(
     )
     _write_json(staging / "manifest.json", manifest.model_dump(mode="json"))
     _write_json(staging / "command.json", {"arguments": list(command), "shell": False})
-    _write_json(staging / "environment.json", _environment_payload(project, worktree))
+    _write_json(
+        staging / "environment.json",
+        _environment_payload(project, worktree, compute_profile=compute_profile),
+    )
     _write_json(staging / "metrics.json", metrics)
     _write_json(
         staging / "assessment.json",
@@ -294,7 +305,15 @@ def _prepare_staging(staging: Path) -> None:
         )
     for child in staging.iterdir():
         if (
-            child.name in {"execution.json", "stdout.log", "stderr.log"}
+            child.name
+            in {
+                "execution.json",
+                "stdout.log",
+                "stderr.log",
+                "torc.json",
+                "torc-slurm-workflow.yaml",
+                "torc-workflow.yaml",
+            }
             and not child.is_symlink()
             and child.is_file()
         ):
@@ -315,7 +334,12 @@ def _require_declared_artifact_root(path: str, roots: tuple[str, ...]) -> None:
     raise ArchivePathError(f"Declared artifact is outside configured artifact roots: {path}")
 
 
-def _environment_payload(project: Project, worktree: Path) -> dict[str, object]:
+def _environment_payload(
+    project: Project,
+    worktree: Path,
+    *,
+    compute_profile: str | None = None,
+) -> dict[str, object]:
     config = project.config
     environment_files = {}
     for relative in config.environment_files:
@@ -335,7 +359,7 @@ def _environment_payload(project: Project, worktree: Path) -> dict[str, object]:
     }
     return {
         "architecture": platform.machine(),
-        "compute_profile": config.default_compute_profile,
+        "compute_profile": compute_profile or config.default_compute_profile,
         "environment_files": environment_files,
         "operating_system": platform.system(),
         "python": platform.python_version(),
