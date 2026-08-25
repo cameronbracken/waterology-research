@@ -17,7 +17,7 @@ from pathlib import Path
 SOURCE_SUFFIXES = {
     ".R", ".r", ".py", ".f90", ".f", ".F90", ".f95", ".qmd", ".Rmd", ".jl", ".do",
 }
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "renv", "out"}
+SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", ".pixi", "renv", "out"}
 ALLOW_MARKER = "waterology: allow-abs-path"
 
 # The pattern definitions below contain the very strings they look for, so they

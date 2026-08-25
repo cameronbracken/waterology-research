@@ -49,6 +49,7 @@ def run_check(script: Path, targets: list[str]) -> tuple[str, str]:
         proc = subprocess.run(
             [sys.executable, str(script), *targets],
             capture_output=True,
+            check=False,
             text=True,
             timeout=120,
         )

@@ -14,6 +14,7 @@ python-build = ">=1.3"
 pytest = ">=8.4"
 pytest-cov = ">=6.2"
 ruff = ">=0.12"
+hatchling = ">=1.27"
 
 [environments]
 default = { features = ["dev"], solve-group = "default" }

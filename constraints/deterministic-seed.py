@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "renv", "out"}
+SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", ".pixi", "renv", "out"}
 ALLOW_MARKER = "waterology: allow-unseeded"
 
 R_SUFFIXES = {".R", ".r"}

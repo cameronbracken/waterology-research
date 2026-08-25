@@ -33,5 +33,6 @@ def test_repository_has_four_sorted_canonical_agents() -> None:
     ]
     assert all("WebSearch" not in agent.body for agent in agents)
     assert all("WebFetch" not in agent.body for agent in agents)
+    assert all("Task tool" not in agent.body for agent in agents)
     assert all("`Bash`" not in agent.body for agent in agents)
     assert all(chr(0x2014) not in agent.body for agent in agents)

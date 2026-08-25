@@ -66,8 +66,9 @@ def test_canonical_guidance_has_required_commands() -> None:
     assert "python3 constraints/check-all.py ." in agents
 
 
-def test_roadmap_leaves_cross_runtime_foundation_unchecked() -> None:
+def test_roadmap_marks_only_cross_runtime_foundation_complete() -> None:
     roadmap = (ROOT / "ROADMAP.md").read_text()
-    assert "- [ ] **Slice 1: cross runtime foundation**" in roadmap
+    assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
+    assert roadmap.count("- [x]") == 1
     assert "Task 10 owns the remaining acceptance checks." in roadmap
     assert "## Research feature roadmap" in roadmap
