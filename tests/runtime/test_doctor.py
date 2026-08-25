@@ -8,6 +8,23 @@ from waterology.cli import app
 from waterology.runtime.assets import AssetCatalog
 
 runner = CliRunner()
+COPY_IGNORE = shutil.ignore_patterns(
+    ".git",
+    ".pixi",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".superpowers",
+    ".worktrees",
+    "__pycache__",
+    "*.pyc",
+)
+
+
+def copied_catalog(tmp_path: Path) -> AssetCatalog:
+    source = AssetCatalog.discover().root
+    destination = tmp_path / "assets"
+    shutil.copytree(source, destination, ignore=COPY_IGNORE)
+    return AssetCatalog.discover(destination)
 
 
 def test_render_check_reports_current_generated_assets() -> None:
@@ -20,10 +37,7 @@ def test_render_check_reports_current_generated_assets() -> None:
 def test_render_check_returns_exit_one_for_stale_generated_assets(
     monkeypatch, tmp_path: Path
 ) -> None:
-    source = AssetCatalog.discover().root
-    destination = tmp_path / "assets"
-    shutil.copytree(source, destination)
-    catalog = AssetCatalog.discover(destination)
+    catalog = copied_catalog(tmp_path)
     catalog.path(".codex/agents/researcher.toml").write_text("stale\n", encoding="utf-8")
     monkeypatch.setattr(AssetCatalog, "discover", classmethod(lambda cls: catalog))
 
@@ -55,3 +69,27 @@ def test_doctor_returns_exit_one_when_requested_runtime_is_missing(monkeypatch) 
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["runtimes"]["codex"]["status"] == "fail"
+
+
+def test_doctor_json_reports_a_missing_canonical_agent(monkeypatch, tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    catalog.path("agent-definitions/writer.md").unlink()
+    monkeypatch.setattr(AssetCatalog, "discover", classmethod(lambda cls: catalog))
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["assets"]["status"] == "fail"
+
+
+def test_doctor_json_reports_a_missing_canonical_directory(monkeypatch, tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    shutil.rmtree(catalog.path("agent-definitions"))
+    monkeypatch.setattr(AssetCatalog, "discover", classmethod(lambda cls: catalog))
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["assets"]["status"] == "fail"

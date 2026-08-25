@@ -5,14 +5,22 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
+from pydantic import ValidationError
 
 from waterology import __version__
+from waterology.runtime.agents import parse_agent
 from waterology.runtime.assets import AssetCatalog, AssetNotFoundError
 from waterology.runtime.render import GeneratedAssetsStaleError, render_agents
 
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MANIFESTS = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
 GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents")
+GENERATED_AGENT_SUFFIXES = {
+    ".codex/agents": ".toml",
+    "agents": ".md",
+    ".opencode/agents": ".md",
+}
+REQUIRED_AGENT_NAMES = ("researcher", "reviewer", "verifier", "writer")
 
 
 @dataclass(frozen=True)
@@ -28,7 +36,9 @@ def _validate_manifests(catalog: AssetCatalog) -> list[ValidationIssue]:
         try:
             path = catalog.path(relative)
         except AssetNotFoundError:
-            issues.append(ValidationIssue(relative, "missing-asset", "required manifest is missing"))
+            issues.append(
+                ValidationIssue(relative, "missing-asset", "required manifest is missing")
+            )
             continue
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -36,7 +46,9 @@ def _validate_manifests(catalog: AssetCatalog) -> list[ValidationIssue]:
             issues.append(ValidationIssue(relative, "invalid-json", str(error)))
             continue
         if not isinstance(data, dict):
-            issues.append(ValidationIssue(relative, "invalid-manifest", "manifest must be a JSON object"))
+            issues.append(
+                ValidationIssue(relative, "invalid-manifest", "manifest must be a JSON object")
+            )
             continue
         for field in ("name", "version", "description", "author", "license"):
             if not data.get(field):
@@ -81,16 +93,110 @@ def _validate_skills(catalog: AssetCatalog) -> list[ValidationIssue]:
     return issues
 
 
-def _validate_generated_agents(catalog: AssetCatalog) -> list[ValidationIssue]:
+def _validate_canonical_agents(
+    catalog: AssetCatalog,
+) -> tuple[list[ValidationIssue], set[str], bool]:
+    issues: list[ValidationIssue] = []
+    present_names: set[str] = set()
+    relative_directory = "agent-definitions"
+    try:
+        directory = catalog.path(relative_directory)
+    except AssetNotFoundError:
+        issues.append(
+            ValidationIssue(
+                relative_directory,
+                "missing-asset",
+                "required canonical agent directory is missing",
+            )
+        )
+        return issues, present_names, False
+    if not directory.is_dir():
+        issues.append(
+            ValidationIssue(
+                relative_directory,
+                "invalid-asset-type",
+                "canonical agent asset must be a directory",
+            )
+        )
+        return issues, present_names, False
+
+    entries = {path.name: path for path in directory.iterdir()}
+    required_files = {f"{name}.md" for name in REQUIRED_AGENT_NAMES}
+    for name in REQUIRED_AGENT_NAMES:
+        filename = f"{name}.md"
+        relative = f"{relative_directory}/{filename}"
+        path = entries.get(filename)
+        if path is None:
+            issues.append(
+                ValidationIssue(
+                    relative,
+                    "missing-asset",
+                    "required canonical agent definition is missing",
+                )
+            )
+            continue
+        if path.is_file():
+            present_names.add(name)
+
+    for filename, path in sorted(entries.items()):
+        relative = f"{relative_directory}/{filename}"
+        if filename not in required_files:
+            issues.append(
+                ValidationIssue(
+                    relative,
+                    "unexpected-asset",
+                    "canonical agent is not part of the Slice 1 inventory",
+                )
+            )
+        if path.suffix != ".md":
+            continue
+        if not path.is_file():
+            issues.append(
+                ValidationIssue(
+                    relative,
+                    "invalid-asset-type",
+                    "canonical agent definition must be a file",
+                )
+            )
+            continue
+        try:
+            agent = parse_agent(path)
+        except ValidationError as error:
+            issues.append(ValidationIssue(relative, "invalid-agent-definition", str(error)))
+            continue
+        except (ValueError, yaml.YAMLError) as error:
+            issues.append(ValidationIssue(relative, "invalid-frontmatter", str(error)))
+            continue
+        if agent.name != path.stem:
+            issues.append(
+                ValidationIssue(
+                    relative,
+                    "invalid-name",
+                    f"metadata name {agent.name!r} does not match filename {filename!r}",
+                )
+            )
+
+    return issues, present_names, not issues
+
+
+def _validate_generated_agents(
+    catalog: AssetCatalog,
+    canonical_names: set[str],
+    canonical_valid: bool,
+) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     directories: dict[str, Path] = {}
     unavailable: set[str] = set()
+    missing_paths: set[str] = set()
+    invalid_expected_path = False
     for relative in GENERATED_AGENT_DIRECTORIES:
         try:
             path = catalog.path(relative)
         except AssetNotFoundError:
             issues.append(
-                ValidationIssue(relative, "missing-asset", "required generated-agent directory is missing")
+                ValidationIssue(
+                    relative, "missing-asset", "required generated-agent directory is missing"
+                )
             )
             unavailable.add(relative)
             continue
@@ -105,19 +211,71 @@ def _validate_generated_agents(catalog: AssetCatalog) -> list[ValidationIssue]:
             unavailable.add(relative)
             continue
         directories[relative] = path
-    try:
-        render_agents(catalog, catalog.root, check=True)
-    except GeneratedAssetsStaleError as error:
-        for path in error.paths:
-            relative = path.relative_to(catalog.root).as_posix()
-            if any(relative.startswith(f"{directory}/") for directory in unavailable):
-                continue
+
+        suffix = GENERATED_AGENT_SUFFIXES[relative]
+        entries = {entry.name: entry for entry in path.iterdir()}
+        required_files = {f"{name}{suffix}" for name in REQUIRED_AGENT_NAMES}
+        for filename in sorted(required_files - entries.keys()):
+            missing = f"{relative}/{filename}"
+            missing_paths.add(missing)
             issues.append(
-                ValidationIssue(relative, "stale-generated-agent", "rendered content differs")
+                ValidationIssue(missing, "missing-asset", "required generated agent is missing")
             )
+        for filename in sorted(entries.keys() - required_files):
+            issues.append(
+                ValidationIssue(
+                    f"{relative}/{filename}",
+                    "orphaned-generated-agent",
+                    "generated agent is not part of the Slice 1 inventory",
+                )
+            )
+        for name in REQUIRED_AGENT_NAMES:
+            filename = f"{name}{suffix}"
+            generated = entries.get(filename)
+            if generated is None:
+                continue
+            generated_relative = f"{relative}/{filename}"
+            if not generated.is_file():
+                invalid_expected_path = True
+                issues.append(
+                    ValidationIssue(
+                        generated_relative,
+                        "invalid-asset-type",
+                        "generated agent must be a file",
+                    )
+                )
+                continue
+            if name not in canonical_names:
+                issues.append(
+                    ValidationIssue(
+                        generated_relative,
+                        "orphaned-generated-agent",
+                        "generated agent has no canonical definition",
+                    )
+                )
+
+    if canonical_valid and not invalid_expected_path:
+        try:
+            render_agents(catalog, catalog.root, check=True)
+        except GeneratedAssetsStaleError as error:
+            for path in error.paths:
+                relative = path.relative_to(catalog.root).as_posix()
+                if relative in missing_paths:
+                    continue
+                if any(relative.startswith(f"{directory}/") for directory in unavailable):
+                    continue
+                issues.append(
+                    ValidationIssue(
+                        relative,
+                        "stale-generated-agent",
+                        "rendered content differs",
+                    )
+                )
     codex_directory = directories.get(".codex/agents")
     if codex_directory is not None:
         for path in sorted(codex_directory.glob("*.toml")):
+            if not path.is_file():
+                continue
             try:
                 tomllib.loads(path.read_text(encoding="utf-8"))
             except tomllib.TOMLDecodeError as error:
@@ -130,6 +288,8 @@ def _validate_generated_agents(catalog: AssetCatalog) -> list[ValidationIssue]:
         if directory not in directories:
             continue
         for path in sorted(directories[directory].glob("*.md")):
+            if not path.is_file():
+                continue
             try:
                 _frontmatter(path)
             except (ValueError, yaml.YAMLError) as error:
@@ -144,9 +304,11 @@ def _validate_generated_agents(catalog: AssetCatalog) -> list[ValidationIssue]:
 
 
 def validate_assets(catalog: AssetCatalog) -> tuple[ValidationIssue, ...]:
+    canonical_issues, canonical_names, canonical_valid = _validate_canonical_agents(catalog)
     issues = [
         *_validate_manifests(catalog),
         *_validate_skills(catalog),
-        *_validate_generated_agents(catalog),
+        *canonical_issues,
+        *_validate_generated_agents(catalog, canonical_names, canonical_valid),
     ]
     return tuple(sorted(issues, key=lambda issue: (issue.path, issue.code)))

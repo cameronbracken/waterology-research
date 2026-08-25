@@ -7,11 +7,22 @@ import pytest
 from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.validate import validate_assets
 
+COPY_IGNORE = shutil.ignore_patterns(
+    ".git",
+    ".pixi",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".superpowers",
+    ".worktrees",
+    "__pycache__",
+    "*.pyc",
+)
+
 
 def copied_catalog(tmp_path: Path) -> AssetCatalog:
     source = AssetCatalog.discover().root
     destination = tmp_path / "assets"
-    shutil.copytree(source, destination)
+    shutil.copytree(source, destination, ignore=COPY_IGNORE)
     return AssetCatalog.discover(destination)
 
 
@@ -47,7 +58,9 @@ def test_validation_reports_a_mismatched_skill_directory(tmp_path: Path) -> None
 def test_validation_reports_duplicate_skill_names(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     skill = catalog.path("skills/eli5/SKILL.md")
-    skill.write_text(skill.read_text(encoding="utf-8").replace("name: eli5", "name: autoresearch", 1))
+    skill.write_text(
+        skill.read_text(encoding="utf-8").replace("name: eli5", "name: autoresearch", 1)
+    )
 
     issues = validate_assets(catalog)
 
@@ -144,7 +157,9 @@ def test_validation_collects_missing_and_malformed_generated_assets(tmp_path: Pa
     assert ("agents", "missing-asset") in issue_codes
     assert (".codex/agents/researcher.toml", "invalid-toml") in issue_codes
     assert (".codex/agents/researcher.toml", "stale-generated-agent") in issue_codes
-    assert not any(path.startswith("agents/") and code == "stale-generated-agent" for path, code in issue_codes)
+    assert not any(
+        path.startswith("agents/") and code == "stale-generated-agent" for path, code in issue_codes
+    )
     assert codex_agent.read_text(encoding="utf-8") == "not valid = ["
 
 
@@ -158,5 +173,164 @@ def test_validation_reports_a_generated_agent_path_with_the_wrong_type(tmp_path:
     issue_codes = {(issue.path, issue.code) for issue in issues}
 
     assert ("agents", "invalid-asset-type") in issue_codes
-    assert not any(path.startswith("agents/") and code == "stale-generated-agent" for path, code in issue_codes)
+    assert not any(
+        path.startswith("agents/") and code == "stale-generated-agent" for path, code in issue_codes
+    )
     assert agent_directory.read_text(encoding="utf-8") == "not a directory"
+
+
+def test_validation_reports_a_missing_canonical_agent_and_orphaned_adapters(
+    tmp_path: Path,
+) -> None:
+    catalog = copied_catalog(tmp_path)
+    catalog.path("agent-definitions/writer.md").unlink()
+
+    issues = validate_assets(catalog)
+    issue_codes = {(issue.path, issue.code) for issue in issues}
+
+    assert ("agent-definitions/writer.md", "missing-asset") in issue_codes
+    for path in (
+        "agents/writer.md",
+        ".codex/agents/writer.toml",
+        ".opencode/agents/writer.md",
+    ):
+        assert (path, "orphaned-generated-agent") in issue_codes
+
+
+def test_validation_reports_a_missing_canonical_agent_directory(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    shutil.rmtree(catalog.path("agent-definitions"))
+
+    issues = validate_assets(catalog)
+
+    assert ("agent-definitions", "missing-asset") in {(issue.path, issue.code) for issue in issues}
+
+
+def test_validation_reports_an_unexpected_canonical_agent(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    unexpected = catalog.path("agent-definitions") / "extra.md"
+    unexpected.write_text(
+        "---\n"
+        "name: extra\n"
+        "description: Unexpected agent.\n"
+        "capabilities: [read]\n"
+        "---\n\n"
+        "Unexpected agent.\n",
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert ("agent-definitions/extra.md", "unexpected-asset") in {
+        (issue.path, issue.code) for issue in issues
+    }
+
+
+def test_validation_checks_an_unexpected_canonical_agent_definition(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    unexpected = catalog.path("agent-definitions") / "extra.md"
+    unexpected.write_text(
+        "---\n"
+        "name: writer\n"
+        "description: Unexpected agent.\n"
+        "capabilities: [read]\n"
+        "---\n\n"
+        "Unexpected agent.\n",
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+    issue_codes = {(issue.path, issue.code) for issue in issues}
+
+    assert ("agent-definitions/extra.md", "unexpected-asset") in issue_codes
+    assert ("agent-definitions/extra.md", "invalid-name") in issue_codes
+
+
+def test_validation_reports_a_canonical_filename_name_mismatch(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    writer = catalog.path("agent-definitions/writer.md")
+    writer.write_text(
+        writer.read_text(encoding="utf-8").replace("name: writer", "name: reviewer", 1),
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert ("agent-definitions/writer.md", "invalid-name") in {
+        (issue.path, issue.code) for issue in issues
+    }
+
+
+@pytest.mark.parametrize(
+    ("content", "code"),
+    (
+        ("Writer body without frontmatter.\n", "invalid-frontmatter"),
+        ("---\nname: [\n---\n\nWriter body.\n", "invalid-frontmatter"),
+        ("---\nscalar\n---\n\nWriter body.\n", "invalid-frontmatter"),
+        (
+            (
+                "---\n"
+                "name: writer\n"
+                "description: Write research results.\n"
+                "capabilities: [invalid]\n"
+                "---\n\n"
+                "Writer body.\n"
+            ),
+            "invalid-agent-definition",
+        ),
+    ),
+)
+def test_validation_reports_invalid_canonical_agent_definitions(
+    tmp_path: Path, content: str, code: str
+) -> None:
+    catalog = copied_catalog(tmp_path)
+    catalog.path("agent-definitions/writer.md").write_text(content, encoding="utf-8")
+
+    issues = validate_assets(catalog)
+
+    assert ("agent-definitions/writer.md", code) in {(issue.path, issue.code) for issue in issues}
+
+
+@pytest.mark.parametrize(
+    ("directory", "filename"),
+    (
+        ("agents", "writer.md"),
+        (".codex/agents", "writer.toml"),
+        (".opencode/agents", "writer.md"),
+    ),
+)
+def test_validation_reports_a_missing_generated_agent(
+    tmp_path: Path, directory: str, filename: str
+) -> None:
+    catalog = copied_catalog(tmp_path)
+    missing = catalog.path(f"{directory}/{filename}")
+    missing.unlink()
+
+    issues = validate_assets(catalog)
+
+    assert (f"{directory}/{filename}", "missing-asset") in {
+        (issue.path, issue.code) for issue in issues
+    }
+    assert not missing.exists()
+
+
+@pytest.mark.parametrize(
+    ("directory", "filename"),
+    (
+        ("agents", "orphan.md"),
+        (".codex/agents", "orphan.toml"),
+        (".opencode/agents", "orphan.md"),
+    ),
+)
+def test_validation_reports_an_orphaned_generated_agent(
+    tmp_path: Path, directory: str, filename: str
+) -> None:
+    catalog = copied_catalog(tmp_path)
+    orphan = catalog.path(directory) / filename
+    orphan.write_text("orphan\n", encoding="utf-8")
+
+    issues = validate_assets(catalog)
+
+    assert (f"{directory}/{filename}", "orphaned-generated-agent") in {
+        (issue.path, issue.code) for issue in issues
+    }

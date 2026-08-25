@@ -116,9 +116,10 @@ and `reviewer`), research skills, and Claude Code compatibility commands.
 
 ## Status
 
-The cross runtime foundation is in progress pending its Slice 1 acceptance
-checks. The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources
-are credited in [ATTRIBUTION.md](ATTRIBUTION.md).
+The cross runtime foundation is complete.
+Later skill migration remains planned for Slice 2. The research roadmap is in
+[ROADMAP.md](ROADMAP.md). Adapted sources are credited in
+[ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## License
 

@@ -26,6 +26,8 @@ def parse_agent(path: Path) -> AgentDefinition:
     if match is None:
         raise ValueError(f"Agent lacks YAML frontmatter: {path}")
     metadata = yaml.safe_load(match.group(1))
+    if not isinstance(metadata, dict):
+        raise ValueError(f"Agent frontmatter must be a mapping: {path}")  # noqa: TRY004
     return AgentDefinition.model_validate(
         {**metadata, "body": match.group(2).lstrip("\n"), "source_path": path}
     )

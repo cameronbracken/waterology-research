@@ -1,9 +1,10 @@
-# macOS junk
+# OS junk
 .DS_Store
 ._*
 .Trashes
 .Spotlight-V100
 .fseventsd
+Thumbs.db
 
 # AI tool files
 # NOTE: CLAUDE.md and AGENTS.md are tracked project guidance.

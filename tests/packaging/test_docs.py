@@ -67,8 +67,13 @@ def test_canonical_guidance_has_required_commands() -> None:
 
 
 def test_roadmap_marks_only_cross_runtime_foundation_complete() -> None:
+    readme = (ROOT / "README.md").read_text()
     roadmap = (ROOT / "ROADMAP.md").read_text()
+
+    assert "The cross runtime foundation is complete." in readme
+    assert "Later skill migration remains planned for Slice 2." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
     assert roadmap.count("- [x]") == 1
-    assert "Task 10 owns the remaining acceptance checks." in roadmap
+    assert "Task 10 owns the remaining acceptance checks." not in roadmap
+    assert "Later skill migration remains planned for Slice 2." in roadmap
     assert "## Research feature roadmap" in roadmap
