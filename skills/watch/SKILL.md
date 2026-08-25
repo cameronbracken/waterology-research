@@ -8,6 +8,8 @@ description: >
 
 # Watch
 
+Use `writing-style` for the baseline, update summaries, and alerts.
+
 Run the `/watch` workflow. It plans what to monitor and what counts as a
 meaningful change, runs a baseline sweep, and records the current state.
 

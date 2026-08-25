@@ -87,6 +87,28 @@ def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> N
     ) in {(issue.path, issue.code, issue.message) for issue in issues}
 
 
+def test_validation_checks_nested_skill_references_and_images(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    skill_directory = catalog.path("skills/eli5")
+    reference = skill_directory / "references" / "guide.md"
+    reference.parent.mkdir()
+    reference.write_text("![Missing image](missing.png)\n", encoding="utf-8")
+    skill = skill_directory / "SKILL.md"
+    skill.write_text(
+        skill.read_text(encoding="utf-8")
+        + "\n[Guide](references/guide.md)\n",
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert (
+        "skills/eli5/references/guide.md",
+        "missing-skill-reference",
+        "missing.png",
+    ) in {(issue.path, issue.code, issue.message) for issue in issues}
+
+
 def test_validation_reports_malformed_codex_toml(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     agent = catalog.path(".codex/agents/researcher.toml")

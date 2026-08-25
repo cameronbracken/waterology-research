@@ -8,6 +8,8 @@ description: >
 
 # Figure Style
 
+Use `writing-style` for labels, annotations, and captions.
+
 Apply before producing or revising any single plot. This is the research-figure
 layer; for general chart-design method (palette construction, mark specs), also
 see the `dataviz` skill.

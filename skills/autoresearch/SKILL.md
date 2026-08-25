@@ -9,6 +9,8 @@ description: >
 
 # Autoresearch
 
+Use `writing-style` for experiment summaries, decision notes, and reports.
+
 Run the `/autoresearch` workflow. It collects the optimization target, benchmark
 command, metric, files in scope, and iteration cap; confirms the plan and the
 execution environment; then loops edit -> run benchmark -> log result and

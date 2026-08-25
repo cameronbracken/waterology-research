@@ -9,6 +9,8 @@ description: >
 
 # ML Training Recipe
 
+Use `writing-style` for the recipe, comparisons, and recommendation.
+
 Run the `/recipe` workflow. It starts from evidence of results (not example
 scripts), links each result to the exact dataset, method, hyperparameters,
 compute, and code path that produced it, validates dataset availability and

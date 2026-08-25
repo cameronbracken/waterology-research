@@ -9,6 +9,8 @@ description: >
 
 # ELI5
 
+Use `writing-style` for the explanation.
+
 Explain a paper or idea simply, without dumbing down what it actually shows.
 
 When the user names a specific paper, arXiv ID, DOI, or URL, read it first

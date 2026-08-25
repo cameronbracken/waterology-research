@@ -1,0 +1,21 @@
+# Adapted from Superpowers 6.3.0 using-git-worktrees (obra/superpowers, MIT),
+# with Waterology-specific isolation rules. See ATTRIBUTION.md.
+cases:
+  - id: clean-documentation
+    situation: One writer, clean checkout, documentation only, no behavior change.
+    decision: work-in-place
+  - id: dirty-checkout
+    situation: The checkout contains unrelated changes.
+    decision: create
+  - id: concurrent-writer
+    situation: Another session may write to the repository.
+    decision: create
+  - id: behavioral-edit
+    situation: The task changes a skill, agent instruction, hook, or runtime behavior.
+    decision: create
+  - id: related-multi-file-change
+    situation: The task spans several related files or needs an isolated test cycle.
+    decision: create
+  - id: already-isolated
+    situation: The session is already inside a linked worktree.
+    decision: reuse

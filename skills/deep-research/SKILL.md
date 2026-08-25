@@ -9,6 +9,8 @@ description: >
 
 # Deep Research
 
+Use `writing-style` for the research brief and synthesis.
+
 Run the `/deepresearch` workflow. The command expands the full protocol in the
 active session — plan, scale, gather, draft, cite, review, deliver — do not try
 to read a prompt-template path from this skill directory.

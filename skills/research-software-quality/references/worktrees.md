@@ -34,6 +34,9 @@ Read-only sessions may share a checkout. When parallel writing is planned,
 reserve `main` as the integration lane and give each writing session a named
 branch and worktree.
 
+The machine-checked examples in
+[worktree-cases.yaml](worktree-cases.yaml) cover the required cutoff cases.
+
 ## Safety checks
 
 - Prefer the runtime's native worktree support when available.

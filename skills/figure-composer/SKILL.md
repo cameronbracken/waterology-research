@@ -8,6 +8,8 @@ description: >
 
 # Figure Composer
 
+Use `writing-style` for panel text, captions, and figure notes.
+
 For multi-panel scientific figures — the composite that carries one argument.
 
 1. State the figure's **single claim** and list every data artifact that

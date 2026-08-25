@@ -9,6 +9,8 @@ description: >
 
 # Replication
 
+Use `writing-style` for the plan, evidence ledger, and report.
+
 Run the `/replicate` workflow. It extracts implementation details, enumerates
 the paper's main empirical claims into a ledger (paper result, observed result,
 assessment, downscaling, compute cost), does a recipe pass for training or

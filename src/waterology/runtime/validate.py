@@ -13,7 +13,7 @@ from waterology.runtime.assets import AssetCatalog, AssetNotFoundError
 from waterology.runtime.render import GeneratedAssetsStaleError, render_agents
 
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-MARKDOWN_LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+[^)]*)?\)")
+MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 MANIFESTS = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
 GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents")
 GENERATED_AGENT_SUFFIXES = {
@@ -91,23 +91,25 @@ def _validate_skills(catalog: AssetCatalog) -> list[ValidationIssue]:
         seen.add(name)
         if not 1 <= len(description) <= 1024:
             issues.append(ValidationIssue(relative, "invalid-description", str(len(description))))
-        for match in MARKDOWN_LINK.finditer(path.read_text(encoding="utf-8")):
-            reference = match.group(1).strip("<>")
-            reference_path = reference.split("#", 1)[0]
-            if (
-                not reference_path
-                or reference_path.startswith(("/", "{{", "${"))
-                or re.match(r"^[a-z][a-z0-9+.-]*:", reference_path, re.IGNORECASE)
-            ):
-                continue
-            if not (path.parent / reference_path).exists():
-                issues.append(
-                    ValidationIssue(
-                        relative,
-                        "missing-skill-reference",
-                        reference_path,
+        for reference_file in directory.rglob("*.md"):
+            reference_relative = reference_file.relative_to(catalog.root).as_posix()
+            for match in MARKDOWN_LINK.finditer(reference_file.read_text(encoding="utf-8")):
+                reference = match.group(1).strip("<>")
+                reference_path = reference.split("#", 1)[0]
+                if (
+                    not reference_path
+                    or reference_path.startswith(("/", "{{", "${"))
+                    or re.match(r"^[a-z][a-z0-9+.-]*:", reference_path, re.IGNORECASE)
+                ):
+                    continue
+                if not (reference_file.parent / reference_path).exists():
+                    issues.append(
+                        ValidationIssue(
+                            reference_relative,
+                            "missing-skill-reference",
+                            reference_path,
+                        )
                     )
-                )
     return issues
 
 

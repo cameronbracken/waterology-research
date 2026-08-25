@@ -25,6 +25,7 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         "waterology_assets/skills/writing-style/references/scientific-prose.md",
         "waterology_assets/skills/research-software-quality/SKILL.md",
         "waterology_assets/skills/research-software-quality/references/worktrees.md",
+        "waterology_assets/skills/research-software-quality/references/worktree-cases.yaml",
         "waterology_assets/agents/researcher.md",
         "waterology_assets/.codex/agents/researcher.toml",
         "waterology_assets/.opencode/agents/researcher.md",

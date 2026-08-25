@@ -8,6 +8,8 @@ description: >
 
 # Paper / Code Audit
 
+Use `writing-style` for the audit report and claim comparisons.
+
 Run the `/audit` workflow. It plans which claims to check, reads the actual code
 (cloning with `gh` when needed rather than trusting the README), and reports
 missing code, method/default mismatches, unstated seeds, and reproduction risks.

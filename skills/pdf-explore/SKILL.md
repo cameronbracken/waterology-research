@@ -8,6 +8,8 @@ description: >
 
 # PDF Explore
 
+Use `writing-style` for extracted notes, comparisons, and summaries.
+
 Use when a PDF answer depends on more than one page or section.
 
 1. Parse the PDF enough to map its structure — title, abstract, methods,

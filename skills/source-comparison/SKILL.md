@@ -8,6 +8,8 @@ description: >
 
 # Source Comparison
 
+Use `writing-style` for the matrix notes and grounded comparison.
+
 Run the `/compare` workflow. It plans the sources and dimensions, gathers
 material (delegating broad sets to the `researcher`), and builds a matrix of
 source, key claim, evidence type, caveats, and confidence — cited via the

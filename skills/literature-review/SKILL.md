@@ -9,6 +9,8 @@ description: >
 
 # Literature Review
 
+Use `writing-style` for the review and source synthesis.
+
 Run the `/lit` workflow. It plans the scope, gathers papers in multi-hop passes
 (new queries built from each hop's citations, authors, and terminology, until a
 hop surfaces nothing new; wide sweeps delegated to the `researcher` agent),
