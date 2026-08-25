@@ -6,7 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from waterology.cli import app
-from waterology.core.assessments import AssessmentEvidenceError, assess_run
+from waterology.core.assessments import AssessmentError, AssessmentEvidenceError, assess_run
 from waterology.core.config import ProjectConfig, project_config_toml
 from waterology.core.execution import start_direct_run
 from waterology.core.experiments import create_experiment, load_experiment
@@ -119,6 +119,42 @@ def test_two_consecutive_no_answer_assessments_require_a_decision(tmp_path: Path
     assert experiment.decision_required is True
 
 
+def test_first_answer_keeps_frozen_commit_stable(tmp_path: Path) -> None:
+    root, experiment_id, worktree = make_experiment(tmp_path / "study")
+    first_commit = commit_working_model(worktree, "first")
+    first = start_direct_run(root, experiment_id, run_id="run-first-answer")
+    (worktree / "artifacts" / "result.txt").unlink()
+    (worktree / "artifacts").rmdir()
+    commit_working_model(worktree, "second")
+    second = start_direct_run(root, experiment_id, run_id="run-later-answer")
+    assess_run(
+        root,
+        first.run_id,
+        kind="answer",
+        conclusion="The first run answers the experiment.",
+        author="cam",
+        evidence=(f".waterology/runs/{first.run_id}/metrics.json",),
+    )
+
+    with pytest.raises(AssessmentError, match="is frozen"):
+        assess_run(
+            root,
+            second.run_id,
+            kind="answer",
+            conclusion="A later run must not move the answer.",
+            author="cam",
+            evidence=(f".waterology/runs/{second.run_id}/metrics.json",),
+        )
+
+    child = create_experiment(
+        root,
+        hypothesis="Use the stable answer.",
+        parent_experiment_id=experiment_id,
+        experiment_id="exp-stable-child",
+    )
+    assert child.base_commit == first_commit
+
+
 def test_assessment_rejects_evidence_outside_allowed_roots(tmp_path: Path) -> None:
     root, experiment_id, worktree = make_experiment(tmp_path / "study")
     commit_working_model(worktree, "result")
@@ -135,6 +171,31 @@ def test_assessment_rejects_evidence_outside_allowed_roots(tmp_path: Path) -> No
             author="cam",
             evidence=(str(outside),),
         )
+
+
+def test_assessment_rejects_symlinked_run_directory_without_writing_target(
+    tmp_path: Path,
+) -> None:
+    root, experiment_id, worktree = make_experiment(tmp_path / "study")
+    commit_working_model(worktree, "result")
+    run = start_direct_run(root, experiment_id, run_id="run-symlink-assessment")
+    outside = tmp_path / "outside-assessments"
+    outside.mkdir()
+    (root / ".waterology" / "assessments" / run.run_id).symlink_to(
+        outside, target_is_directory=True
+    )
+
+    with pytest.raises(AssessmentError, match="must not be a symlink"):
+        assess_run(
+            root,
+            run.run_id,
+            kind="answer",
+            conclusion="Do not write through the symlink.",
+            author="cam",
+            evidence=(f".waterology/runs/{run.run_id}/metrics.json",),
+        )
+
+    assert list(outside.iterdir()) == []
 
 
 def test_run_assess_cli_writes_structured_assessment(tmp_path: Path) -> None:

@@ -87,11 +87,11 @@ def initialize_project(start: Path, name: str | None = None) -> InitializationRe
     else:
         config = load_project_config(paths.config_file)
 
-    paths.state.mkdir(exist_ok=True)
+    _ensure_state_directory(paths.state, paths.root)
     for directory in _STATE_DIRECTORIES:
-        (paths.state / directory).mkdir(exist_ok=True)
+        _ensure_state_directory(paths.state / directory, paths.root)
     for artifact_root in config.artifact_roots:
-        (root / artifact_root).mkdir(parents=True, exist_ok=True)
+        _ensure_project_directory(root / artifact_root, root)
 
     updated_gitignore = _ensure_state_is_ignored(root / ".gitignore")
     return InitializationResult(
@@ -105,11 +105,26 @@ def discover_project(start: Path) -> Project:
     current = start.resolve()
     if current.is_file():
         current = current.parent
+    configured_path = None
     for candidate in (current, *current.parents):
         paths = project_paths(candidate)
         if paths.config_file.is_file():
-            return Project(candidate, load_project_config(paths.config_file), paths)
+            configured_path = configured_path or candidate
+            if paths.state.is_dir():
+                project = Project(candidate, load_project_config(paths.config_file), paths)
+                validate_project_state(project)
+                return project
+    if configured_path is not None:
+        raise ProjectInitializationError(
+            f"Waterology local state is not initialized: {configured_path}"
+        )
     raise ProjectNotFoundError(f"No waterology.toml found from {start}")
+
+
+def validate_project_state(project: Project) -> None:
+    _validate_state_directory(project.paths.state, project.root)
+    for directory in _STATE_DIRECTORIES:
+        _validate_state_directory(project.paths.state / directory, project.root)
 
 
 def inspect_project(start: Path) -> ProjectStatus:
@@ -150,6 +165,34 @@ def _ensure_state_is_ignored(path: Path) -> bool:
         prefix = ""
     path.write_text(prefix + entry + "\n", encoding="utf-8")
     return True
+
+
+def _ensure_state_directory(path: Path, root: Path) -> None:
+    if path.is_symlink():
+        raise ProjectInitializationError(f"Local state path must not be a symlink: {path}")
+    path.mkdir(exist_ok=True)
+    _validate_state_directory(path, root)
+
+
+def _ensure_project_directory(path: Path, root: Path) -> None:
+    if path.is_symlink():
+        raise ProjectInitializationError(f"Project directory must not be a symlink: {path}")
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError as error:
+        raise ProjectInitializationError(
+            f"Project directory escapes the project: {path}"
+        ) from error
+
+
+def _validate_state_directory(path: Path, root: Path) -> None:
+    if path.is_symlink() or not path.is_dir():
+        raise ProjectInitializationError(f"Invalid local state directory: {path}")
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError as error:
+        raise ProjectInitializationError(f"Local state escapes the project: {path}") from error
 
 
 def _record_count(path: Path) -> int:

@@ -85,7 +85,8 @@ only after confirming that no Waterology install process is running.
 
 Waterology manages local experiments as committed Git variants. Initialize a
 repository, then edit `waterology.toml` to set the fixed command, declared
-outputs, artifact roots, and environment files:
+outputs, artifact roots, environment files, metric extractors, and any regular
+expressions that should redact sensitive log text before archive sealing:
 
 ```console
 pixi run waterology init

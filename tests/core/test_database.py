@@ -3,7 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from waterology.core.database import UnsupportedDatabaseSchemaError, open_database
+from waterology.core.database import (
+    DatabasePathError,
+    UnsupportedDatabaseSchemaError,
+    open_database,
+)
 
 
 def test_open_database_applies_migrations_once(tmp_path: Path) -> None:
@@ -45,6 +49,18 @@ def test_open_database_configures_wal_foreign_keys_and_busy_timeout(tmp_path: Pa
     assert journal_mode == "wal"
     assert foreign_keys == 1
     assert busy_timeout == 4321
+
+
+def test_open_database_rejects_symlink_without_modifying_target(tmp_path: Path) -> None:
+    outside = tmp_path / "outside.sqlite"
+    outside.write_bytes(b"outside database remains unchanged")
+    path = tmp_path / "state.sqlite"
+    path.symlink_to(outside)
+
+    with pytest.raises(DatabasePathError, match="must not be a symlink"):
+        open_database(path)
+
+    assert outside.read_bytes() == b"outside database remains unchanged"
 
 
 def test_open_database_rejects_a_newer_schema_without_modifying_it(tmp_path: Path) -> None:

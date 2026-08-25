@@ -14,6 +14,7 @@ def _portable_record_paths(values: tuple[str, ...]) -> tuple[str, ...]:
         if (
             not value
             or "\\" in value
+            or any(ord(character) < 32 for character in value)
             or path.is_absolute()
             or _WINDOWS_ABSOLUTE.match(value)
             or ".." in path.parts
@@ -21,6 +22,8 @@ def _portable_record_paths(values: tuple[str, ...]) -> tuple[str, ...]:
         ):
             raise ValueError("must contain relative project paths")
         validated.append(path.as_posix())
+    if len(set(validated)) != len(validated):
+        raise ValueError("must not contain duplicate project paths")
     return tuple(validated)
 
 
@@ -75,6 +78,7 @@ class RunManifest(BaseModel):
     started_at: str
     finished_at: str
     executor: Literal["direct"] = "direct"
+    process_id: int | None = Field(default=None, ge=1)
     terminal_state: Literal["completed", "failed", "cancelled", "lost"]
     exit_code: int | None
     declared_artifacts: tuple[str, ...]
@@ -120,4 +124,5 @@ class RepairResult(BaseModel):
     runs: int
     assessments: int
     artifacts: int
+    rejected_records: int = 0
     warnings: tuple[str, ...] = ()

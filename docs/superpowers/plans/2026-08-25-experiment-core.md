@@ -231,8 +231,9 @@ durable research state model, process execution, and recovery behavior.
 
 ## Completion evidence
 
-- Full suite: 231 tests passed on 2026-08-25.
+- Full suite: 262 tests passed on 2026-08-25.
 - Ruff: all checks passed.
 - Generated runtime assets: current.
 - Repository constraints: 3 of 3 passed.
 - Wheel inspection: core SQL migration and cross runtime assets present.
+- Independent review: no remaining Slice 3 release blockers.

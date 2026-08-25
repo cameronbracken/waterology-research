@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from waterology.core.project import (
+    ProjectInitializationError,
     ProjectNotFoundError,
     discover_project,
     initialize_project,
@@ -75,6 +76,45 @@ def test_discover_project_walks_from_a_nested_path(tmp_path: Path) -> None:
 
     assert project.root == root.resolve()
     assert project.config.name == "study"
+
+
+def test_discover_project_inside_experiment_worktree_uses_owning_state(tmp_path: Path) -> None:
+    root = make_git_repository(tmp_path / "study")
+    initialize_project(root)
+    worktree = root / ".waterology" / "worktrees" / "exp-one"
+    worktree.mkdir()
+    (worktree / "waterology.toml").write_text(
+        'schema_version = 1\nname = "variant"\n', encoding="utf-8"
+    )
+
+    project = discover_project(worktree)
+
+    assert project.root == root.resolve()
+    assert project.config.name == "study"
+
+
+def test_initialize_rejects_symlinked_local_state(tmp_path: Path) -> None:
+    root = make_git_repository(tmp_path / "study")
+    outside = tmp_path / "outside-state"
+    outside.mkdir()
+    (root / ".waterology").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ProjectInitializationError, match="must not be a symlink"):
+        initialize_project(root)
+
+
+@pytest.mark.parametrize("directory", ["experiments", "runs", "staging", "worktrees"])
+def test_discover_rejects_symlinked_state_subdirectory(tmp_path: Path, directory: str) -> None:
+    root = make_git_repository(tmp_path / "study")
+    initialize_project(root)
+    state_directory = root / ".waterology" / directory
+    state_directory.rmdir()
+    outside = tmp_path / f"outside-{directory}"
+    outside.mkdir()
+    state_directory.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ProjectInitializationError, match="Invalid local state directory"):
+        discover_project(root)
 
 
 def test_discover_project_reports_missing_configuration(tmp_path: Path) -> None:

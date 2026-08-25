@@ -37,6 +37,8 @@ def assess_run(
     project = discover_project(start)
     run = load_archive(project.root, run_id)
     experiment = load_experiment(project.root, run.experiment_id)
+    if experiment.status == "frozen":
+        raise AssessmentError(f"Experiment is frozen: {experiment.id}")
     conclusion = conclusion.strip()
     author = author.strip()
     if not conclusion:
@@ -58,7 +60,7 @@ def assess_run(
         note=note.strip() if note else None,
         created_at=_utc_now(),
     )
-    directory = project.paths.assessments / run.run_id
+    directory = _validated_assessment_directory(project, run.run_id, create=True)
     destination = directory / f"{assessment.id}.json"
     with open_database(project.paths.database) as database:
         ensure_experiment_index(database, project, experiment)
@@ -70,7 +72,6 @@ def assess_run(
             payload={"assessment_id": assessment.id, "kind": assessment.kind},
         )
         try:
-            directory.mkdir(exist_ok=True)
             _write_assessment(destination, assessment)
             _index_assessment(database, assessment)
             derived = load_experiment(project.root, experiment.id)
@@ -90,16 +91,30 @@ def assess_run(
 
 def list_assessments(start: Path, run_id: str) -> tuple[AssessmentRecord, ...]:
     project = discover_project(start)
-    load_archive(project.root, run_id)
+    run = load_archive(project.root, run_id)
     directory = project.paths.assessments / run_id
-    if not directory.is_dir():
+    if not directory.exists() and not directory.is_symlink():
         return ()
+    directory = _validated_assessment_directory(project, run_id, create=False)
     records = []
     for path in directory.glob("assessment-*.json"):
         try:
-            records.append(AssessmentRecord.model_validate_json(path.read_text(encoding="utf-8")))
+            assessment = AssessmentRecord.model_validate_json(path.read_text(encoding="utf-8"))
         except (OSError, ValidationError) as error:
             raise AssessmentError(f"Invalid assessment record: {path}") from error
+        if assessment.run_id != run_id:
+            raise AssessmentError(
+                f"Assessment run {assessment.run_id} does not match directory {run_id}"
+            )
+        if assessment.experiment_id != run.experiment_id:
+            raise AssessmentError(
+                f"Assessment experiment does not match run manifest: {assessment.id}"
+            )
+        if assessment.commit_sha != run.commit_sha:
+            raise AssessmentError(f"Assessment commit does not match run manifest: {assessment.id}")
+        for evidence in assessment.evidence:
+            _validate_evidence(project, run_id, evidence)
+        records.append(assessment)
     return tuple(sorted(records, key=lambda item: (item.created_at, item.id)))
 
 
@@ -192,11 +207,33 @@ def _update_experiment_state(database: Database, experiment: object) -> None:
 
 def _write_assessment(path: Path, assessment: AssessmentRecord) -> None:
     staged = path.with_name(f".{path.name}.tmp")
-    staged.write_text(
-        json.dumps(assessment.model_dump(mode="json"), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    if path.exists() or path.is_symlink() or staged.exists() or staged.is_symlink():
+        raise AssessmentError(f"Assessment record path already exists: {path}")
+    with staged.open("x", encoding="utf-8") as stream:
+        stream.write(
+            json.dumps(assessment.model_dump(mode="json"), indent=2, sort_keys=True) + "\n"
+        )
     staged.replace(path)
+
+
+def _validated_assessment_directory(
+    project: Project,
+    run_id: str,
+    *,
+    create: bool,
+) -> Path:
+    directory = project.paths.assessments / run_id
+    if directory.is_symlink():
+        raise AssessmentError(f"Assessment directory must not be a symlink: {run_id}")
+    if create:
+        directory.mkdir(exist_ok=True)
+    if not directory.is_dir():
+        raise AssessmentError(f"Invalid assessment directory: {run_id}")
+    try:
+        directory.resolve().relative_to(project.paths.assessments.resolve())
+    except ValueError as error:
+        raise AssessmentError(f"Assessment directory escapes local state: {run_id}") from error
+    return directory
 
 
 def _utc_now() -> str:

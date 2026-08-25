@@ -24,6 +24,7 @@ max_runs = 2
 [archive]
 allow_missing_outputs = false
 environment_allowlist = ["OMP_NUM_THREADS"]
+log_redactions = ["token=[^\\\\s]+"]
 
 [[metrics]]
 name = "rmse"
@@ -39,6 +40,7 @@ field = "rmse"
     assert config.name == "flood-study"
     assert config.command == ("pixi", "run", "analysis")
     assert config.concurrency.max_runs == 2
+    assert config.archive.log_redactions == (r"token=[^\s]+",)
     assert config.metrics[0].field == "rmse"
 
 
@@ -96,3 +98,14 @@ def test_load_project_config_rejects_unsupported_schema(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError, match="Input should be 1"):
         load_project_config(path)
+
+
+def test_project_config_rejects_invalid_log_redaction() -> None:
+    with pytest.raises(ValidationError, match="invalid log redaction pattern"):
+        ProjectConfig.model_validate(
+            {
+                "schema_version": 1,
+                "name": "study",
+                "archive": {"log_redactions": ["["]},
+            }
+        )

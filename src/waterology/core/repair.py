@@ -1,13 +1,15 @@
 import hashlib
 import json
+import re
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 from waterology.core.archive import ArchiveError, list_archives, verify_project_archive
-from waterology.core.assessments import list_assessments
-from waterology.core.database import Database, open_database
+from waterology.core.assessments import AssessmentError, list_assessments
+from waterology.core.database import Database, open_database, validate_database_path
+from waterology.core.errors import WaterologyError
 from waterology.core.experiments import ensure_experiment_index, list_experiments
 from waterology.core.project import Project, discover_project
 from waterology.core.records import (
@@ -17,15 +19,24 @@ from waterology.core.records import (
     RunManifest,
 )
 
+_EXPERIMENT_DIRECTORY = re.compile(r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+_RUN_DIRECTORY = re.compile(r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+_ASSESSMENT_FILE = re.compile(r"^assessment-[0-9a-f]{16}\.json$")
+
+
+class RepairRecordError(WaterologyError):
+    code = "repair_records_invalid"
+
 
 def repair_index(start: Path) -> RepairResult:
     project = discover_project(start)
+    validate_database_path(project.paths.database)
+    _validate_durable_layout(project)
     experiments = list_experiments(project.root)
     runs = list_archives(project.root)
     _validate_archives(project, runs)
-    assessments = tuple(
-        assessment for run in runs for assessment in list_assessments(project.root, run.run_id)
-    )
+    _validate_record_relationships(project, experiments, runs)
+    assessments = _load_assessments(project, runs)
     artifacts = tuple(artifact for run in runs for artifact in _archive_artifacts(project, run))
     result = RepairResult(
         projects=1,
@@ -36,7 +47,6 @@ def repair_index(start: Path) -> RepairResult:
     )
 
     temporary = project.paths.database.with_name(f".state.sqlite.repair-{uuid4().hex[:12]}.sqlite")
-    intent_id = ""
     try:
         with open_database(temporary) as database:
             intent = database.append_intent(
@@ -45,7 +55,6 @@ def repair_index(start: Path) -> RepairResult:
                 entity_id=project.config.name,
                 payload=result.model_dump(mode="json"),
             )
-            intent_id = intent.id
             _import_project(database, project, experiments, runs)
             for experiment in experiments:
                 ensure_experiment_index(database, project, experiment)
@@ -60,6 +69,10 @@ def repair_index(start: Path) -> RepairResult:
                 raise sqlite3.IntegrityError(
                     f"Repaired database failed integrity check: {integrity}"
                 )
+            foreign_keys = database.connection.execute("PRAGMA foreign_key_check").fetchall()
+            if foreign_keys:
+                raise sqlite3.IntegrityError("Repaired database failed foreign key validation")
+            database.append_observation(intent.id, payload={"outcome": "repaired"})
             database.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             database.connection.execute("PRAGMA journal_mode = DELETE")
         _replace_database(temporary, project.paths.database)
@@ -67,9 +80,85 @@ def repair_index(start: Path) -> RepairResult:
         _remove_database_files(temporary)
         raise
 
-    with open_database(project.paths.database) as database:
-        database.append_observation(intent_id, payload={"outcome": "repaired"})
     return result
+
+
+def _validate_durable_layout(project: Project) -> None:
+    rejected = []
+    for directory, pattern, required_file in (
+        (project.paths.experiments, _EXPERIMENT_DIRECTORY, "experiment.json"),
+        (project.paths.runs, _RUN_DIRECTORY, "manifest.json"),
+    ):
+        for child in directory.iterdir():
+            if child.name == ".DS_Store":
+                continue
+            required = child / required_file
+            if (
+                child.is_symlink()
+                or not child.is_dir()
+                or pattern.fullmatch(child.name) is None
+                or required.is_symlink()
+                or not required.is_file()
+            ):
+                rejected.append(child.relative_to(project.root).as_posix())
+
+    for directory in project.paths.assessments.iterdir():
+        if directory.name == ".DS_Store":
+            continue
+        if (
+            directory.is_symlink()
+            or not directory.is_dir()
+            or _RUN_DIRECTORY.fullmatch(directory.name) is None
+        ):
+            rejected.append(directory.relative_to(project.root).as_posix())
+            continue
+        for record in directory.iterdir():
+            if record.name == ".DS_Store":
+                continue
+            if (
+                record.is_symlink()
+                or not record.is_file()
+                or _ASSESSMENT_FILE.fullmatch(record.name) is None
+            ):
+                rejected.append(record.relative_to(project.root).as_posix())
+
+    if rejected:
+        paths = tuple(sorted(rejected))
+        raise RepairRecordError(
+            f"Repair rejected {len(paths)} malformed durable record location(s)",
+            details={"paths": list(paths), "rejected_records": len(paths)},
+        )
+
+
+def _validate_record_relationships(
+    project: Project,
+    experiments: tuple[ExperimentRecord, ...],
+    runs: tuple[RunManifest, ...],
+) -> None:
+    experiment_ids = {experiment.id for experiment in experiments}
+    for experiment in experiments:
+        if experiment.project_id != project.config.name:
+            raise ValueError(f"Experiment project does not match configuration: {experiment.id}")
+    for run in runs:
+        if run.project_id != project.config.name:
+            raise ArchiveError(f"Run project does not match configuration: {run.run_id}")
+        if run.experiment_id not in experiment_ids:
+            raise ArchiveError(f"Run references an unknown experiment: {run.run_id}")
+
+
+def _load_assessments(
+    project: Project,
+    runs: tuple[RunManifest, ...],
+) -> tuple[AssessmentRecord, ...]:
+    run_ids = {run.run_id for run in runs}
+    for directory in project.paths.assessments.iterdir():
+        if directory.name == ".DS_Store":
+            continue
+        if directory.name not in run_ids:
+            raise AssessmentError(f"Assessment references an unknown run directory: {directory}")
+    return tuple(
+        assessment for run in runs for assessment in list_assessments(project.root, run.run_id)
+    )
 
 
 def _validate_archives(project: Project, runs: tuple[RunManifest, ...]) -> None:
@@ -132,8 +221,8 @@ def _import_run(database: Database, run: RunManifest) -> None:
             """
             INSERT INTO runs (
                 id, experiment_id, commit_sha, operational_state, archive_path,
-                executor, started_at, finished_at, exit_code
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                executor, process_id, started_at, finished_at, exit_code
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run.run_id,
@@ -142,6 +231,7 @@ def _import_run(database: Database, run: RunManifest) -> None:
                 run.terminal_state,
                 f".waterology/runs/{run.run_id}",
                 run.executor,
+                run.process_id,
                 run.started_at,
                 run.finished_at,
                 run.exit_code,
@@ -189,16 +279,26 @@ def _import_artifact(database: Database, run_id: str, path: str, size: int) -> N
 
 
 def _replace_database(temporary: Path, destination: Path) -> None:
-    if destination.exists():
+    backups: dict[Path, Path] = {}
+    try:
+        for suffix in ("-wal", "-shm"):
+            sidecar = destination.with_name(destination.name + suffix)
+            if not sidecar.exists():
+                continue
+            backup = temporary.with_name(f"{temporary.name}.previous{suffix}")
+            sidecar.replace(backup)
+            backups[sidecar] = backup
+        temporary.replace(destination)
+    except BaseException:
+        for sidecar, backup in backups.items():
+            if backup.exists():
+                backup.replace(sidecar)
+        raise
+    for backup in backups.values():
         try:
-            connection = sqlite3.connect(destination)
-            connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            connection.execute("PRAGMA journal_mode = DELETE")
-            connection.close()
-        except sqlite3.DatabaseError:
+            backup.unlink(missing_ok=True)
+        except OSError:
             pass
-    _remove_database_sidecars(destination)
-    temporary.replace(destination)
 
 
 def _remove_database_files(path: Path) -> None:

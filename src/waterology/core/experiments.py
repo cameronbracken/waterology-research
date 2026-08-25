@@ -14,6 +14,7 @@ from waterology.core.records import (
     AssessmentRecord,
     ExperimentNoteRecord,
     ExperimentRecord,
+    RunManifest,
     WorktreeRecord,
 )
 
@@ -60,7 +61,12 @@ def create_experiment(
     record_directory = project.paths.experiments / identifier
     if branch_exists(project.root, branch):
         raise ExperimentConflictError(f"Experiment branch already exists: {branch}")
-    if worktree.exists() or record_directory.exists():
+    if (
+        worktree.exists()
+        or worktree.is_symlink()
+        or record_directory.exists()
+        or record_directory.is_symlink()
+    ):
         raise ExperimentConflictError(f"Experiment path already exists: {identifier}")
 
     base_commit = resolve_commit(project.root, parent_commit or parent_ref)
@@ -104,6 +110,10 @@ def load_experiment(start: Path, experiment_id: str) -> ExperimentRecord:
     _validate_identifier(experiment_id)
     project = discover_project(start)
     path = project.paths.experiments / experiment_id / "experiment.json"
+    if path.parent.is_symlink() or path.is_symlink():
+        raise ExperimentNotFoundError(
+            f"Experiment record path must not be a symlink: {experiment_id}"
+        )
     if not path.is_file():
         raise ExperimentNotFoundError(f"Experiment does not exist: {experiment_id}")
     return _derive_experiment_state(project, _read_experiment_record(path))
@@ -287,7 +297,7 @@ def _derive_experiment_state(
     assessments = _experiment_assessments(project, record.id)
     answers = [assessment for assessment in assessments if assessment.kind == "answer"]
     if answers:
-        answer = answers[-1]
+        answer = answers[0]
         return record.model_copy(
             update={
                 "decision_required": False,
@@ -309,7 +319,7 @@ def _latest_answer_commit(project: Project, experiment_id: str) -> str:
     ]
     if not answers:
         raise ExperimentConflictError(f"Parent experiment has no answer: {experiment_id}")
-    return answers[-1].commit_sha
+    return answers[0].commit_sha
 
 
 def _experiment_assessments(
@@ -318,10 +328,22 @@ def _experiment_assessments(
 ) -> tuple[AssessmentRecord, ...]:
     records = []
     for path in project.paths.assessments.glob("run-*/assessment-*.json"):
+        if path.parent.is_symlink() or path.is_symlink():
+            raise ValueError(f"Assessment record path must not be a symlink: {path}")
         try:
             assessment = AssessmentRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            run_id = path.parent.name
+            manifest_path = project.paths.runs / run_id / "manifest.json"
+            manifest = RunManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
         except (OSError, ValidationError) as error:
             raise ValueError(f"Invalid assessment record: {path}") from error
+        if assessment.run_id != run_id or manifest.run_id != run_id:
+            raise ValueError(f"Assessment run does not match its directory: {path}")
+        if (
+            assessment.experiment_id != manifest.experiment_id
+            or assessment.commit_sha != manifest.commit_sha
+        ):
+            raise ValueError(f"Assessment does not match its run manifest: {path}")
         if assessment.experiment_id == experiment_id:
             records.append(assessment)
     return tuple(sorted(records, key=lambda item: (item.created_at, item.id)))

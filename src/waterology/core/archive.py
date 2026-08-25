@@ -10,6 +10,8 @@ from pathlib import Path, PurePosixPath
 
 from pydantic import ValidationError
 
+from waterology import __version__
+from waterology.core.config import ProjectConfig, load_project_config
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import load_experiment, load_worktree
 from waterology.core.git import resolve_commit
@@ -24,6 +26,8 @@ _STAGING_PAYLOADS = {
     "checksums.sha256",
     "command.json",
     "environment.json",
+    "execution.json",
+    ".execution.json.tmp",
     "manifest.json",
     "metrics.json",
     "result.md",
@@ -67,6 +71,8 @@ def build_run_archive(
     stdout: str,
     stderr: str,
     metrics: dict[str, object],
+    process_id: int | None = None,
+    config: ProjectConfig | None = None,
 ) -> Path:
     if _RUN_ID.fullmatch(run_id) is None:
         raise ValueError(f"Invalid run identifier: {run_id}")
@@ -76,6 +82,12 @@ def build_run_archive(
     worktree = Path(worktree_record.path)
     if not worktree_record.exists:
         raise ArchivePathError(f"Experiment worktree is missing: {experiment_id}")
+    variant_config = config or load_project_config(worktree / "waterology.toml")
+    if variant_config.name != experiment.project_id:
+        raise ArchiveError(
+            f"Experiment project {experiment.project_id} does not match waterology.toml"
+        )
+    project = Project(project.root, variant_config, project.paths)
     resolved_commit = resolve_commit(project.root, commit_sha)
     if resolved_commit != commit_sha:
         raise ArchiveError(f"Run commit is not canonical: {commit_sha}")
@@ -107,6 +119,7 @@ def build_run_archive(
         command=command,
         started_at=started_at,
         finished_at=finished_at,
+        process_id=process_id,
         terminal_state=terminal_state,
         exit_code=exit_code,
         declared_artifacts=project.config.outputs,
@@ -121,14 +134,16 @@ def build_run_archive(
         staging / "assessment.json",
         {"assessment": "unassessed", "schema_version": 1},
     )
-    (staging / "stdout.log").write_text(stdout, encoding="utf-8")
-    (staging / "stderr.log").write_text(stderr, encoding="utf-8")
+    (staging / "stdout.log").write_text(_redact_log(project, stdout), encoding="utf-8")
+    (staging / "stderr.log").write_text(_redact_log(project, stderr), encoding="utf-8")
     (staging / "result.md").write_text(
         f"# Run {run_id}\n\nOperational state: {terminal_state}\n",
         encoding="utf-8",
     )
     _write_source_archive(project.root, commit_sha, staging / "source.tar.zst")
     _write_checksums(staging)
+    (staging / "execution.json").unlink(missing_ok=True)
+    (staging / ".execution.json.tmp").unlink(missing_ok=True)
     staging.replace(destination)
     return destination
 
@@ -168,7 +183,10 @@ def verify_archive(path: Path) -> ArchiveVerification:
 def load_archive(start: Path, run_id: str) -> RunManifest:
     _validate_run_id(run_id)
     project = discover_project(start)
-    path = project.paths.runs / run_id / "manifest.json"
+    directory = project.paths.runs / run_id
+    if directory.is_symlink():
+        raise ArchivePathError(f"Run archive directory must not be a symlink: {run_id}")
+    path = directory / "manifest.json"
     if not path.is_file():
         raise ArchiveNotFoundError(f"Run archive does not exist: {run_id}")
     try:
@@ -227,6 +245,16 @@ def _resolve_artifacts(
             raise ArchivePathError(
                 f"Declared artifact escapes the experiment worktree: {relative}"
             ) from error
+        if resolved.is_dir():
+            for nested in resolved.rglob("*"):
+                try:
+                    nested.resolve().relative_to(worktree.resolve())
+                except ValueError as error:
+                    nested_relative = nested.relative_to(resolved).as_posix()
+                    raise ArchivePathError(
+                        "Declared artifact nested path escapes the experiment worktree: "
+                        f"{relative}/{nested_relative}"
+                    ) from error
         sources.append((relative, resolved))
     return tuple(sources), tuple(missing)
 
@@ -265,6 +293,12 @@ def _prepare_staging(staging: Path) -> None:
             f"Run staging path contains unknown payloads: {', '.join(unexpected)}"
         )
     for child in staging.iterdir():
+        if (
+            child.name in {"execution.json", "stdout.log", "stderr.log"}
+            and not child.is_symlink()
+            and child.is_file()
+        ):
+            continue
         if child.is_dir() and not child.is_symlink():
             shutil.rmtree(child)
         else:
@@ -286,6 +320,13 @@ def _environment_payload(project: Project, worktree: Path) -> dict[str, object]:
     environment_files = {}
     for relative in config.environment_files:
         path = worktree / relative
+        if path.exists() or path.is_symlink():
+            try:
+                path.resolve().relative_to(worktree.resolve())
+            except ValueError as error:
+                raise ArchivePathError(
+                    f"Environment file escapes the experiment worktree: {relative}"
+                ) from error
         environment_files[relative] = _sha256(path) if path.is_file() else None
     variables = {
         name: hashlib.sha256(os.environ[name].encode()).hexdigest()
@@ -299,8 +340,31 @@ def _environment_payload(project: Project, worktree: Path) -> dict[str, object]:
         "operating_system": platform.system(),
         "python": platform.python_version(),
         "schema_version": 1,
+        "tool_versions": {
+            "git": _git_version(project.root),
+            "waterology": __version__,
+        },
         "variables_sha256": variables,
     }
+
+
+def _redact_log(project: Project, value: str) -> str:
+    redacted = value
+    for pattern in project.config.archive.log_redactions:
+        redacted = re.sub(pattern, "[REDACTED]", redacted)
+    return redacted
+
+
+def _git_version(repository: Path) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(repository), "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return "unknown"
+    return completed.stdout.strip()
 
 
 def _write_source_archive(repository: Path, commit_sha: str, destination: Path) -> None:
@@ -325,8 +389,11 @@ def _zstd_compress(data: bytes) -> bytes:
 
 
 def _write_checksums(directory: Path) -> None:
+    excluded = {"checksums.sha256", "execution.json", ".execution.json.tmp"}
     paths = sorted(
-        path for path in directory.rglob("*") if path.is_file() and path.name != "checksums.sha256"
+        path
+        for path in directory.rglob("*")
+        if path.is_file() and path.relative_to(directory).as_posix() not in excluded
     )
     lines = [f"{_sha256(path)}  {path.relative_to(directory).as_posix()}" for path in paths]
     (directory / "checksums.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")

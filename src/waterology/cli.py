@@ -209,10 +209,12 @@ def _core_failure_payload(error: WaterologyError) -> dict[str, object]:
     return {"error": error.payload(), "status": "fail"}
 
 
-def _normalized_core_error(error: WaterologyError | ValueError) -> WaterologyError:
+def _normalized_core_error(error: Exception) -> WaterologyError:
     if isinstance(error, WaterologyError):
         return error
-    return InvalidInputError(str(error))
+    if isinstance(error, ValueError):
+        return InvalidInputError(str(error))
+    return WaterologyError(str(error))
 
 
 def _record_payload(record: BaseModel) -> dict[str, object]:
@@ -220,7 +222,7 @@ def _record_payload(record: BaseModel) -> dict[str, object]:
 
 
 def _show_core_failure(
-    error: WaterologyError | ValueError,
+    error: Exception,
     *,
     json_output: bool,
     title: str,
@@ -241,11 +243,8 @@ def init_project_command(
     """Initialize a Waterology project at a Git repository root."""
     try:
         result = initialize_project(path, name=name)
-    except WaterologyError as error:
-        if json_output:
-            _emit_json(_core_failure_payload(error))
-        else:
-            _show_table("Initialization failed", ("Error",), ((str(error),),))
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Initialization failed")
         raise typer.Exit(1) from error
 
     payload = {
@@ -281,11 +280,8 @@ def project_status_command(
     """Show local Waterology project state."""
     try:
         result = inspect_project(path)
-    except WaterologyError as error:
-        if json_output:
-            _emit_json(_core_failure_payload(error))
-        else:
-            _show_table("Project status failed", ("Error",), ((str(error),),))
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Project status failed")
         raise typer.Exit(1) from error
 
     payload = {
@@ -330,13 +326,8 @@ def repair_index_command(
         _console().print("Rebuilding the Waterology index...")
     try:
         result = repair_index(path)
-    except (WaterologyError, ValueError, OSError) as error:
-        normalized = (
-            error
-            if isinstance(error, (WaterologyError, ValueError))
-            else InvalidInputError(str(error))
-        )
-        _show_core_failure(normalized, json_output=json_output, title="Index repair failed")
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Index repair failed")
         raise typer.Exit(1) from error
     if json_output:
         _emit_json({"result": _record_payload(result), "status": "pass"})
@@ -376,7 +367,7 @@ def experiment_create_command(
             owner=owner,
             experiment_id=experiment_id,
         )
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Experiment creation failed")
         raise typer.Exit(1) from error
     payload = {"experiment": _record_payload(experiment), "status": "pass"}
@@ -398,7 +389,7 @@ def experiment_list_command(
     """List experiments from durable records."""
     try:
         experiments = list_experiments(path)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Experiment listing failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -429,7 +420,7 @@ def experiment_show_command(
     try:
         experiment = load_experiment(path, experiment_id)
         notes = list_experiment_notes(path, experiment_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Experiment lookup failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -467,7 +458,7 @@ def experiment_note_command(
     """Append a note to an experiment."""
     try:
         note = add_experiment_note(path, experiment_id, text, author=author)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Experiment note failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -484,7 +475,7 @@ def worktree_list_command(
     """List experiment worktrees."""
     try:
         worktrees = list_worktrees(path)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Worktree listing failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -519,7 +510,7 @@ def worktree_open_command(
     """Resolve an experiment worktree path."""
     try:
         worktree = load_worktree(path, experiment_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Worktree lookup failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -536,7 +527,7 @@ def archive_list_command(
     """List sealed run archives."""
     try:
         archives = list_archives(path)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Archive listing failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -571,7 +562,7 @@ def archive_show_command(
     """Show a sealed run archive manifest."""
     try:
         archive = load_archive(path, run_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Archive lookup failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -601,7 +592,7 @@ def archive_verify_command(
     """Verify every sealed archive payload against its checksum."""
     try:
         verification = verify_project_archive(path, run_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Archive verification failed")
         raise typer.Exit(1) from error
     status = "pass" if verification.valid else "fail"
@@ -637,7 +628,7 @@ def run_start_command(
         _console().print(f"Starting direct run for {experiment_id}...")
     try:
         run = start_direct_run(path, experiment_id, run_id=run_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -658,7 +649,7 @@ def run_list_command(
     """List terminal runs."""
     try:
         runs = list_archives(path)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run listing failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -680,7 +671,7 @@ def run_status_command(
     """Show terminal run state."""
     try:
         run = load_archive(path, run_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run lookup failed")
         raise typer.Exit(1) from error
     if json_output:
@@ -702,13 +693,8 @@ def run_logs_command(
     """Read terminal run logs."""
     try:
         logs = read_archive_logs(path, run_id)
-    except (WaterologyError, ValueError, OSError) as error:
-        normalized = (
-            error
-            if isinstance(error, (WaterologyError, ValueError))
-            else InvalidInputError(str(error))
-        )
-        _show_core_failure(normalized, json_output=json_output, title="Run log lookup failed")
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="Run log lookup failed")
         raise typer.Exit(1) from error
     if json_output:
         _emit_json({"logs": logs, "run_id": run_id, "status": "pass"})
@@ -742,7 +728,7 @@ def run_assess_command(
             note=note,
         )
         experiment = load_experiment(path, assessment.experiment_id)
-    except (WaterologyError, ValueError) as error:
+    except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run assessment failed")
         raise typer.Exit(1) from error
     payload = {

@@ -18,6 +18,10 @@ class UnsupportedDatabaseSchemaError(WaterologyError):
     code = "unsupported_database_schema"
 
 
+class DatabasePathError(WaterologyError):
+    code = "database_path_invalid"
+
+
 @dataclass(frozen=True)
 class EventRecord:
     sequence: int
@@ -163,6 +167,7 @@ class Database:
 
 def open_database(path: Path, busy_timeout_ms: int = 5000) -> Database:
     path.parent.mkdir(parents=True, exist_ok=True)
+    validate_database_path(path)
     connection = sqlite3.connect(path, timeout=busy_timeout_ms / 1000)
     connection.row_factory = sqlite3.Row
     try:
@@ -174,6 +179,16 @@ def open_database(path: Path, busy_timeout_ms: int = 5000) -> Database:
         connection.close()
         raise
     return Database(connection)
+
+
+def validate_database_path(path: Path) -> None:
+    for candidate in (
+        path,
+        path.with_name(path.name + "-wal"),
+        path.with_name(path.name + "-shm"),
+    ):
+        if candidate.is_symlink():
+            raise DatabasePathError(f"Database path must not be a symlink: {candidate}")
 
 
 def _apply_migrations(connection: sqlite3.Connection) -> None:

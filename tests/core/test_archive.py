@@ -18,7 +18,12 @@ from waterology.core.archive import (
     load_archive,
     verify_archive,
 )
-from waterology.core.config import ProjectConfig, project_config_toml
+from waterology.core.config import (
+    ArchiveConfig,
+    ProjectConfig,
+    load_project_config,
+    project_config_toml,
+)
 from waterology.core.experiments import create_experiment
 from waterology.core.project import initialize_project
 
@@ -88,6 +93,9 @@ def test_build_and_verify_run_archive(tmp_path: Path) -> None:
     with tarfile.open(fileobj=io.BytesIO(source_tar)) as source:
         assert {"model.py", "waterology.toml"} <= set(source.getnames())
     assert (archive / "artifacts" / "artifacts" / "result.json").is_file()
+    environment = json.loads((archive / "environment.json").read_text(encoding="utf-8"))
+    assert environment["tool_versions"]["git"].startswith("git version ")
+    assert environment["tool_versions"]["waterology"]
     verification = verify_archive(archive)
     assert verification.valid is True
     assert verification.missing == verification.changed == verification.unexpected == ()
@@ -119,6 +127,42 @@ def test_verify_archive_reports_changed_payload(tmp_path: Path) -> None:
 
     assert verification.valid is False
     assert verification.changed == ("stdout.log",)
+
+
+def test_archive_redacts_configured_log_patterns_before_sealing(tmp_path: Path) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    config = load_project_config(worktree / "waterology.toml").model_copy(
+        update={"archive": ArchiveConfig(log_redactions=(r"token=[^\s]+",))}
+    )
+    (worktree / "waterology.toml").write_text(project_config_toml(config), encoding="utf-8")
+    subprocess.run(["git", "-C", str(worktree), "add", "waterology.toml"], check=True)
+    subprocess.run(
+        ["git", "-C", str(worktree), "commit", "--quiet", "-m", "Configure redaction"],
+        check=True,
+    )
+    output = worktree / "artifacts" / "result.json"
+    output.parent.mkdir()
+    output.write_text("{}\n", encoding="utf-8")
+
+    archive = build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-redacted",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="token=stdout-secret\n",
+        stderr="token=stderr-secret\n",
+        metrics={},
+    )
+
+    assert (archive / "stdout.log").read_text(encoding="utf-8") == "[REDACTED]\n"
+    assert (archive / "stderr.log").read_text(encoding="utf-8") == "[REDACTED]\n"
+    assert verify_archive(archive).valid is True
 
 
 def test_verify_archive_reports_missing_and_unexpected_payloads(tmp_path: Path) -> None:
@@ -264,6 +308,95 @@ def test_archive_rejects_declared_artifact_symlink_escape(tmp_path: Path) -> Non
         )
 
     assert not (root / ".waterology" / "runs" / "run-escape").exists()
+
+
+def test_archive_rejects_nested_symlink_escape_in_declared_directory(tmp_path: Path) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study", output="artifacts")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    outside = tmp_path / "outside.json"
+    outside.write_text("{}\n", encoding="utf-8")
+    artifacts = worktree / "artifacts"
+    artifacts.mkdir()
+    (artifacts / "inside.json").write_text("{}\n", encoding="utf-8")
+    (artifacts / "escaped.json").symlink_to(outside)
+
+    with pytest.raises(ArchivePathError, match="nested path escapes"):
+        build_run_archive(
+            root,
+            experiment_id=experiment_id,
+            run_id="run-nested-escape",
+            commit_sha=git(worktree, "rev-parse", "HEAD"),
+            command=("python3", "model.py"),
+            started_at="2026-08-25T10:00:00Z",
+            finished_at="2026-08-25T10:00:01Z",
+            terminal_state="completed",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            metrics={},
+        )
+
+
+def test_archive_hashes_artifacts_named_like_internal_staging_files(tmp_path: Path) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study", output="artifacts")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    artifacts = worktree / "artifacts"
+    artifacts.mkdir()
+    for name in ("execution.json", ".execution.json.tmp", "checksums.sha256"):
+        (artifacts / name).write_text(f"artifact {name}\n", encoding="utf-8")
+
+    archive = build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-internal-names",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="",
+        stderr="",
+        metrics={},
+    )
+
+    checksums = (archive / "checksums.sha256").read_text(encoding="utf-8")
+    assert "artifacts/artifacts/execution.json" in checksums
+    assert "artifacts/artifacts/.execution.json.tmp" in checksums
+    assert "artifacts/artifacts/checksums.sha256" in checksums
+    assert verify_archive(archive).valid is True
+
+
+def test_archive_replaces_staged_log_symlink_without_writing_target(tmp_path: Path) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    output = worktree / "artifacts" / "result.json"
+    output.parent.mkdir()
+    output.write_text("{}\n", encoding="utf-8")
+    outside = tmp_path / "outside.log"
+    outside.write_text("outside stays unchanged\n", encoding="utf-8")
+    staging = root / ".waterology" / "staging" / "run-staged-log-link"
+    staging.mkdir()
+    (staging / "stdout.log").symlink_to(outside)
+
+    archive = build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-staged-log-link",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="safe log\n",
+        stderr="",
+        metrics={},
+    )
+
+    assert outside.read_text(encoding="utf-8") == "outside stays unchanged\n"
+    assert (archive / "stdout.log").read_text(encoding="utf-8") == "safe log\n"
+    assert verify_archive(archive).valid is True
 
 
 def test_archive_cli_lists_shows_and_verifies_sealed_run(tmp_path: Path) -> None:

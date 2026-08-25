@@ -10,7 +10,7 @@ _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 
 
 def _portable_project_path(value: str) -> str:
-    if not value or "\\" in value or "\x00" in value:
+    if not value or "\\" in value or any(ord(character) < 32 for character in value):
         raise ValueError("must be a relative project path using forward slashes")
     path = PurePosixPath(value)
     if path.is_absolute() or _WINDOWS_ABSOLUTE.match(value) or ".." in path.parts:
@@ -21,7 +21,10 @@ def _portable_project_path(value: str) -> str:
 
 
 def _portable_project_paths(values: tuple[str, ...]) -> tuple[str, ...]:
-    return tuple(_portable_project_path(value) for value in values)
+    validated = tuple(_portable_project_path(value) for value in values)
+    if len(set(validated)) != len(validated):
+        raise ValueError("project paths must not contain duplicates")
+    return validated
 
 
 class ConcurrencyConfig(BaseModel):
@@ -35,6 +38,19 @@ class ArchiveConfig(BaseModel):
 
     allow_missing_outputs: bool = False
     environment_allowlist: tuple[str, ...] = ()
+    log_redactions: tuple[str, ...] = ()
+
+    @field_validator("log_redactions")
+    @classmethod
+    def _validate_log_redactions(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        for value in values:
+            if not value:
+                raise ValueError("log redaction patterns must not be empty")
+            try:
+                re.compile(value)
+            except re.error as error:
+                raise ValueError(f"invalid log redaction pattern: {error}") from error
+        return values
 
 
 class MetricExtractor(BaseModel):
@@ -64,7 +80,24 @@ class ProjectConfig(BaseModel):
 
     _validate_artifact_roots = field_validator("artifact_roots")(_portable_project_paths)
     _validate_environment_files = field_validator("environment_files")(_portable_project_paths)
-    _validate_outputs = field_validator("outputs")(_portable_project_paths)
+
+    @field_validator("outputs")
+    @classmethod
+    def _validate_outputs(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        validated = _portable_project_paths(values)
+        paths = tuple(PurePosixPath(value) for value in validated)
+        for index, path in enumerate(paths):
+            if any(path in other.parents or other in path.parents for other in paths[index + 1 :]):
+                raise ValueError("declared outputs must not overlap")
+        return validated
+
+    @field_validator("metrics")
+    @classmethod
+    def _validate_metrics(cls, values: tuple[MetricExtractor, ...]) -> tuple[MetricExtractor, ...]:
+        names = [metric.name for metric in values]
+        if len(set(names)) != len(names):
+            raise ValueError("metric names must be unique")
+        return values
 
     @field_validator("name", "default_compute_profile")
     @classmethod
@@ -108,6 +141,7 @@ def project_config_toml(config: ProjectConfig) -> str:
         "[archive]",
         f"allow_missing_outputs = {str(config.archive.allow_missing_outputs).lower()}",
         f"environment_allowlist = {_toml_array(config.archive.environment_allowlist)}",
+        f"log_redactions = {_toml_array(config.archive.log_redactions)}",
     ]
     for metric in config.metrics:
         lines.extend(
