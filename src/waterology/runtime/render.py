@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import yaml
 
 from waterology.runtime.agents import AgentDefinition, load_agents
 from waterology.runtime.assets import AssetCatalog
+from waterology.runtime.skills import SkillDefinition, load_skills
 
 CLAUDE_TOOLS = {
     "read": ("Read", "Grep", "Glob"),
@@ -18,6 +20,7 @@ CLAUDE_TOOLS = {
         "mcp__kagi__kagi_extract",
     ),
 }
+SOURCE_ATTRIBUTION = re.compile(r"<!--\s*Adapted from.*?-->", re.DOTALL)
 
 
 def render_claude(agent: AgentDefinition) -> str:
@@ -48,6 +51,25 @@ def render_opencode(agent: AgentDefinition) -> str:
     return f"---\n{frontmatter}\n---\n\n{marker}\n\n{agent.body}"
 
 
+def render_claude_command(skill: SkillDefinition) -> str:
+    command = skill.claude_command
+    if command is None:
+        raise ValueError(f"Skill has no Claude command metadata: {skill.name}")
+    frontmatter = yaml.safe_dump(
+        {"description": skill.description, "argument-hint": command.argument_hint},
+        sort_keys=False,
+    ).rstrip()
+    marker = f"<!-- Generated from skills/{skill.name}/SKILL.md. Do not edit. -->"
+    match = SOURCE_ATTRIBUTION.search(skill.body)
+    attribution = (
+        match.group(0)
+        if match is not None
+        else "<!-- Attribution is recorded in the canonical skill and ATTRIBUTION.md. -->"
+    )
+    body = f"Use the `{skill.name}` skill to complete this request.\n\nArguments: $ARGUMENTS\n"
+    return f"---\n{frontmatter}\n---\n\n{marker}\n{attribution}\n\n{body}"
+
+
 Renderer = Callable[[AgentDefinition], str]
 DESTINATIONS: dict[str, tuple[str, str, Renderer]] = {
     "claude": ("agents", ".md", render_claude),
@@ -59,7 +81,39 @@ DESTINATIONS: dict[str, tuple[str, str, Renderer]] = {
 class GeneratedAssetsStaleError(RuntimeError):
     def __init__(self, paths: tuple[Path, ...]) -> None:
         self.paths = paths
-        super().__init__("Generated agent files are stale")
+        super().__init__("Generated files are stale")
+
+
+def _render_expected(expected: dict[Path, str], check: bool) -> tuple[Path, ...]:
+    changed: list[Path] = []
+    for destination, content in expected.items():
+        current = destination.read_text(encoding="utf-8") if destination.exists() else None
+        if current == content:
+            continue
+        changed.append(destination)
+        if not check:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8")
+    paths = tuple(sorted(changed))
+    if check and paths:
+        raise GeneratedAssetsStaleError(paths)
+    return paths
+
+
+def _expected_agents(catalog: AssetCatalog, output_root: Path) -> dict[Path, str]:
+    expected: dict[Path, str] = {}
+    for agent in load_agents(catalog):
+        for directory, suffix, renderer in DESTINATIONS.values():
+            expected[output_root / directory / f"{agent.name}{suffix}"] = renderer(agent)
+    return expected
+
+
+def _expected_commands(catalog: AssetCatalog, output_root: Path) -> dict[Path, str]:
+    return {
+        output_root / "commands" / f"{skill.claude_command.name}.md": render_claude_command(skill)
+        for skill in load_skills(catalog)
+        if skill.claude_command is not None
+    }
 
 
 def render_agents(
@@ -67,19 +121,24 @@ def render_agents(
     output_root: Path,
     check: bool = False,
 ) -> tuple[Path, ...]:
-    changed: list[Path] = []
-    for agent in load_agents(catalog):
-        for directory, suffix, renderer in DESTINATIONS.values():
-            destination = output_root / directory / f"{agent.name}{suffix}"
-            expected = renderer(agent)
-            current = destination.read_text(encoding="utf-8") if destination.exists() else None
-            if current == expected:
-                continue
-            changed.append(destination)
-            if not check:
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_text(expected, encoding="utf-8")
-    paths = tuple(sorted(changed))
-    if check and paths:
-        raise GeneratedAssetsStaleError(paths)
-    return paths
+    return _render_expected(_expected_agents(catalog, output_root), check)
+
+
+def render_commands(
+    catalog: AssetCatalog,
+    output_root: Path,
+    check: bool = False,
+) -> tuple[Path, ...]:
+    return _render_expected(_expected_commands(catalog, output_root), check)
+
+
+def render_assets(
+    catalog: AssetCatalog,
+    output_root: Path,
+    check: bool = False,
+) -> tuple[Path, ...]:
+    expected = {
+        **_expected_agents(catalog, output_root),
+        **_expected_commands(catalog, output_root),
+    }
+    return _render_expected(expected, check)

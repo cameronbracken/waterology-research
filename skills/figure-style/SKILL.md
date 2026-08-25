@@ -8,6 +8,9 @@ description: >
 
 # Figure Style
 
+<!-- Adapted from companion-inc/feynman, skills/figure-style/SKILL.md at commit
+8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
+
 Use `writing-style` for labels, annotations, and captions.
 
 Apply before producing or revising any single plot. This is the research-figure
@@ -40,4 +43,4 @@ Stack defaults (match a project's existing style first):
   data. See `rules/quarto-conventions.md`.
 
 ---
-*Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*
+*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

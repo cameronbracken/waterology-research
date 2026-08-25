@@ -31,7 +31,7 @@ def test_render_check_reports_current_generated_assets() -> None:
     result = runner.invoke(app, ["render", "--check"])
 
     assert result.exit_code == 0
-    assert "Generated agents are current" in result.stdout
+    assert "Generated assets are current" in result.stdout
 
 
 def test_render_check_returns_exit_one_for_stale_generated_assets(
@@ -44,7 +44,7 @@ def test_render_check_returns_exit_one_for_stale_generated_assets(
     result = runner.invoke(app, ["render", "--check"])
 
     assert result.exit_code == 1
-    assert "Generated agent files are stale" in result.stdout
+    assert "Generated files are stale" in result.stdout
 
 
 def test_doctor_json_reports_runtime_commands(monkeypatch, tmp_path: Path) -> None:

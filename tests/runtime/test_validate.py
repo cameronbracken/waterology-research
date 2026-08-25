@@ -69,6 +69,46 @@ def test_validation_reports_duplicate_skill_names(tmp_path: Path) -> None:
     }
 
 
+def test_validation_reports_duplicate_claude_command_names(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    skill = catalog.path("skills/writing-style/SKILL.md")
+    skill.write_text(
+        skill.read_text(encoding="utf-8").replace(
+            "---\n\n# Writing Style",
+            """metadata:
+  claude-command:
+    name: log
+    argument-hint: (none)
+---
+
+# Writing Style""",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert ("skills/writing-style/SKILL.md", "duplicate-claude-command", "log") in {
+        (issue.path, issue.code, issue.message) for issue in issues
+    }
+
+
+def test_validation_reports_invalid_claude_command_metadata(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    skill = catalog.path("skills/session-log/SKILL.md")
+    skill.write_text(
+        skill.read_text(encoding="utf-8").replace("argument-hint: (none)", "argument-hint: ''"),
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert ("skills/session-log/SKILL.md", "invalid-skill-definition") in {
+        (issue.path, issue.code) for issue in issues
+    }
+
+
 def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     skill = catalog.path("skills/eli5/SKILL.md")
@@ -132,6 +172,53 @@ def test_validation_reports_stale_generated_agents_without_writing(tmp_path: Pat
         (issue.path, issue.code) for issue in issues
     }
     assert agent.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_validation_reports_stale_generated_command_without_writing(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    command = catalog.path("commands/log.md")
+    command.write_text("stale\n", encoding="utf-8")
+
+    issues = validate_assets(catalog)
+
+    assert ("commands/log.md", "stale-generated-command") in {
+        (issue.path, issue.code) for issue in issues
+    }
+    assert command.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_validation_reports_generated_command_directory(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    command = catalog.path("commands/log.md")
+    command.unlink()
+    command.mkdir()
+
+    issues = validate_assets(catalog)
+
+    assert (
+        "commands/log.md",
+        "invalid-asset-type",
+        "generated command must be a file",
+    ) in {(issue.path, issue.code, issue.message) for issue in issues}
+
+
+def test_validation_reports_orphaned_generated_command(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    command = catalog.path("commands") / "orphan.md"
+    command.write_text(
+        "---\n"
+        "description: Orphaned command.\n"
+        "argument-hint: (none)\n"
+        "---\n\n"
+        "<!-- Generated from skills/missing/SKILL.md. Do not edit. -->\n",
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert ("commands/orphan.md", "orphaned-generated-command") in {
+        (issue.path, issue.code) for issue in issues
+    }
 
 
 def test_validation_reports_malformed_manifest_json(tmp_path: Path) -> None:

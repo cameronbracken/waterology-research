@@ -66,14 +66,15 @@ def test_canonical_guidance_has_required_commands() -> None:
     assert "python3 constraints/check-all.py ." in agents
 
 
-def test_roadmap_marks_only_cross_runtime_foundation_complete() -> None:
+def test_roadmap_marks_research_methods_complete() -> None:
     readme = (ROOT / "README.md").read_text()
     roadmap = (ROOT / "ROADMAP.md").read_text()
 
-    assert "The cross runtime foundation is complete." in readme
-    assert "Later skill migration remains planned for Slice 2." in readme
+    assert "The cross runtime foundation and research methods migration are complete." in readme
+    assert "Research workflows are runtime neutral." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
-    assert roadmap.count("- [x]") == 1
+    assert "- [x] **Slice 2: research methods**" in roadmap
+    assert roadmap.count("- [x]") == 2
     assert "Task 10 owns the remaining acceptance checks." not in roadmap
-    assert "Later skill migration remains planned for Slice 2." in roadmap
+    assert "Later skill migration remains planned for Slice 2." not in roadmap
     assert "## Research feature roadmap" in roadmap

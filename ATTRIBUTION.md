@@ -53,31 +53,47 @@ source carry a one-line credit at the top; this page is the canonical list.
 
 - **Author:** Companion, Inc.
 - **Repo:** <https://github.com/companion-inc/feynman>
+- **Pinned revision:** `8ad8d5582fc5acb855fb83f972f0f3121d1aa423`
 - **License:** MIT — © 2026 Companion, Inc. *(standalone `LICENSE` file present)*
+- **Original paths:** `.feynman/agents/{researcher,reviewer,verifier,writer}.md`,
+  `skills/*/SKILL.md`, and `prompts/{audit,autoresearch,compare,deepresearch,
+  draft,lit,log,recipe,replicate,review,summarize,watch}.md`.
 - **What we adapt:** the four research subagents (`researcher`, `writer`,
   `verifier`, `reviewer`), the general-research skills (`deep-research`,
   `literature-review`, `paper-writing`, `paper-narrative`, `paper-code-audit`,
   `research-review`, `source-comparison`, `figure-composer`, `figure-style`,
   `replication`, `pdf-explore`, `eli5`, `ml-training-recipe`, `session-log`,
-  `watch`, `autoresearch`), and the matching slash-command workflows
+  `watch`, `autoresearch`, `source-summarization`), and the matching
+  slash-command workflows
   (`/deepresearch`, `/lit`, `/draft`, `/review`, `/audit`, `/compare`,
   `/replicate`, `/recipe`, `/autoresearch`, `/watch`, `/log`, `/summarize`).
-  Feynman's tool names (`web_search`, `fetch_content`, alphaXiv `alpha_*`, the
-  `subagent` dispatcher, Hugging Face `hf_*`) are remapped to Claude Code
-  equivalents (`WebSearch`/`WebFetch`, the Consensus MCP + OpenAlex/arXiv, the
-  `Task` tool); the computational-biology model wrappers and Feynman
-  product-internal skills are dropped; figures, papers, and examples are
-  retargeted to the R / Quarto / hydrology-energy stack.
+  Feynman's tool names and product assumptions are replaced with capability
+  descriptions that work in Claude Code, Codex, and OpenCode. Durable workflow
+  behavior now lives in canonical skills.
+  The `commands/` files are generated Claude compatibility shims.
+  Computational biology model wrappers and Feynman
+  product internal skills are dropped. Figures, papers, and examples are
+  retargeted to the R, Quarto, hydrology, and energy stack.
 - **Credit string:** *Adapted from Feynman (companion-inc/feynman, MIT).*
 
 ### alphaXiv/openresearch-cli — experiment tree + research-loop refinements
 
 - **Author:** alphaXiv
 - **Repo:** <https://github.com/alphaXiv/openresearch-cli>
+- **Pinned revision:** `13049867497de8fd5e15253cd818462629edd690`
+- **Replication revision:** `5412465c112b4f81033420db7ff7267ec88106c6`
 - **License:** MIT *(declared in `Cargo.toml`; no standalone `LICENSE` file is
   present in the repo as of July 2026 — cited in good faith)*
-- **What we adapt:** the experiment-tree discipline from the `orx` agent
-  skills and system prompt (`rules/experiment-tree.md` and `/autoresearch`
+- **Original paths:** `agent-skills/orx-agent-delegation/SKILL.md`,
+  `agent-skills/orx-experiment-tree/SKILL.md`,
+  `agent-skills/orx-lit-review/SKILL.md`, `SYSTEM_PROMPT.md`, and
+  `src/local/skills.rs` at the replication revision.
+- **What we adapt:** the portable delegation contract for independent task
+  boundaries, standalone briefs, worktree ownership, explicit compute
+  authorization, output paths, and return contracts; the experiment-tree
+  discipline from the `orx` agent
+  skills and system prompt (`skills/autoresearch/references/experiment-tree.md`
+  and `/autoresearch`
   tree mode) — frozen baseline, fixed run contract, vary-code-not-knobs, one
   branch for each hypothesis, "stacked bushes" tree shaping, no merge or
   rebase of branches with recorded results; the multi-hop literature-search

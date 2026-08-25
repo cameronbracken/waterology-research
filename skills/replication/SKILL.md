@@ -5,25 +5,71 @@ description: >
   explicit environment choice. Use when the user asks to replicate results,
   reproduce an experiment, verify a claim empirically, or build a replication
   package.
+metadata:
+  claude-command:
+    name: replicate
+    argument-hint: <paper>
 ---
 
 # Replication
 
+<!-- Adapted from companion-inc/feynman, skills/replication/SKILL.md at commit
+8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT), with claim-ledger guidance
+from alphaXiv/openresearch-cli, src/local/skills.rs at commit
+5412465c112b4f81033420db7ff7267ec88106c6 (MIT per Cargo.toml). See
+ATTRIBUTION.md. -->
+
 Use `writing-style` for the plan, evidence ledger, and report.
 
-Run the `/replicate` workflow. It extracts implementation details, enumerates
-the paper's main empirical claims into a ledger (paper result, observed result,
-assessment, downscaling, compute cost), does a recipe pass for training or
-dataset-heavy targets, plans what code, data, metrics, and environment are
-needed, then asks where to run before executing. Assessments come from a fixed
-vocabulary (`aligned`, `partially aligned`, `inconclusive under this setup`,
-`not attempted`); divergent results are quantified, never characterized as the
-claim being wrong.
+Read the target paper, linked code, and recent relevant `CHANGELOG.md` entries.
+Delegate broad implementation extraction to the `researcher` through the
+runtime's available agent mechanism.
 
-Execution environments are matched to this stack: Local, a new git branch, a
-Pixi environment (`rv`/`renv` for R), or remote SSH/Slurm for GPU or long jobs.
-Nothing is installed or run until the environment is confirmed. See the
-`setup-environment` skill for scaffolding an isolated environment.
+Create a claim ledger, starting with the headline table or figure result. Unless
+the user requests broader coverage, focus on the main illustrative claim. Each
+row carries the paper result, observed result, assessment, downscaling or
+substitutions, and compute cost.
+
+For training or dataset heavy targets, extract a recipe before execution. Link
+each claimed result to its dataset, method, hyperparameters, compute, metric,
+and implementation path. Check dataset availability and schema where possible.
+Mark unchecked details `unverified`.
+
+Plan the code, data, metrics, environment, and checks that decide whether the
+replication is aligned with the reported result. Separate verified facts,
+inferences, and missing information.
+
+Require an explicit environment choice before execution:
+
+- Local work in the current directory.
+- A new Git branch.
+- A Pixi environment, with `rv` or `renv` for R packages when appropriate.
+- Remote SSH or Slurm for GPU or long runs.
+- Plan only, with no execution.
+
+Match the existing project setup before creating an environment. Do not install
+packages, run training, or execute experiments until the user confirms the
+environment. Use `setup-environment` only after that choice when scaffolding is
+needed.
+
+When authorized, work claim by claim and fill the ledger as results arrive.
+Record seeds, RNG kind, commands, scripts, raw outputs, and results in a
+reproducible layout. State every downscaling or substitution. Do not call the
+outcome replicated unless the planned checks pass.
+
+Assess each claim with exactly one of `aligned`, `partially aligned`,
+`inconclusive under this setup`, or `not attempted`. For divergence, quantify
+what this run observed and its uncertainty. Do not characterize the paper's
+claim as wrong or infer beyond the tested setup.
+
+For resumable work, append concise `CHANGELOG.md` entries after meaningful
+progress, failed attempts, major checks, and before stopping. Record the active
+objective, changes, evidence, and next step.
+
+Lead the report with the strongest result figure, followed by the claim ledger
+and what a full scale replication still needs. Every figure and number carries
+its script, seed, and exact command. End with direct paper, dataset,
+documentation, and repository URLs.
 
 Agents used: `researcher`.
 Output: replication plan, scripts, raw outputs, and a `CHANGELOG.md` trail.
@@ -31,4 +77,4 @@ Output: replication plan, scripts, raw outputs, and a `CHANGELOG.md` trail.
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT); claim ledger from
 openresearch-cli (alphaXiv/openresearch-cli, MIT per Cargo.toml). See
-`${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*
+`ATTRIBUTION.md`.*
