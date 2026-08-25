@@ -10,7 +10,8 @@ from pydantic import ValidationError
 from waterology import __version__
 from waterology.runtime.agents import parse_agent
 from waterology.runtime.assets import AssetCatalog, AssetNotFoundError
-from waterology.runtime.render import GeneratedAssetsStaleError, render_agents
+from waterology.runtime.render import GeneratedAssetsStaleError, render_agents, render_commands
+from waterology.runtime.skills import parse_skill
 
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
@@ -110,6 +111,92 @@ def _validate_skills(catalog: AssetCatalog) -> list[ValidationIssue]:
                             reference_path,
                         )
                     )
+    return issues
+
+
+def _validate_skill_commands(catalog: AssetCatalog) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    command_owners: dict[str, str] = {}
+    expected_commands: set[str] = set()
+    definitions_valid = True
+
+    for directory in catalog.skill_directories():
+        path = directory / "SKILL.md"
+        relative = path.relative_to(catalog.root).as_posix()
+        try:
+            skill = parse_skill(path)
+        except (ValueError, ValidationError, yaml.YAMLError) as error:
+            definitions_valid = False
+            issues.append(ValidationIssue(relative, "invalid-skill-definition", str(error)))
+            continue
+        command = skill.claude_command
+        if command is None:
+            continue
+        if command.name in command_owners:
+            definitions_valid = False
+            issues.append(ValidationIssue(relative, "duplicate-claude-command", command.name))
+            continue
+        command_owners[command.name] = relative
+        expected_commands.add(f"{command.name}.md")
+
+    try:
+        command_directory = catalog.path("commands")
+    except AssetNotFoundError:
+        if expected_commands:
+            issues.append(
+                ValidationIssue("commands", "missing-asset", "generated commands are missing")
+            )
+        return issues
+    if not command_directory.is_dir():
+        issues.append(
+            ValidationIssue("commands", "invalid-asset-type", "commands must be a directory")
+        )
+        return issues
+
+    entries = {path.name: path for path in command_directory.iterdir()}
+    command_assets_valid = True
+    for filename in sorted(expected_commands - entries.keys()):
+        command_assets_valid = False
+        issues.append(
+            ValidationIssue(
+                f"commands/{filename}", "missing-asset", "generated command is missing"
+            )
+        )
+    for filename, path in sorted(entries.items()):
+        if filename in expected_commands and not path.is_file():
+            command_assets_valid = False
+            issues.append(
+                ValidationIssue(
+                    f"commands/{filename}",
+                    "invalid-asset-type",
+                    "generated command must be a file",
+                )
+            )
+            continue
+        if not path.is_file() or path.suffix != ".md":
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "<!-- Generated from skills/" in text and filename not in expected_commands:
+            issues.append(
+                ValidationIssue(
+                    f"commands/{filename}",
+                    "orphaned-generated-command",
+                    "generated command has no canonical skill metadata",
+                )
+            )
+
+    if definitions_valid and command_assets_valid:
+        try:
+            render_commands(catalog, catalog.root, check=True)
+        except GeneratedAssetsStaleError as error:
+            for path in error.paths:
+                issues.append(
+                    ValidationIssue(
+                        path.relative_to(catalog.root).as_posix(),
+                        "stale-generated-command",
+                        "rendered content differs",
+                    )
+                )
     return issues
 
 
@@ -328,6 +415,7 @@ def validate_assets(catalog: AssetCatalog) -> tuple[ValidationIssue, ...]:
     issues = [
         *_validate_manifests(catalog),
         *_validate_skills(catalog),
+        *_validate_skill_commands(catalog),
         *canonical_issues,
         *_validate_generated_agents(catalog, canonical_names, canonical_valid),
     ]

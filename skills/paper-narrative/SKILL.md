@@ -8,6 +8,9 @@ description: >
 
 # Paper Narrative
 
+<!-- Adapted from companion-inc/feynman, skills/paper-narrative/SKILL.md at
+commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
+
 Improve the argument a paper makes, not just its prose.
 
 Use the `writing-style` skill's scientific layer when shaping claims and
@@ -24,7 +27,8 @@ revising the manuscript text.
 5. Save a revision plan or manuscript draft with source and provenance notes.
 
 The output reads as a paper's evidence arc, not a generic writing checklist. For
-producing the draft itself, hand off to `/draft`; for a hard critique, `/review`.
+producing the draft itself, use `paper-writing`; for a hard critique, use
+`research-review`.
 
 ---
-*Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*
+*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

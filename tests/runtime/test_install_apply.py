@@ -52,6 +52,36 @@ def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
     assert serialized == json.dumps(manifest, indent=2, sort_keys=True) + "\n"
 
 
+@pytest.mark.parametrize(
+    ("runtime", "skill_root"),
+    [
+        (Runtime.CLAUDE, ".claude/skills"),
+        (Runtime.CODEX, ".agents/skills"),
+        (Runtime.OPENCODE, ".opencode/skills"),
+    ],
+)
+def test_installed_autoresearch_tree_reference_resolves(
+    tmp_path: Path, runtime: Runtime, skill_root: str
+) -> None:
+    plan = build_install_plan(
+        runtime,
+        InstallScope.PROJECT,
+        tmp_path,
+        InstallMode.COPY,
+        AssetCatalog.discover(),
+    )
+
+    apply_install_plan(plan)
+
+    skill = tmp_path / skill_root / "autoresearch/SKILL.md"
+    reference = skill.parent / "references/experiment-tree.md"
+    assert skill.is_file()
+    assert reference.is_file()
+    assert "[experiment-tree.md](references/experiment-tree.md)" in skill.read_text(
+        encoding="utf-8"
+    )
+
+
 def test_unowned_destination_blocks_every_write(tmp_path: Path) -> None:
     collision = tmp_path / ".opencode/agents/researcher.md"
     collision.parent.mkdir(parents=True)

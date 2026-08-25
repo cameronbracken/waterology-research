@@ -21,7 +21,7 @@ from waterology.runtime.install import (
     build_install_plan,
     preflight,
 )
-from waterology.runtime.render import GeneratedAssetsStaleError, render_agents
+from waterology.runtime.render import GeneratedAssetsStaleError, render_assets
 from waterology.runtime.validate import ValidationIssue, validate_assets
 
 app = typer.Typer(
@@ -176,24 +176,24 @@ def _show_install_failure(error: Exception, issues: tuple[ValidationIssue, ...] 
 
 @app.command()
 def render(
-    check: bool = typer.Option(False, "--check", help="Check generated agents without writing."),
+    check: bool = typer.Option(False, "--check", help="Check generated assets without writing."),
 ) -> None:
-    """Render generated runtime agent files."""
+    """Render generated runtime files."""
     catalog = AssetCatalog.discover()
     try:
-        changed = render_agents(catalog, catalog.root, check=check)
+        changed = render_assets(catalog, catalog.root, check=check)
     except GeneratedAssetsStaleError as error:
         _show_table(
-            "Generated agent files are stale",
+            "Generated files are stale",
             ("Status", "Path"),
             (("stale", str(path)) for path in error.paths),
         )
         raise typer.Exit(1) from error
     if check:
-        _show_table("Generated agents", ("Status",), (("Generated agents are current",),))
+        _show_table("Generated assets", ("Status",), (("Generated assets are current",),))
         return
     _show_table(
-        "Generated agents",
+        "Generated assets",
         ("Status", "Files"),
         (("Rendered", str(len(changed))),),
     )

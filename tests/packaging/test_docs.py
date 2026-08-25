@@ -1,6 +1,28 @@
+import json
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_distribution_name_preserves_waterology_cli() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    pixi = tomllib.loads((ROOT / "pixi.toml").read_text())
+
+    assert project["project"]["name"] == "waterology-research"
+    assert project["project"]["scripts"] == {"waterology": "waterology.cli:app"}
+    assert "waterology-research" in pixi["pypi-dependencies"]
+    assert "waterology" not in pixi["pypi-dependencies"]
+
+    repository = "https://codeberg.org/waterology/waterology-research"
+    for path in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+        manifest = json.loads((ROOT / path).read_text())
+        assert manifest["name"] == "waterology"
+        assert manifest["homepage"] == repository
+        assert manifest["repository"] == repository
+
+    readme = (ROOT / "README.md").read_text()
+    assert "ssh://git@codeberg.org/waterology/waterology-research.git" in readme
 
 
 def test_readme_documents_all_runtimes_and_cli() -> None:
@@ -66,14 +88,15 @@ def test_canonical_guidance_has_required_commands() -> None:
     assert "python3 constraints/check-all.py ." in agents
 
 
-def test_roadmap_marks_only_cross_runtime_foundation_complete() -> None:
+def test_roadmap_marks_research_methods_complete() -> None:
     readme = (ROOT / "README.md").read_text()
     roadmap = (ROOT / "ROADMAP.md").read_text()
 
-    assert "The cross runtime foundation is complete." in readme
-    assert "Later skill migration remains planned for Slice 2." in readme
+    assert "The cross runtime foundation and research methods migration are complete." in readme
+    assert "Research workflows are runtime neutral." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
-    assert roadmap.count("- [x]") == 1
+    assert "- [x] **Slice 2: research methods**" in roadmap
+    assert roadmap.count("- [x]") == 2
     assert "Task 10 owns the remaining acceptance checks." not in roadmap
-    assert "Later skill migration remains planned for Slice 2." in roadmap
+    assert "Later skill migration remains planned for Slice 2." not in roadmap
     assert "## Research feature roadmap" in roadmap

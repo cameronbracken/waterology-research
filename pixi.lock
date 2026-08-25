@@ -1627,7 +1627,7 @@ packages:
   size: 387535
   timestamp: 1786599623274
 - pypi: ./
-  name: waterology
+  name: waterology-research
   requires_dist:
   - pydantic>=2.8,<3
   - pyyaml>=6.0,<7

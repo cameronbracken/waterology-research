@@ -9,15 +9,18 @@ description: >
 
 # ELI5
 
+<!-- Adapted from companion-inc/feynman, skills/eli5/SKILL.md at commit
+8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
+
 Use `writing-style` for the explanation.
 
 Explain a paper or idea simply, without dumbing down what it actually shows.
 
 When the user names a specific paper, arXiv ID, DOI, or URL, read it first
-(`WebFetch`, or the Consensus MCP for peer-reviewed work) before explaining. For
-a long source, run `/summarize` to get an on-disk summary first. If the user
-gives only a topic, anchor the explanation on the 1-3 clearest representative
-papers.
+with the runtime's available page or scholarly source reader before explaining.
+For a long source, use `source-summarization` to create an on-disk summary
+first. If the user gives only a topic, anchor the explanation on the 1-3
+clearest representative papers.
 
 Structure the answer with:
 - `One-Sentence Summary`
@@ -35,4 +38,4 @@ Guidelines:
 - Keep it inline unless the user asks to save it as an artifact.
 
 ---
-*Adapted from Feynman (companion-inc/feynman, MIT). See `${CLAUDE_PLUGIN_ROOT}/ATTRIBUTION.md`.*
+*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

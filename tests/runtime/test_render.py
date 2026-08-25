@@ -9,10 +9,13 @@ from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.render import (
     GeneratedAssetsStaleError,
     render_agents,
+    render_assets,
     render_claude,
+    render_claude_command,
     render_codex,
     render_opencode,
 )
+from waterology.runtime.skills import ClaudeCommand, SkillDefinition
 
 
 def sample_agent(tmp_path: Path) -> AgentDefinition:
@@ -22,6 +25,20 @@ def sample_agent(tmp_path: Path) -> AgentDefinition:
         capabilities=("read", "write", "shell", "web"),
         body="Gather evidence and cite it.\n",
         source_path=tmp_path / "researcher.md",
+    )
+
+
+def sample_skill(tmp_path: Path) -> SkillDefinition:
+    return SkillDefinition(
+        name="session-log",
+        description="Write a durable session log.",
+        body=(
+            "<!-- Adapted from example/upstream, prompts/log.md at commit "
+            "0123456789abcdef (MIT). -->\n\n"
+            "Write the log to `notes/<date>-session.md`.\n"
+        ),
+        source_path=tmp_path / "skills/session-log/SKILL.md",
+        claude_command=ClaudeCommand(name="log", argument_hint="(none)"),
     )
 
 
@@ -60,6 +77,23 @@ def test_opencode_renderer_uses_v2_subagent_format(tmp_path: Path) -> None:
     assert "Gather evidence and cite it." in body
 
 
+def test_claude_command_renderer_delegates_to_canonical_skill(tmp_path: Path) -> None:
+    metadata, body = split_markdown_frontmatter(render_claude_command(sample_skill(tmp_path)))
+
+    assert metadata == {
+        "description": "Write a durable session log.",
+        "argument-hint": "(none)",
+    }
+    assert "Generated from skills/session-log/SKILL.md" in body
+    assert "example/upstream" in body
+    assert "prompts/log.md" in body
+    assert "0123456789abcdef" in body
+    assert "MIT" in body
+    assert "`session-log` skill" in body
+    assert "$ARGUMENTS" in body
+    assert "Write the log to" not in body
+
+
 def test_render_agents_writes_checks_and_detects_stale_outputs(tmp_path: Path) -> None:
     source_root = tmp_path / "source"
     agent_definitions = source_root / "agent-definitions"
@@ -94,3 +128,43 @@ def test_render_agents_writes_checks_and_detects_stale_outputs(tmp_path: Path) -
 
     assert error.value.paths == (stale_path,)
     assert stale_path.read_text(encoding="utf-8") == "stale\n"
+
+
+def test_render_assets_includes_skill_backed_claude_commands(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    skill_directory = source_root / "skills/session-log"
+    skill_directory.mkdir(parents=True)
+    (skill_directory / "SKILL.md").write_text(
+        """---
+name: session-log
+description: Write a durable session log.
+metadata:
+  claude-command:
+    name: log
+    argument-hint: (none)
+---
+
+Write the log to `notes/<date>-session.md`.
+""",
+        encoding="utf-8",
+    )
+    agent_definitions = source_root / "agent-definitions"
+    agent_definitions.mkdir()
+    (agent_definitions / "researcher.md").write_text(
+        "---\n"
+        "name: researcher\n"
+        "description: Gather evidence.\n"
+        "capabilities: [read]\n"
+        "---\n\n"
+        "Gather evidence.\n",
+        encoding="utf-8",
+    )
+    output_root = tmp_path / "output"
+
+    changed = render_assets(AssetCatalog.discover(source_root), output_root)
+
+    command_path = output_root / "commands/log.md"
+    assert command_path in changed
+    assert command_path.is_file()
+    assert "`session-log` skill" in command_path.read_text(encoding="utf-8")
+    assert render_assets(AssetCatalog.discover(source_root), output_root) == ()

@@ -8,8 +8,8 @@ Fortran, Quarto, and LaTeX.
 
 The package keeps research skills and agent definitions in the repository, then
 installs runtime adapters for each supported tool. Packaging and agents support
-all three runtimes. Command-backed skill bodies are still Claude-oriented until
-Slice 2, when they become runtime neutral.
+all three runtimes. Research workflows are runtime neutral. Claude slash
+commands are generated compatibility shims that invoke the canonical skills.
 
 ## What's here
 
@@ -74,7 +74,7 @@ The canonical remote is a private Codeberg repository. Install from the Git URL
 when working from the remote:
 
 ```text
-/plugin marketplace add ssh://git@codeberg.org/waterology/waterology-cc.git
+/plugin marketplace add ssh://git@codeberg.org/waterology/waterology-research.git
 /plugin install waterology@waterology
 ```
 
@@ -104,6 +104,9 @@ and `reviewer`), research skills, and Claude Code compatibility commands.
 The `writing-style` skill supplies shared prose guidance and a scientific
 writing layer. The `research-software-quality` skill scales testing, debugging,
 verification, review, and worktree isolation to the task.
+The `agent-delegation` skill defines portable task briefs, worktree ownership,
+compute authorization, and return contracts. `source-summarization` keeps long
+source text on disk and reads it in bounded windows.
 
 | Command | Does |
 | --- | --- |
@@ -120,9 +123,8 @@ verification, review, and worktree isolation to the task.
 
 ## Status
 
-The cross runtime foundation is complete.
-Later skill migration remains planned for Slice 2. The research roadmap is in
-[ROADMAP.md](ROADMAP.md). Adapted sources are credited in
+The cross runtime foundation and research methods migration are complete.
+The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## License
