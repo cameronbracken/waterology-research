@@ -20,6 +20,7 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         names = set(archive.namelist())
 
     required = {
+        "waterology/core/migrations/001_initial.sql",
         "waterology_assets/skills/project-conventions/SKILL.md",
         "waterology_assets/skills/writing-style/SKILL.md",
         "waterology_assets/skills/writing-style/references/scientific-prose.md",

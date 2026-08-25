@@ -34,6 +34,22 @@ def test_readme_documents_all_runtimes_and_cli() -> None:
     assert "waterology doctor" in readme
 
 
+def test_readme_documents_the_local_experiment_workflow() -> None:
+    readme = (ROOT / "README.md").read_text()
+    for command in (
+        "pixi run waterology init",
+        "pixi run waterology experiment create",
+        "pixi run waterology worktree open",
+        "pixi run waterology run start",
+        "pixi run waterology run assess",
+        "pixi run waterology archive verify",
+        "pixi run waterology repair-index",
+    ):
+        assert command in readme
+    assert "SQLite is a rebuildable index." in readme
+    assert "freezes the experiment at the run commit." in readme
+
+
 def test_readme_documents_install_scope_and_runtime_contracts() -> None:
     readme = (ROOT / "README.md").read_text()
     for command in (
@@ -88,15 +104,19 @@ def test_canonical_guidance_has_required_commands() -> None:
     assert "python3 constraints/check-all.py ." in agents
 
 
-def test_roadmap_marks_research_methods_complete() -> None:
+def test_roadmap_marks_platform_slices_complete() -> None:
     readme = (ROOT / "README.md").read_text()
     roadmap = (ROOT / "ROADMAP.md").read_text()
 
-    assert "The cross runtime foundation and research methods migration are complete." in readme
+    assert (
+        "The cross runtime foundation, research methods migration, and experiment core\n"
+        "are complete."
+    ) in readme
     assert "Research workflows are runtime neutral." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
     assert "- [x] **Slice 2: research methods**" in roadmap
-    assert roadmap.count("- [x]") == 2
+    assert "- [x] **Slice 3: experiment core**" in roadmap
+    assert roadmap.count("- [x]") == 3
     assert "Task 10 owns the remaining acceptance checks." not in roadmap
     assert "Later skill migration remains planned for Slice 2." not in roadmap
     assert "## Research feature roadmap" in roadmap

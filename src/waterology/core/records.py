@@ -1,0 +1,123 @@
+import re
+from pathlib import PurePosixPath
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+_WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
+
+
+def _portable_record_paths(values: tuple[str, ...]) -> tuple[str, ...]:
+    validated = []
+    for value in values:
+        path = PurePosixPath(value)
+        if (
+            not value
+            or "\\" in value
+            or path.is_absolute()
+            or _WINDOWS_ABSOLUTE.match(value)
+            or ".." in path.parts
+            or path.as_posix() == "."
+        ):
+            raise ValueError("must contain relative project paths")
+        validated.append(path.as_posix())
+    return tuple(validated)
+
+
+class ExperimentRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+    project_id: str = Field(min_length=1)
+    parent_experiment_id: str | None = None
+    hypothesis: str = Field(min_length=1)
+    base_commit: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    branch: str = Field(min_length=1)
+    worktree: str = Field(min_length=1)
+    owner: str | None = None
+    status: Literal["provisional", "frozen"] = "provisional"
+    created_at: str
+    frozen_at: str | None = None
+    decision_required: bool = False
+
+
+class ExperimentNoteRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^note-[0-9a-f]{16}$")
+    experiment_id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+    text: str = Field(min_length=1)
+    author: str | None = None
+    created_at: str
+
+
+class WorktreeRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    experiment_id: str
+    branch: str
+    path: str
+    owner: str | None = None
+    exists: bool
+
+
+class RunManifest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    run_id: str = Field(pattern=r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+    project_id: str
+    experiment_id: str
+    commit_sha: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    command: tuple[str, ...]
+    started_at: str
+    finished_at: str
+    executor: Literal["direct"] = "direct"
+    terminal_state: Literal["completed", "failed", "cancelled", "lost"]
+    exit_code: int | None
+    declared_artifacts: tuple[str, ...]
+    collected_artifacts: tuple[str, ...]
+    missing_artifacts: tuple[str, ...]
+
+    _validate_declared_artifacts = field_validator("declared_artifacts")(_portable_record_paths)
+    _validate_collected_artifacts = field_validator("collected_artifacts")(_portable_record_paths)
+    _validate_missing_artifacts = field_validator("missing_artifacts")(_portable_record_paths)
+
+
+class ArchiveVerification(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    valid: bool
+    missing: tuple[str, ...]
+    changed: tuple[str, ...]
+    unexpected: tuple[str, ...]
+
+
+class AssessmentRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^assessment-[0-9a-f]{16}$")
+    run_id: str = Field(pattern=r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+    experiment_id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
+    commit_sha: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    kind: Literal["invalid", "no_answer", "answer"]
+    conclusion: str = Field(min_length=1)
+    author: str = Field(min_length=1)
+    evidence: tuple[str, ...] = ()
+    note: str | None = None
+    created_at: str
+
+
+class RepairResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    projects: int
+    experiments: int
+    runs: int
+    assessments: int
+    artifacts: int
+    warnings: tuple[str, ...] = ()

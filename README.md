@@ -81,6 +81,48 @@ when working from the remote:
 Troubleshooting: `.waterology-install.lock` may remain after a crash. Remove it
 only after confirming that no Waterology install process is running.
 
+## Experiment core
+
+Waterology manages local experiments as committed Git variants. Initialize a
+repository, then edit `waterology.toml` to set the fixed command, declared
+outputs, artifact roots, and environment files:
+
+```console
+pixi run waterology init
+git add waterology.toml .gitignore
+git commit -m "Configure Waterology"
+pixi run waterology experiment create "Test a longer calibration window" --owner cam
+```
+
+The create command returns an experiment identifier and worktree path. Make
+the scientific change in that worktree and commit it before starting a run:
+
+```console
+pixi run waterology worktree open <experiment-id>
+pixi run waterology run start <experiment-id>
+pixi run waterology run status <run-id>
+pixi run waterology archive verify <run-id>
+```
+
+Record a scientific conclusion after inspecting the archive. An `answer`
+freezes the experiment at the run commit. Two consecutive `no_answer`
+assessments require a decision before further repair:
+
+```console
+pixi run waterology run assess <run-id> answer "The evidence supports the hypothesis" \
+  --author cam --evidence .waterology/runs/<run-id>/metrics.json
+```
+
+SQLite is a rebuildable index. Durable experiment records, run archives, and
+assessment records remain readable without it:
+
+```console
+pixi run waterology repair-index
+```
+
+Project status and all experiment, worktree, run, archive, assessment, and
+repair commands support structured JSON where automation needs it.
+
 ## Constraints
 
 | Check | What it enforces |
@@ -123,7 +165,8 @@ source text on disk and reads it in bounded windows.
 
 ## Status
 
-The cross runtime foundation and research methods migration are complete.
+The cross runtime foundation, research methods migration, and experiment core
+are complete.
 The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 
