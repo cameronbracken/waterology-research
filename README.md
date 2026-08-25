@@ -1,6 +1,6 @@
-# waterology
+# waterology-research
 
-Waterology is a research workflow package for
+waterology-research is a set of skills, agents, and workflows for
 [Claude Code](https://claude.com/claude-code),
 [Codex](https://openai.com/codex/), and
 [OpenCode](https://opencode.ai/). It supports research software in R, Python,
@@ -63,7 +63,7 @@ The Claude Code marketplace remains available for local development. Add the
 repository as a marketplace, then install the plugin:
 
 ```text
-/plugin marketplace add ~/projects/waterology-cc
+/plugin marketplace add ~/projects/waterology-research
 /plugin install waterology@waterology
 ```
 
