@@ -236,6 +236,47 @@ The runtime command must be able to find `waterology-mcp` on `PATH`. The install
 project configuration it does not own. Merge the printed snippet manually when another configuration
 already owns the destination.
 
+## Research dashboard
+
+Install the optional dashboard dependencies and start the local research view from an initialized
+project:
+
+```console
+pip install 'waterology-research[dashboard]'
+waterology dashboard
+```
+
+The server binds to `127.0.0.1:8127` and opens a browser by default. Use `--no-open` for a headless
+session or SSH port forwarding. The Overview puts experiment lineage, active agents, recent
+evidence, archives, and compute state together. Separate Experiments, Agents, Evidence, Archives,
+and Compute views provide hypotheses, commits, worktree ownership, logs, metrics, artifacts,
+assessments, and TORC links.
+
+Pages are rendered on the server and remain useful without JavaScript. A small checked in script
+updates summary counts and stores the light, dark, or system theme choice in the browser. Guarded
+forms create experiments, start or resume agents, start or cancel runs, record assessments, and
+export verified archives through the same service functions used by the CLI and MCP server.
+
+For remote access, prefer SSH forwarding while the dashboard remains bound to loopback:
+
+```console
+ssh -L 8127:127.0.0.1:8127 research-host
+waterology dashboard --no-open
+```
+
+A non-loopback bind requires both `--allow-remote` and an access token. Set the token through the
+environment so it does not appear in shell history:
+
+```console
+WATEROLOGY_DASHBOARD_TOKEN='replace-with-a-long-random-value' \
+  waterology dashboard --host 0.0.0.0 --allow-remote --no-open
+```
+
+The token protects every route and becomes an HTTP only same site cookie after browser bootstrap.
+Open `http://<host>:8127/?token=<access-token>` once, then the server redirects to a clean URL.
+The dashboard is a local project tool. It does not publish results, push Git state, or provide a
+hosted collaboration service.
+
 ## Constraints
 
 | Check | What it enforces |
@@ -278,8 +319,8 @@ source text on disk and reads it in bounded windows.
 
 ## Status
 
-The cross runtime foundation, research methods migration, experiment core, TORC managed execution,
-and agent session and MCP slices are complete.
+The six platform slices are complete: cross runtime packaging, research methods, experiment state,
+TORC execution, agent sessions and MCP, and the local research dashboard.
 The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 

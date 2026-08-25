@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Local Waterology research state and guarded workflow actions">
+    <title>{{ title }} | {{ snapshot.project.name }}</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <script src="/static/dashboard.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to research content</a>
+    <header class="site-header">
+      <div>
+        <a class="brand" href="/">Waterology</a>
+        <p class="project-name">{{ snapshot.project.name }}</p>
+      </div>
+      <button class="theme-button" type="button" data-theme-toggle aria-label="Change color theme">
+        Theme: system
+      </button>
+    </header>
+    <nav class="site-nav" aria-label="Research views">
+      {% for slug, label in [('overview', 'Overview'), ('experiments', 'Experiments'),
+      ('agents', 'Agents'), ('evidence', 'Evidence'), ('archives', 'Archives'),
+      ('compute', 'Compute')] %}
+      <a href="{{ '/' if slug == 'overview' else '/' ~ slug }}"
+         {% if view == slug or view == slug[:-1] ~ '_detail' %}aria-current="page"{% endif %}>
+        {{ label }}
+      </a>
+      {% endfor %}
+    </nav>
+
+    <main id="main-content">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">Local research workspace</p>
+          <h1>{{ title }}</h1>
+        </div>
+        <p class="refresh" aria-live="polite">Updated <span data-updated>on page load</span></p>
+      </div>
+
+      {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+      {% if view == 'overview' %}
+      <section class="summary-grid" aria-label="Project summary">
+        {% for name, label in [('experiments', 'Experiments'), ('active_agents', 'Active agents'),
+        ('evidence', 'Evidence records'), ('archives', 'Archives'), ('active_runs', 'Active runs')] %}
+        <article class="metric-card">
+          <span class="metric-value" data-count="{{ name }}">{{ snapshot.counts[name] }}</span>
+          <span>{{ label }}</span>
+        </article>
+        {% endfor %}
+      </section>
+      <div class="overview-grid">
+        <section class="panel">
+          <div class="panel-heading"><h2>Experiment tree</h2><a href="/experiments">Open view</a></div>
+          {% if snapshot.experiments %}
+          <ol class="tree-list">
+            {% for experiment in snapshot.experiments[-4:] %}
+            <li>
+              <a href="/experiments/{{ experiment.id }}">{{ experiment.id }}</a>
+              <span class="status status-{{ experiment.status }}">{{ experiment.status }}</span>
+              <p>{{ experiment.hypothesis }}</p>
+              <small>Parent: {{ experiment.parent_experiment_id or 'root' }}</small>
+            </li>
+            {% endfor %}
+          </ol>
+          {% else %}<p class="empty">No experiments yet. Start with a testable hypothesis.</p>{% endif %}
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><h2>Active agents</h2><a href="/agents">Open view</a></div>
+          {% set active = snapshot.sessions | selectattr('state', 'in', ['running', 'waiting']) | list %}
+          {% if active %}
+          <ul class="record-list">
+            {% for session in active %}
+            <li><a href="/agents/{{ session.id }}">{{ session.id }}</a>
+              <span class="status status-{{ session.state }}">{{ session.state }}</span></li>
+            {% endfor %}
+          </ul>
+          {% else %}<p class="empty">No active agent sessions.</p>{% endif %}
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><h2>Recent evidence</h2><a href="/evidence">Open view</a></div>
+          {% if snapshot.evidence %}
+          <ul class="record-list">
+            {% for record in snapshot.evidence[-5:] | reverse %}
+            <li><strong>{{ record.kind }}</strong> {{ record.claim }}</li>
+            {% endfor %}
+          </ul>
+          {% else %}<p class="empty">No evidence has been registered.</p>{% endif %}
+        </section>
+        <section class="panel">
+          <div class="panel-heading"><h2>Compute state</h2><a href="/compute">Open view</a></div>
+          {% if snapshot.managed_runs %}
+          <ul class="record-list columns">
+            {% for run in snapshot.managed_runs[:6] %}
+            <li><code>{{ run.run_id }}</code>
+              <span class="status status-{{ run.operational_state }}">{{ run.operational_state }}</span>
+              <small>{{ run.executor }}{% if run.compute_profile %} / {{ run.compute_profile }}{% endif %}</small>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}<p class="empty">No runs have been recorded.</p>{% endif %}
+        </section>
+      </div>
+
+      {% elif view == 'experiments' %}
+      <div class="content-grid">
+        <section class="panel span-two">
+          <h2>Hypotheses and lineage</h2>
+          {% if snapshot.experiments %}
+          <div class="table-wrap"><table><thead><tr><th>Experiment</th><th>Hypothesis</th><th>Parent</th><th>Status</th><th>Commit</th></tr></thead><tbody>
+          {% for experiment in snapshot.experiments %}<tr>
+            <td><a href="/experiments/{{ experiment.id }}">{{ experiment.id }}</a></td>
+            <td>{{ experiment.hypothesis }}</td><td>{{ experiment.parent_experiment_id or 'root' }}</td>
+            <td><span class="status status-{{ experiment.status }}">{{ experiment.status }}</span></td>
+            <td><code>{{ experiment.base_commit[:10] }}</code></td>
+          </tr>{% endfor %}</tbody></table></div>
+          {% else %}<p class="empty">No experiments yet.</p>{% endif %}
+        </section>
+        <section class="panel action-panel">
+          <h2>Create experiment</h2>
+          <form action="/actions/experiments" method="post">
+            <input type="hidden" name="action_token" value="{{ action_token }}">
+            <label>Identifier <input name="experiment_id" placeholder="exp-streamflow"></label>
+            <label>Hypothesis <textarea name="hypothesis" required></textarea></label>
+            <label>Parent experiment <input name="parent_experiment_id"></label>
+            <label>Git reference <input name="parent_ref" value="HEAD"></label>
+            <label>Type <code>create</code> to confirm <input name="confirm" required></label>
+            <button type="submit">Create experiment</button>
+          </form>
+        </section>
+      </div>
+
+      {% elif view == 'experiment_detail' %}
+      <section class="panel">
+        <p><a href="/experiments">Back to experiments</a></p>
+        <h2>{{ selected.id }}</h2><p class="lead">{{ selected.hypothesis }}</p>
+        <dl class="details"><div><dt>Status</dt><dd>{{ selected.status }}</dd></div>
+          <div><dt>Parent</dt><dd>{{ selected.parent_experiment_id or 'root' }}</dd></div>
+          <div><dt>Branch</dt><dd><code>{{ selected.branch }}</code></dd></div>
+          <div><dt>Base commit</dt><dd><code>{{ selected.base_commit }}</code></dd></div></dl>
+        <h3>Notes</h3>
+        {% set notes = snapshot.experiment_notes.get(selected.id, []) %}
+        {% if notes %}<ul class="record-list">{% for note in notes %}<li>{{ note.text }} <small>{{ note.created_at }}</small></li>{% endfor %}</ul>
+        {% else %}<p class="empty">No experiment notes.</p>{% endif %}
+        <h3>Runs and assessments</h3>
+        {% set experiment_runs = snapshot.archives | selectattr('experiment_id', 'equalto', selected.id) | list %}
+        {% if experiment_runs %}<ul class="record-list">{% for run in experiment_runs %}<li><a href="/archives/{{ run.run_id }}">{{ run.run_id }}</a><span class="status status-{{ run.terminal_state }}">{{ run.terminal_state }}</span><code>{{ run.commit_sha[:10] }}</code></li>{% endfor %}</ul>{% else %}<p class="empty">No sealed runs for this experiment.</p>{% endif %}
+        {% set experiment_assessments = snapshot.assessments | selectattr('experiment_id', 'equalto', selected.id) | list %}
+        {% if experiment_assessments %}<ul class="record-list">{% for assessment in experiment_assessments %}<li><strong>{{ assessment.kind }}</strong><span>{{ assessment.conclusion }}</span><small>{{ assessment.author }}</small></li>{% endfor %}</ul>{% endif %}
+        <h3>Evidence</h3>
+        {% set experiment_evidence = snapshot.evidence | selectattr('experiment_id', 'equalto', selected.id) | list %}
+        {% if experiment_evidence %}<ul class="record-list">{% for record in experiment_evidence %}<li><span class="kind">{{ record.kind }}</span><span>{{ record.claim }}</span></li>{% endfor %}</ul>{% else %}<p class="empty">No linked evidence.</p>{% endif %}
+      </section>
+
+      {% elif view == 'agents' %}
+      <div class="content-grid">
+        <section class="panel span-two"><h2>Sessions and worktree ownership</h2>
+          {% if snapshot.sessions %}<div class="table-wrap"><table><thead><tr><th>Session</th><th>Experiment</th><th>Runtime</th><th>State</th><th>Worktree</th></tr></thead><tbody>
+          {% for session in snapshot.sessions %}<tr><td><a href="/agents/{{ session.id }}">{{ session.id }}</a></td><td>{{ session.experiment_id }}</td><td>{{ session.runtime }}</td><td><span class="status status-{{ session.state }}">{{ session.state }}</span></td><td><code>{{ session.worktree }}</code></td></tr>{% endfor %}
+          </tbody></table></div>{% else %}<p class="empty">No agent sessions.</p>{% endif %}
+        </section>
+        <section class="panel action-panel"><h2>Start agent</h2>
+          <form action="/actions/agents/start" method="post">
+            <input type="hidden" name="action_token" value="{{ action_token }}">
+            <label>Experiment <input name="experiment_id" required></label>
+            <label>Task <textarea name="task" required></textarea></label>
+            <label>Runtime <select name="runtime"><option>codex</option><option>claude</option><option>opencode</option></select></label>
+            <label>Role <input name="role" value="researcher"></label>
+            <label>Type <code>start</code> to confirm <input name="confirm" required></label>
+            <button type="submit">Start agent</button>
+          </form>
+        </section>
+        <section class="panel action-panel"><h2>Resume agent</h2>
+          <form action="/actions/agents/resume" method="post">
+            <input type="hidden" name="action_token" value="{{ action_token }}">
+            <label>Session <input name="session_id" required></label>
+            <label>Prompt <textarea name="prompt" required></textarea></label>
+            <label>Type <code>resume</code> to confirm <input name="confirm" required></label>
+            <button type="submit">Resume agent</button>
+          </form>
+        </section>
+      </div>
+
+      {% elif view == 'agent_detail' %}
+      <section class="panel"><p><a href="/agents">Back to agents</a></p><h2>{{ selected.id }}</h2>
+        <dl class="details"><div><dt>State</dt><dd><span class="status status-{{ selected.state }}">{{ selected.state }}</span></dd></div><div><dt>Runtime</dt><dd>{{ selected.runtime }}</dd></div><div><dt>Role</dt><dd>{{ selected.role }}</dd></div><div><dt>Compute profile</dt><dd>{{ selected.compute_profile }}</dd></div><div><dt>Native ID</dt><dd>{{ selected.native_session_id or 'not recorded' }}</dd></div><div><dt>Worktree</dt><dd><code>{{ selected.worktree }}</code></dd></div></dl>
+        <h3>Task and resume context</h3><p class="lead">{{ selected.task }}</p>
+        <h3>Attempt logs</h3>{% if logs %}{% for attempt in logs %}<details><summary>Attempt {{ attempt.attempt }}</summary><h4>Events</h4><pre>{{ attempt.events }}</pre><h4>Standard error</h4><pre>{{ attempt.stderr }}</pre></details>{% endfor %}{% else %}<p class="empty">No attempts.</p>{% endif %}
+      </section>
+
+      {% elif view == 'evidence' %}
+      <div class="content-grid"><section class="panel span-two"><h2>Claims and supporting records</h2>
+        {% if snapshot.evidence %}<ul class="evidence-list">{% for record in snapshot.evidence %}<li><span class="kind">{{ record.kind }}</span><div><strong>{{ record.claim }}</strong><p>{{ record.experiment_id }}{% if record.path %} / <code>{{ record.path }}</code>{% endif %}</p></div></li>{% endfor %}</ul>{% else %}<p class="empty">No evidence records.</p>{% endif %}
+      </section><section class="panel"><h2>Artifacts</h2>{% if snapshot.artifacts %}<ul class="record-list">{% for record in snapshot.artifacts %}<li><code>{{ record.path }}</code><small>{{ record.label or record.experiment_id }}</small></li>{% endfor %}</ul>{% else %}<p class="empty">No artifact references.</p>{% endif %}</section>
+      <section class="panel"><h2>Run metrics</h2>{% if snapshot.archive_metrics %}<ul class="record-list">{% for run_id, metrics in snapshot.archive_metrics.items() %}<li><a href="/archives/{{ run_id }}">{{ run_id }}</a><pre>{{ metrics | tojson(indent=2) }}</pre></li>{% endfor %}</ul>{% else %}<p class="empty">No archived metrics.</p>{% endif %}</section>
+      <section class="panel"><h2>Experiment notes</h2>{% set note_count = namespace(value=0) %}<ul class="record-list">{% for experiment_id, notes in snapshot.experiment_notes.items() %}{% for note in notes %}{% set note_count.value = note_count.value + 1 %}<li><a href="/experiments/{{ experiment_id }}">{{ experiment_id }}</a><span>{{ note.text }}</span></li>{% endfor %}{% endfor %}</ul>{% if note_count.value == 0 %}<p class="empty">No experiment notes.</p>{% endif %}</section></div>
+
+      {% elif view == 'archives' %}
+      <div class="content-grid"><section class="panel span-two"><h2>Sealed run archives</h2>
+        {% if snapshot.archives %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Experiment</th><th>State</th><th>Executor</th><th>Finished</th></tr></thead><tbody>{% for archive in snapshot.archives %}<tr><td><a href="/archives/{{ archive.run_id }}">{{ archive.run_id }}</a></td><td>{{ archive.experiment_id }}</td><td><span class="status status-{{ archive.terminal_state }}">{{ archive.terminal_state }}</span></td><td>{{ archive.executor }}</td><td>{{ archive.finished_at }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No sealed archives.</p>{% endif %}
+      </section><section class="panel action-panel"><h2>Record assessment</h2><form action="/actions/assessments" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Kind <select name="kind"><option value="answer">answer</option><option value="no_answer">no answer</option><option value="invalid">invalid</option></select></label><label>Conclusion <textarea name="conclusion" required></textarea></label><label>Author <input name="author" required></label><label>Evidence paths, one per line <textarea name="evidence"></textarea></label><label>Type <code>assess</code> to confirm <input name="confirm" required></label><button type="submit">Record assessment</button></form></section>
+      <section class="panel action-panel"><h2>Export archive</h2><form action="/actions/archives/export" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Destination <input name="destination" placeholder="exports/run-id.tar.gz" required></label><label>Type <code>export</code> to confirm <input name="confirm" required></label><button type="submit">Export archive</button></form></section></div>
+
+      {% elif view == 'archive_detail' %}
+      <section class="panel"><p><a href="/archives">Back to archives</a></p><h2>{{ selected.run_id }}</h2>
+        <dl class="details"><div><dt>State</dt><dd>{{ selected.terminal_state }}</dd></div><div><dt>Experiment</dt><dd>{{ selected.experiment_id }}</dd></div><div><dt>Commit</dt><dd><code>{{ selected.commit_sha }}</code></dd></div><div><dt>Executor</dt><dd>{{ selected.executor }}</dd></div></dl>
+        <h3>Collected artifacts</h3>{% if selected.collected_artifacts %}<ul class="record-list">{% for path in selected.collected_artifacts %}<li><code>{{ path }}</code></li>{% endfor %}</ul>{% else %}<p class="empty">No artifacts were collected.</p>{% endif %}
+        <h3>Figures</h3>{% set figure_count = namespace(value=0) %}<ul class="record-list">{% for path in selected.collected_artifacts %}{% if path.lower().endswith(('.png', '.jpg', '.jpeg', '.svg', '.pdf')) %}{% set figure_count.value = figure_count.value + 1 %}<li><code>{{ path }}</code></li>{% endif %}{% endfor %}</ul>{% if figure_count.value == 0 %}<p class="empty">No figures were collected.</p>{% endif %}
+        <h3>Source snapshot</h3><p><code>.waterology/runs/{{ selected.run_id }}/source.tar.zst</code></p>
+        <h3>Run manifest</h3><pre>{{ selected | tojson(indent=2) }}</pre>
+        {% set run_assessments = snapshot.assessments | selectattr('run_id', 'equalto', selected.run_id) | list %}<h3>Assessments</h3>{% if run_assessments %}<ul class="record-list">{% for assessment in run_assessments %}<li><strong>{{ assessment.kind }}</strong><span>{{ assessment.conclusion }}</span><small>{{ assessment.author }}</small></li>{% endfor %}</ul>{% else %}<p class="empty">No assessment recorded.</p>{% endif %}
+        <h3>Metrics</h3><pre>{{ metrics | tojson(indent=2) }}</pre><h3>Standard output</h3><pre>{{ logs.stdout }}</pre><h3>Standard error</h3><pre>{{ logs.stderr }}</pre>
+      </section>
+
+      {% elif view == 'compute' %}
+      <div class="content-grid"><section class="panel span-two"><h2>Run state</h2>
+        {% if snapshot.managed_runs %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Experiment</th><th>State</th><th>Executor</th><th>Profile</th><th>Workflow</th></tr></thead><tbody>{% for run in snapshot.managed_runs %}<tr><td>{{ run.run_id }}</td><td>{{ run.experiment_id }}</td><td><span class="status status-{{ run.operational_state }}">{{ run.operational_state }}</span>{% if run.inspection_error %}<small>{{ run.inspection_error }}</small>{% endif %}</td><td>{{ run.executor }}</td><td>{{ run.compute_profile or 'direct' }}</td><td>{{ run.workflow_id or '' }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No run state.</p>{% endif %}
+      </section><section class="panel"><h2>TORC profiles</h2>{% if snapshot.profiles %}<ul class="record-list">{% for profile in snapshot.profiles %}<li><strong>{{ profile.name }}</strong><span>{{ profile.mode }}</span>{% if profile.dashboard_url %}<a href="{{ profile.dashboard_url }}" rel="noreferrer">TORC dashboard</a>{% endif %}<code>{{ profile.tui_command }}</code></li>{% endfor %}</ul>{% else %}<p class="empty">No TORC profiles configured. Direct execution remains available.</p>{% endif %}</section>
+      <section class="panel action-panel"><h2>Start run</h2><form action="/actions/runs/start" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Experiment <input name="experiment_id" required></label><label>Profile <input name="profile" value="direct"></label><label class="checkbox"><input type="checkbox" name="confirm_remote" value="yes"> Confirm first remote or Slurm use</label><label>Type <code>start</code> to confirm <input name="confirm" required></label><button type="submit">Start run</button></form></section>
+      <section class="panel action-panel"><h2>Cancel run</h2><form action="/actions/runs/cancel" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Type <code>cancel</code> to confirm <input name="confirm" required></label><button class="danger" type="submit">Cancel run</button></form></section></div>
+      {% endif %}
+    </main>
+    <footer><span>Local Waterology dashboard</span><span>{{ snapshot.project.root }}</span></footer>
+  </body>
+</html>

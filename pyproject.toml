@@ -21,6 +21,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dashboard = [
+  "jinja2>=3.1,<4",
+  "starlette>=0.48,<2",
+  "uvicorn>=0.31,<1",
+]
 mcp = ["mcp>=2,<3"]
 
 [project.scripts]

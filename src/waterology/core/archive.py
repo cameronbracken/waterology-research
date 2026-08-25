@@ -6,19 +6,24 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 from pathlib import Path, PurePosixPath
+from typing import BinaryIO
 
 from pydantic import ValidationError
 
 from waterology import __version__
 from waterology.core.config import ProjectConfig, load_project_config
+from waterology.core.database import open_database
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import load_experiment, load_worktree
 from waterology.core.git import resolve_commit
-from waterology.core.project import Project, discover_project
+from waterology.core.project import Project, discover_project, project_state_lock
 from waterology.core.records import ArchiveVerification, ExecutorReference, RunManifest
 
 _RUN_ID = re.compile(r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+_WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 _CHECKSUM_LINE = re.compile(r"^(?P<sha256>[0-9a-f]{64})  (?P<path>.+)$")
 _STAGING_PAYLOADS = {
     "artifacts",
@@ -59,6 +64,10 @@ class ArchiveArtifactMissingError(ArchiveError):
 
 class ArchiveNotFoundError(ArchiveError):
     code = "archive_not_found"
+
+
+class ArchiveExportError(ArchiveError):
+    code = "archive_export_failed"
 
 
 def build_run_archive(
@@ -234,6 +243,149 @@ def read_archive_logs(start: Path, run_id: str) -> dict[str, str]:
         "stdout": (archive / "stdout.log").read_text(encoding="utf-8"),
         "stderr": (archive / "stderr.log").read_text(encoding="utf-8"),
     }
+
+
+def export_project_archive(start: Path, run_id: str, destination: str) -> Path:
+    project = discover_project(start)
+    relative = PurePosixPath(destination)
+    if (
+        not destination
+        or "\\" in destination
+        or _WINDOWS_ABSOLUTE.match(destination)
+        or relative.is_absolute()
+        or ".." in relative.parts
+        or relative.as_posix() == "."
+        or any(part.rstrip(" .") != part for part in relative.parts)
+    ):
+        raise ArchiveExportError("Archive export destination must be a relative project path")
+    if relative.parts[0].casefold() in {".waterology", ".git"}:
+        raise ArchiveExportError("Archive exports must be outside repository control state")
+    output = project.root / relative.as_posix()
+    parent = output.parent
+    with project_state_lock(project.root), open_database(project.paths.database) as database:
+        verification = verify_project_archive(project.root, run_id)
+        if not verification.valid:
+            raise ArchiveExportError(f"Archive failed verification before export: {run_id}")
+        source = project.paths.runs / run_id
+        for item in source.rglob("*"):
+            if item.is_symlink():
+                raise ArchiveExportError(
+                    f"Archive contains a symlink: {item.relative_to(source)}"
+                )
+        expected_checksums = _read_checksums(source / "checksums.sha256")
+        checksum_payload = (source / "checksums.sha256").read_bytes()
+        current = project.root
+        for part in relative.parts[:-1]:
+            current = current / part
+            if current.is_symlink():
+                raise ArchiveExportError(
+                    f"Archive export parent must not be a symlink: {current}"
+                )
+        parent.mkdir(parents=True, exist_ok=True)
+        try:
+            resolved_parent = parent.resolve()
+            resolved_parent.relative_to(project.root.resolve())
+        except ValueError as error:
+            raise ArchiveExportError("Archive export destination escapes the project") from error
+        for reserved in (project.paths.state, project.root / ".git"):
+            try:
+                resolved_parent.relative_to(reserved.resolve())
+            except ValueError:
+                continue
+            raise ArchiveExportError("Archive exports must be outside repository control state")
+        if output.exists() or output.is_symlink():
+            raise ArchiveExportError(f"Archive export already exists: {relative.as_posix()}")
+        intent = database.append_intent(
+            kind="archive.export",
+            entity_type="run",
+            entity_id=run_id,
+            payload={"destination": relative.as_posix()},
+        )
+        descriptor, staged_name = tempfile.mkstemp(
+            prefix=f".{output.name}.waterology-export-", dir=parent
+        )
+        staged = Path(staged_name)
+        try:
+            _write_export_tar(descriptor, staged, source, run_id)
+            _verify_export_tar(
+                staged,
+                run_id,
+                expected_checksums=expected_checksums,
+                checksum_payload=checksum_payload,
+            )
+            os.link(staged, output)
+            staged.unlink()
+        except BaseException as error:
+            staged.unlink(missing_ok=True)
+            database.append_observation(
+                intent.id,
+                payload={"error": type(error).__name__, "outcome": "failed"},
+            )
+            if isinstance(error, FileExistsError):
+                raise ArchiveExportError(
+                    f"Archive export already exists: {relative.as_posix()}"
+                ) from error
+            if isinstance(error, ArchiveExportError):
+                raise
+            raise ArchiveExportError(f"Unable to export archive: {run_id}") from error
+        database.append_observation(
+            intent.id,
+            payload={"destination": relative.as_posix(), "outcome": "exported"},
+        )
+    return output
+
+
+def _write_export_tar(descriptor: int, staged: Path, source: Path, run_id: str) -> None:
+    del staged
+    with os.fdopen(descriptor, "wb") as stream:
+        with tarfile.open(fileobj=stream, mode="w:gz") as archive:
+            archive.add(source, arcname=run_id, recursive=True)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _verify_export_tar(
+    staged: Path,
+    run_id: str,
+    *,
+    expected_checksums: dict[str, str],
+    checksum_payload: bytes,
+) -> None:
+    expected_files = {
+        f"{run_id}/checksums.sha256",
+        *(f"{run_id}/{relative}" for relative in expected_checksums),
+    }
+    try:
+        with tarfile.open(staged, mode="r:gz") as archive:
+            members = archive.getmembers()
+            if any(member.issym() or member.islnk() or not (member.isfile() or member.isdir()) for member in members):
+                raise ArchiveExportError("Staged archive contains an unsafe entry")
+            files = [member for member in members if member.isfile()]
+            actual_files = {member.name for member in files}
+            if len(actual_files) != len(files) or actual_files != expected_files:
+                raise ArchiveExportError("Staged archive payload does not match its checksums")
+            checksum_stream = archive.extractfile(f"{run_id}/checksums.sha256")
+            if checksum_stream is None or checksum_stream.read() != checksum_payload:
+                raise ArchiveExportError("Staged archive checksum file changed during export")
+            for relative, expected in expected_checksums.items():
+                stream = archive.extractfile(f"{run_id}/{relative}")
+                if stream is None:
+                    raise ArchiveExportError(
+                        f"Staged archive payload is missing during export: {relative}"
+                    )
+                if _stream_sha256(stream) != expected:
+                    raise ArchiveExportError(
+                        f"Staged archive payload changed during export: {relative}"
+                    )
+    except (tarfile.TarError, OSError) as error:
+        raise ArchiveExportError("Unable to verify staged archive export") from error
+
+
+def _stream_sha256(stream: BinaryIO) -> str:
+    digest = hashlib.sha256()
+    while chunk := stream.read(1024 * 1024):
+        digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _resolve_artifacts(

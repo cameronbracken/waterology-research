@@ -13,8 +13,10 @@ from waterology.core.archive import (
     ArchiveArtifactMissingError,
     ArchiveConflictError,
     ArchiveError,
+    ArchiveExportError,
     ArchivePathError,
     build_run_archive,
+    export_project_archive,
     load_archive,
     verify_archive,
 )
@@ -24,6 +26,7 @@ from waterology.core.config import (
     load_project_config,
     project_config_toml,
 )
+from waterology.core.database import open_database
 from waterology.core.experiments import create_experiment
 from waterology.core.project import initialize_project
 from waterology.core.records import ExecutorReference
@@ -100,6 +103,73 @@ def test_build_and_verify_run_archive(tmp_path: Path) -> None:
     verification = verify_archive(archive)
     assert verification.valid is True
     assert verification.missing == verification.changed == verification.unexpected == ()
+
+
+def test_export_verified_archive_without_overwrite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    output = worktree / "artifacts" / "result.json"
+    output.parent.mkdir()
+    output.write_text('{"rmse": 1.25}\n', encoding="utf-8")
+    build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-export",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="baseline\n",
+        stderr="",
+        metrics={"rmse": 1.25},
+    )
+
+    exported = export_project_archive(root, "run-export", "exports/run-export.tar.gz")
+
+    with tarfile.open(exported, mode="r:gz") as archive:
+        assert "run-export/manifest.json" in archive.getnames()
+    with open_database(root / ".waterology" / "state.sqlite") as database:
+        export_events = [
+            event for event in database.list_events() if event.kind == "archive.export"
+        ]
+    assert [event.phase for event in export_events] == ["intent", "observation"]
+    assert export_events[-1].payload["outcome"] == "exported"
+    with pytest.raises(ArchiveExportError, match="already exists"):
+        export_project_archive(root, "run-export", "exports/run-export.tar.gz")
+    with pytest.raises(ArchiveExportError, match="relative project path"):
+        export_project_archive(root, "run-export", "../outside.tar.gz")
+    with pytest.raises(ArchiveExportError, match="relative project path"):
+        export_project_archive(root, "run-export", "C:/outside.tar.gz")
+    with pytest.raises(ArchiveExportError, match="repository control state"):
+        export_project_archive(root, "run-export", ".WATEROLOGY/export.tar.gz")
+    with pytest.raises(ArchiveExportError, match="repository control state"):
+        export_project_archive(root, "run-export", ".Git/export.tar.gz")
+    with pytest.raises(ArchiveExportError, match="relative project path"):
+        export_project_archive(root, "run-export", ".git./export.tar.gz")
+    with pytest.raises(ArchiveExportError, match="relative project path"):
+        export_project_archive(root, "run-export", ".waterology /export.tar.gz")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (root / "linked").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ArchiveExportError, match="must not be a symlink"):
+        export_project_archive(root, "run-export", "linked/run-export.tar.gz")
+
+    write_export = archive_module._write_export_tar
+
+    def mutate_then_write(
+        descriptor: int, staged: Path, source: Path, run_id: str
+    ) -> None:
+        (source / "stdout.log").write_text("changed during export\n", encoding="utf-8")
+        write_export(descriptor, staged, source, run_id)
+
+    monkeypatch.setattr(archive_module, "_write_export_tar", mutate_then_write)
+    with pytest.raises(ArchiveExportError, match="changed during export"):
+        export_project_archive(root, "run-export", "exports/mutated.tar.gz")
+    assert not (root / "exports" / "mutated.tar.gz").exists()
 
 
 def test_torc_archive_preserves_executor_reference_and_workflow(tmp_path: Path) -> None:
@@ -557,3 +627,4 @@ def test_sealed_archive_is_never_overwritten(tmp_path: Path) -> None:
         build_run_archive(root, **arguments)
 
     assert (archive / "stdout.log").read_text(encoding="utf-8") == "first\n"
+import waterology.core.archive as archive_module

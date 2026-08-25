@@ -65,6 +65,20 @@ def run_diagnostics(
             mcp_server or "waterology-mcp entry point was not found",
         )
     )
+    dashboard_dependencies = all(
+        find_spec(module) is not None for module in ("jinja2", "starlette", "uvicorn")
+    )
+    diagnostics.append(
+        Diagnostic(
+            "dashboard:dependencies",
+            "pass" if dashboard_dependencies else "warn",
+            (
+                "Dashboard dependencies are installed"
+                if dashboard_dependencies
+                else "Install the dashboard package extra"
+            ),
+        )
+    )
     try:
         machine = load_machine_config(machine_config_file)
     except MachineConfigError as error:

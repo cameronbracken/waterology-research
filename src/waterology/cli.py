@@ -1158,6 +1158,38 @@ def mcp_config_command(
 
 
 @app.command()
+def dashboard(
+    path: Path = _PROJECT_PATH_OPTION,
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8127, "--port", min=1, max=65535),
+    open_browser: bool = typer.Option(True, "--open/--no-open"),
+    allow_remote: bool = typer.Option(False, "--allow-remote"),
+    access_token: str | None = typer.Option(
+        None,
+        "--access-token",
+        envvar="WATEROLOGY_DASHBOARD_TOKEN",
+    ),
+) -> None:
+    """Start the local research dashboard."""
+    try:
+        from waterology.dashboard.server import dashboard_url, run_dashboard
+
+        url = dashboard_url(host, port)
+        _console().print(f"Waterology dashboard: {url}")
+        run_dashboard(
+            path,
+            host=host,
+            port=port,
+            open_browser=open_browser,
+            allow_remote=allow_remote,
+            access_token=access_token,
+        )
+    except Exception as error:
+        _show_core_failure(error, json_output=False, title="Dashboard failed")
+        raise typer.Exit(1) from error
+
+
+@app.command()
 def render(
     check: bool = typer.Option(False, "--check", help="Check generated assets without writing."),
 ) -> None:
@@ -1298,10 +1330,19 @@ def doctor(
         for diagnostic in diagnostics
         if diagnostic.name.startswith("mcp:")
     }
+    dashboard = {
+        diagnostic.name.removeprefix("dashboard:"): {
+            "message": diagnostic.message,
+            "status": diagnostic.status,
+        }
+        for diagnostic in diagnostics
+        if diagnostic.name.startswith("dashboard:")
+    }
     if json_output:
         _emit_json(
             {
                 "assets": {"message": assets.message, "status": assets.status},
+                "dashboard": dashboard,
                 "requested_runtime": requested_runtime,
                 "requested_torc_profile": torc_profile,
                 "mcp": mcp,

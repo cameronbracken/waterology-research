@@ -15,6 +15,11 @@ def test_distribution_name_preserves_waterology_cli() -> None:
         "waterology-mcp": "waterology.mcp.server:main",
     }
     assert project["project"]["optional-dependencies"]["mcp"] == ["mcp>=2,<3"]
+    assert project["project"]["optional-dependencies"]["dashboard"] == [
+        "jinja2>=3.1,<4",
+        "starlette>=0.48,<2",
+        "uvicorn>=0.31,<1",
+    ]
     assert "waterology-research" in pixi["pypi-dependencies"]
     assert "waterology" not in pixi["pypi-dependencies"]
 
@@ -36,6 +41,7 @@ def test_readme_documents_all_runtimes_and_cli() -> None:
     assert "OpenCode" in readme
     assert "waterology install all" in readme
     assert "waterology doctor" in readme
+    assert "waterology dashboard" in readme
 
 
 def test_readme_documents_the_local_experiment_workflow() -> None:
@@ -113,8 +119,8 @@ def test_roadmap_marks_platform_slices_complete() -> None:
     roadmap = (ROOT / "ROADMAP.md").read_text()
 
     assert (
-        "The cross runtime foundation, research methods migration, experiment core, TORC managed execution,\n"
-        "and agent session and MCP slices are complete."
+        "The six platform slices are complete: cross runtime packaging, research methods, experiment state,\n"
+        "TORC execution, agent sessions and MCP, and the local research dashboard."
     ) in readme
     assert "Research workflows are runtime neutral." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
@@ -122,7 +128,8 @@ def test_roadmap_marks_platform_slices_complete() -> None:
     assert "- [x] **Slice 3: experiment core**" in roadmap
     assert "- [x] **Slice 4: TORC integration**" in roadmap
     assert "- [x] **Slice 5: agent sessions and MCP**" in roadmap
-    assert roadmap.count("- [x]") == 5
+    assert "- [x] **Slice 6: research dashboard**" in roadmap
+    assert roadmap.count("- [x]") == 6
     assert "Task 10 owns the remaining acceptance checks." not in roadmap
     assert "Later skill migration remains planned for Slice 2." not in roadmap
     assert "## Research feature roadmap" in roadmap

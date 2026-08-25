@@ -63,6 +63,7 @@ def test_doctor_json_reports_runtime_commands(monkeypatch, tmp_path: Path) -> No
     assert payload["torc"]["binary"]["status"] == "warn"
     assert payload["mcp"]["sdk"]["status"] in {"pass", "warn"}
     assert payload["mcp"]["server"]["status"] == "warn"
+    assert payload["dashboard"]["dependencies"]["status"] in {"pass", "warn"}
 
 
 def test_doctor_reports_valid_optional_torc_profiles(monkeypatch, tmp_path: Path) -> None:
