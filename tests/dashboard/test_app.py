@@ -52,7 +52,7 @@ def test_research_views_render_without_javascript(
 
     assert response.status_code == 200
     assert heading in response.text
-    assert '<main id="main-content">' in response.text
+    assert '<main id="main-content" tabindex="-1">' in response.text
     assert 'data-theme="system"' in response.text
     assert response.headers["x-frame-options"] == "DENY"
     assert "default-src 'self'" in response.headers["content-security-policy"]
@@ -228,6 +228,15 @@ def test_views_include_planned_research_context(tmp_path: Path) -> None:
     for path, phrases in expected.items():
         assert responses[path].status_code == 200
         assert all(phrase in responses[path].text for phrase in phrases)
+
+
+def test_confirmation_prompt_stays_on_one_label_line(tmp_path: Path) -> None:
+    app = create_dashboard_app(make_project(tmp_path))
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        response = client.get("/experiments")
+
+    assert '<span>Type <code>create</code> to confirm</span>' in response.text
 
 
 def test_detail_views_include_resume_and_archive_context(

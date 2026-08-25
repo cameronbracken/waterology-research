@@ -30,7 +30,7 @@
       {% endfor %}
     </nav>
 
-    <main id="main-content">
+    <main id="main-content" tabindex="-1">
       <div class="page-heading">
         <div>
           <p class="eyebrow">Local research workspace</p>
@@ -127,7 +127,7 @@
             <label>Hypothesis <textarea name="hypothesis" required></textarea></label>
             <label>Parent experiment <input name="parent_experiment_id"></label>
             <label>Git reference <input name="parent_ref" value="HEAD"></label>
-            <label>Type <code>create</code> to confirm <input name="confirm" required></label>
+            <label><span>Type <code>create</code> to confirm</span><input name="confirm" required></label>
             <button type="submit">Create experiment</button>
           </form>
         </section>
@@ -169,7 +169,7 @@
             <label>Task <textarea name="task" required></textarea></label>
             <label>Runtime <select name="runtime"><option>codex</option><option>claude</option><option>opencode</option></select></label>
             <label>Role <input name="role" value="researcher"></label>
-            <label>Type <code>start</code> to confirm <input name="confirm" required></label>
+            <label><span>Type <code>start</code> to confirm</span><input name="confirm" required></label>
             <button type="submit">Start agent</button>
           </form>
         </section>
@@ -178,7 +178,7 @@
             <input type="hidden" name="action_token" value="{{ action_token }}">
             <label>Session <input name="session_id" required></label>
             <label>Prompt <textarea name="prompt" required></textarea></label>
-            <label>Type <code>resume</code> to confirm <input name="confirm" required></label>
+            <label><span>Type <code>resume</code> to confirm</span><input name="confirm" required></label>
             <button type="submit">Resume agent</button>
           </form>
         </section>
@@ -201,8 +201,8 @@
       {% elif view == 'archives' %}
       <div class="content-grid"><section class="panel span-two"><h2>Sealed run archives</h2>
         {% if snapshot.archives %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Experiment</th><th>State</th><th>Executor</th><th>Finished</th></tr></thead><tbody>{% for archive in snapshot.archives %}<tr><td><a href="/archives/{{ archive.run_id }}">{{ archive.run_id }}</a></td><td>{{ archive.experiment_id }}</td><td><span class="status status-{{ archive.terminal_state }}">{{ archive.terminal_state }}</span></td><td>{{ archive.executor }}</td><td>{{ archive.finished_at }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No sealed archives.</p>{% endif %}
-      </section><section class="panel action-panel"><h2>Record assessment</h2><form action="/actions/assessments" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Kind <select name="kind"><option value="answer">answer</option><option value="no_answer">no answer</option><option value="invalid">invalid</option></select></label><label>Conclusion <textarea name="conclusion" required></textarea></label><label>Author <input name="author" required></label><label>Evidence paths, one per line <textarea name="evidence"></textarea></label><label>Type <code>assess</code> to confirm <input name="confirm" required></label><button type="submit">Record assessment</button></form></section>
-      <section class="panel action-panel"><h2>Export archive</h2><form action="/actions/archives/export" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Destination <input name="destination" placeholder="exports/run-id.tar.gz" required></label><label>Type <code>export</code> to confirm <input name="confirm" required></label><button type="submit">Export archive</button></form></section></div>
+      </section><section class="panel action-panel"><h2>Record assessment</h2><form action="/actions/assessments" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Kind <select name="kind"><option value="answer">answer</option><option value="no_answer">no answer</option><option value="invalid">invalid</option></select></label><label>Conclusion <textarea name="conclusion" required></textarea></label><label>Author <input name="author" required></label><label>Evidence paths, one per line <textarea name="evidence"></textarea></label><label><span>Type <code>assess</code> to confirm</span><input name="confirm" required></label><button type="submit">Record assessment</button></form></section>
+      <section class="panel action-panel"><h2>Export archive</h2><form action="/actions/archives/export" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Destination <input name="destination" placeholder="exports/run-id.tar.gz" required></label><label><span>Type <code>export</code> to confirm</span><input name="confirm" required></label><button type="submit">Export archive</button></form></section></div>
 
       {% elif view == 'archive_detail' %}
       <section class="panel"><p><a href="/archives">Back to archives</a></p><h2>{{ selected.run_id }}</h2>
@@ -219,8 +219,8 @@
       <div class="content-grid"><section class="panel span-two"><h2>Run state</h2>
         {% if snapshot.managed_runs %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Experiment</th><th>State</th><th>Executor</th><th>Profile</th><th>Workflow</th></tr></thead><tbody>{% for run in snapshot.managed_runs %}<tr><td>{{ run.run_id }}</td><td>{{ run.experiment_id }}</td><td><span class="status status-{{ run.operational_state }}">{{ run.operational_state }}</span>{% if run.inspection_error %}<small>{{ run.inspection_error }}</small>{% endif %}</td><td>{{ run.executor }}</td><td>{{ run.compute_profile or 'direct' }}</td><td>{{ run.workflow_id or '' }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No run state.</p>{% endif %}
       </section><section class="panel"><h2>TORC profiles</h2>{% if snapshot.profiles %}<ul class="record-list">{% for profile in snapshot.profiles %}<li><strong>{{ profile.name }}</strong><span>{{ profile.mode }}</span>{% if profile.dashboard_url %}<a href="{{ profile.dashboard_url }}" rel="noreferrer">TORC dashboard</a>{% endif %}<code>{{ profile.tui_command }}</code></li>{% endfor %}</ul>{% else %}<p class="empty">No TORC profiles configured. Direct execution remains available.</p>{% endif %}</section>
-      <section class="panel action-panel"><h2>Start run</h2><form action="/actions/runs/start" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Experiment <input name="experiment_id" required></label><label>Profile <input name="profile" value="direct"></label><label class="checkbox"><input type="checkbox" name="confirm_remote" value="yes"> Confirm first remote or Slurm use</label><label>Type <code>start</code> to confirm <input name="confirm" required></label><button type="submit">Start run</button></form></section>
-      <section class="panel action-panel"><h2>Cancel run</h2><form action="/actions/runs/cancel" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label>Type <code>cancel</code> to confirm <input name="confirm" required></label><button class="danger" type="submit">Cancel run</button></form></section></div>
+      <section class="panel action-panel"><h2>Start run</h2><form action="/actions/runs/start" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Experiment <input name="experiment_id" required></label><label>Profile <input name="profile" value="direct"></label><label class="checkbox"><input type="checkbox" name="confirm_remote" value="yes"> Confirm first remote or Slurm use</label><label><span>Type <code>start</code> to confirm</span><input name="confirm" required></label><button type="submit">Start run</button></form></section>
+      <section class="panel action-panel"><h2>Cancel run</h2><form action="/actions/runs/cancel" method="post"><input type="hidden" name="action_token" value="{{ action_token }}"><label>Run <input name="run_id" required></label><label><span>Type <code>cancel</code> to confirm</span><input name="confirm" required></label><button class="danger" type="submit">Cancel run</button></form></section></div>
       {% endif %}
     </main>
     <footer><span>Local Waterology dashboard</span><span>{{ snapshot.project.root }}</span></footer>

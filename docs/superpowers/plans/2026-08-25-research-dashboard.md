@@ -150,16 +150,17 @@ git diff --check
 
 ## Completion evidence
 
-- Repository checks passed on 2026-08-25: 457 tests, Ruff, generated asset comparison, all three
+- Repository checks passed on 2026-08-25: 458 tests, Ruff, generated asset comparison, all three
   constraints, and `git diff --check`.
 - Built `waterology_research-0.3.0.tar.gz` and `waterology_research-0.3.0-py3-none-any.whl` from the
   final candidate. Installed the wheel with its dashboard extra in a clean Python 3.14 environment.
 - Started the installed CLI against a representative project. Overview, Experiments, Agents,
   Evidence, Archives, Compute, the stylesheet, and a one-shot event stream all returned HTTP 200.
-- The in-app browser backend was unavailable. Browser screenshots at desktop and narrow widths
-  could not be recorded. Automated checks cover server rendered content, skip navigation,
-  responsive CSS, theme controls, guarded forms, representative detail pages, and WCAG AA button
-  contrast.
+- Completed the visual acceptance check in Brave at 1440 by 900 and 390 by 844 pixels. Overview,
+  Experiments, Agents, Evidence, Archives, Compute, agent detail, and archive detail rendered without
+  clipping or body overflow. Tables remained locally scrollable at narrow width. Light, dark, and
+  system themes, guarded form validation, empty states, notices, and keyboard skip navigation all
+  worked. The review found and resolved a main-content focus defect and split confirmation labels.
 - The first independent review returned no-go with eight blocker groups. The candidate now includes
   regressions and fixes for Host validation, event loop blocking, browser readiness, export
   integrity, direct and TORC state reconciliation, missing view content, remote confirmation, and
