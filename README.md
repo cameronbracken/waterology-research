@@ -39,8 +39,18 @@ pixi run waterology install all --dry-run
 pixi run waterology doctor
 ```
 
-The Codex manifest is `.codex-plugin/plugin.json`; generated Codex agents and
-skills install into the project. See the official
+Project scope is the default. Use `--scope user` for user configuration.
+`--target` is available only for project installs. Both `install` and `doctor` support `--json`.
+
+For a user-scoped Codex install:
+
+```console
+pixi run waterology install codex --scope user
+```
+
+Root `skills/` is canonical. The Codex manifest is `.codex-plugin/plugin.json`.
+Generated Codex agents install in `.codex/agents/`.
+Codex installs root skills in `.agents/skills/`. See the official
 [Codex plugin documentation](https://developers.openai.com/plugins/concepts/plugins).
 
 OpenCode installs project files under `.opencode/`, including agents and
