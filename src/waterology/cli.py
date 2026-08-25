@@ -150,6 +150,30 @@ def _conflict_payload(conflicts: tuple[InstallConflict, ...]) -> list[dict[str, 
     ]
 
 
+def _install_failure_payload(
+    payload: dict[str, object],
+    error: Exception,
+    issues: tuple[ValidationIssue, ...] = (),
+) -> dict[str, object]:
+    conflicts = error.conflicts if isinstance(error, InstallConflictError) else ()
+    return {
+        **payload,
+        "conflicts": _conflict_payload(conflicts),
+        "error": {"message": str(error), "type": type(error).__name__},
+        "issues": _validation_payload(issues),
+        "status": "fail",
+    }
+
+
+def _show_install_failure(error: Exception, issues: tuple[ValidationIssue, ...] = ()) -> None:
+    if issues:
+        _show_validation_issues(issues)
+    elif isinstance(error, InstallConflictError):
+        _show_install_conflicts(error.conflicts)
+    else:
+        _show_table("Install failed", ("Error",), ((str(error),),))
+
+
 @app.command()
 def render(
     check: bool = typer.Option(False, "--check", help="Check generated agents without writing."),
@@ -191,53 +215,41 @@ def install(
         raise typer.BadParameter("cannot be used with --scope user", param_hint="--target")
 
     runtimes = _selected_runtimes(runtime)
-    catalog = AssetCatalog.discover()
-    validation_issues = validate_assets(catalog)
     payload = _install_payload(runtime, scope, mode, dry_run)
-    if validation_issues:
-        if json_output:
-            _emit_json(
-                {**payload, "issues": _validation_payload(validation_issues), "status": "fail"}
-            )
-        else:
-            _show_validation_issues(validation_issues)
-        raise typer.Exit(1)
-
-    plans = tuple(
-        build_install_plan(selected, scope, target, mode, catalog) for selected in runtimes
-    )
     try:
+        catalog = AssetCatalog.discover()
+        validation_issues = validate_assets(catalog)
+        if validation_issues:
+            error = ValueError("Waterology assets failed validation")
+            if json_output:
+                _emit_json(_install_failure_payload(payload, error, validation_issues))
+            else:
+                _show_install_failure(error, validation_issues)
+            raise typer.Exit(1)
+
+        plans = tuple(
+            build_install_plan(selected, scope, target, mode, catalog) for selected in runtimes
+        )
         conflicts = _preflight_plans(plans, force)
-    except (OSError, ValueError) as error:
-        if json_output:
-            _emit_json({**payload, "error": str(error), "status": "fail"})
-        else:
-            _show_table("Install failed", ("Error",), ((str(error),),))
-        raise typer.Exit(1) from error
-    if conflicts:
-        if json_output:
-            _emit_json({**payload, "conflicts": _conflict_payload(conflicts), "status": "fail"})
-        else:
-            _show_install_conflicts(conflicts)
-        raise typer.Exit(1)
+        if conflicts:
+            raise InstallConflictError(conflicts)
 
-    if dry_run:
-        plans_payload = {
-            plan.runtime.value: [str(action.destination) for action in plan.actions]
-            for plan in plans
-        }
-        if json_output:
-            _emit_json({**payload, "plans": plans_payload, "status": "pass"})
-        else:
-            _show_table(
-                "Install dry run",
-                ("Runtime", "Assets"),
-                ((name, str(len(actions))) for name, actions in plans_payload.items()),
-            )
-        return
+        if dry_run:
+            plans_payload = {
+                plan.runtime.value: [str(action.destination) for action in plan.actions]
+                for plan in plans
+            }
+            if json_output:
+                _emit_json({**payload, "plans": plans_payload, "status": "pass"})
+            else:
+                _show_table(
+                    "Install dry run",
+                    ("Runtime", "Assets"),
+                    ((name, str(len(actions))) for name, actions in plans_payload.items()),
+                )
+            return
 
-    results = {}
-    try:
+        results = {}
         for plan in plans:
             result = apply_install_plan(plan, force=force)
             results[plan.runtime.value] = {
@@ -245,16 +257,11 @@ def install(
                 "manifests": [str(path) for path in result.manifests],
                 "unchanged": [str(path) for path in result.unchanged],
             }
-    except (InstallConflictError, OSError, ValueError) as error:
+    except (InstallConflictError, OSError, TypeError, ValueError) as error:
         if json_output:
-            error_payload: dict[str, object] = {**payload, "error": str(error), "status": "fail"}
-            if isinstance(error, InstallConflictError):
-                error_payload["conflicts"] = _conflict_payload(error.conflicts)
-            _emit_json(error_payload)
-        elif isinstance(error, InstallConflictError):
-            _show_install_conflicts(error.conflicts)
+            _emit_json(_install_failure_payload(payload, error))
         else:
-            _show_table("Install failed", ("Error",), ((str(error),),))
+            _show_install_failure(error)
         raise typer.Exit(1) from error
 
     if json_output:
