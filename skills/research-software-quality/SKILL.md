@@ -31,6 +31,13 @@ evidence, reproducibility, and user intent without imposing a fixed ceremony.
 Skills and agent instructions change behavior even when their files are
 Markdown. Treat them as behavior changes.
 
+## Verification and Validation 
+
+Analysis should be compared against known baselines (eg. existing data, 
+physical relationships, expert knowledge). Modeling decisions need to be 
+similarly justified through literature citations and/or sound scientific 
+reasoning.
+
 ## Persistence
 
 Continue while the requested outcome and the next safe action are clear. A
