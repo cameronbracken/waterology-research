@@ -22,12 +22,15 @@ def test_parse_agent_reads_neutral_metadata(tmp_path: Path) -> None:
     assert agent.body == "Gather evidence.\n"
 
 
-def test_repository_has_four_sorted_canonical_agents() -> None:
+def test_repository_has_sorted_canonical_agents() -> None:
     agents = load_agents(AssetCatalog.discover())
 
     assert [agent.name for agent in agents] == [
+        "r-reviewer",
+        "reproducibility-auditor",
         "researcher",
         "reviewer",
+        "sim-reviewer",
         "verifier",
         "writer",
     ]

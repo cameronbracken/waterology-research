@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 import tomllib
 import zipfile
 from pathlib import Path
@@ -42,18 +44,38 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         "waterology_assets/skills/autoresearch/references/experiment-tree.md",
         "waterology_assets/skills/audit-reproducibility/SKILL.md",
         "waterology_assets/skills/audit-reproducibility/references/passport-schema.md",
+        "waterology_assets/skills/bib-validate/scripts/validate_bib.py",
+        "waterology_assets/skills/capture-environment/SKILL.md",
+        "waterology_assets/skills/compile-latex/SKILL.md",
+        "waterology_assets/skills/compile-latex/scripts/overfull_boxes.py",
+        "waterology_assets/skills/compile-latex/templates/latexmkrc",
         "waterology_assets/skills/deep-research/references/workflow.md",
+        "waterology_assets/skills/myst-to-quarto/scripts/myst_to_quarto.py",
+        "waterology_assets/skills/pipeline-manifest/SKILL.md",
+        "waterology_assets/skills/pipeline-manifest/templates/run-all.sh",
+        "waterology_assets/skills/simulation-study/SKILL.md",
+        "waterology_assets/skills/simulation-study/references/simulation-conventions.md",
         "waterology_assets/skills/source-summarization/SKILL.md",
         "waterology_assets/skills/source-summarization/references/workflow.md",
         "waterology_assets/commands/deepresearch.md",
+        "waterology_assets/commands/simulation-study.md",
         "waterology_assets/commands/summarize.md",
+        "waterology_assets/agents/r-reviewer.md",
         "waterology_assets/agents/researcher.md",
+        "waterology_assets/agents/reproducibility-auditor.md",
+        "waterology_assets/agents/sim-reviewer.md",
         "waterology_assets/.codex/agents/researcher.toml",
         "waterology_assets/.codex/config.toml",
         "waterology_assets/.opencode/agents/researcher.md",
         "waterology_assets/hooks/claim-reconcile.py",
         "waterology_assets/hooks/hooks.json",
         "waterology_assets/templates/passport.yaml",
+        "waterology_assets/templates/run-all.sh",
+        "waterology_assets/templates/latexmkrc",
+        "waterology_assets/constraints/conservation-tol.py",
+        "waterology_assets/constraints/mc-has-mcse.py",
+        "waterology_assets/constraints/no-hardcoded-results.py",
+        "waterology_assets/constraints/overfull-boxes.py",
         "waterology_assets/.claude-plugin/plugin.json",
         "waterology_assets/.codex-plugin/plugin.json",
         "waterology_assets/ATTRIBUTION.md",
@@ -116,6 +138,40 @@ def test_project_install_smoke(
         assert tomllib.loads(installed_agent.read_text(encoding="utf-8"))["name"] == "researcher"
     else:
         assert yaml.safe_load(installed_agent.read_text(encoding="utf-8").split("---", 2)[1])
+
+    skills_root = (tmp_path / skill_path).parent
+    resources = (
+        "simulation-study/references/simulation-conventions.md",
+        "pipeline-manifest/templates/run-all.sh",
+        "compile-latex/templates/latexmkrc",
+        "compile-latex/scripts/overfull_boxes.py",
+        "bib-validate/scripts/validate_bib.py",
+        "myst-to-quarto/scripts/myst_to_quarto.py",
+    )
+    for relative in resources:
+        assert (skills_root / relative).is_file()
+    for relative in (
+        "bib-validate/scripts/validate_bib.py",
+        "myst-to-quarto/scripts/myst_to_quarto.py",
+    ):
+        completed = subprocess.run(
+            [sys.executable, str(skills_root / relative), "--help"],
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(skills_root / "compile-latex/scripts/overfull_boxes.py"),
+            str(tmp_path),
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
 
     manifests = sorted(tmp_path.rglob(".waterology-install.json"))
     assert manifests

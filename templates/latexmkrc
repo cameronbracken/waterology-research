@@ -1,0 +1,7 @@
+# Copy to .latexmkrc and adjust project-specific search paths if required.
+$pdf_mode = 5;
+$xelatex = 'xelatex %O %S';
+$bibtex = 'bibtex %O %B';
+$out_dir = 'out';
+$max_repeat = 5;
+$cleanup_includes_cusdep_generated = 0;

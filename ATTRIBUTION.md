@@ -25,19 +25,23 @@ source carry a one-line credit at the top; this page is the canonical list.
 
 - **Author:** Pedro H. C. Sant'Anna
 - **Repo:** <https://github.com/pedrohcgs/claude-code-my-workflow>
-- **Pinned revision:** `cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6`
+- **Pinned revisions:** `cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6`
+  (passport), `9d371f0bf8a8bc99569feca3210ef5133af28d33` (review and build tools)
 - **License:** MIT — © 2026 Pedro H. C. Sant'Anna
 - **Original paths:** `.claude/skills/audit-reproducibility/SKILL.md`,
-  `.claude/hooks/claim-reconcile.py`, and `templates/passport-template.yaml`.
+  `.claude/hooks/claim-reconcile.py`, `templates/passport-template.yaml`,
+  `.claude/agents/{r-reviewer,sim-reviewer}.md`,
+  `.claude/rules/simulation-conventions.md`, and
+  `.claude/skills/{simulation-study,capture-environment,compile-latex}/SKILL.md`.
 - **What we adapt:** the reproducibility **passport**
   (`audit-reproducibility` skill, `passport.yaml` schema, and the
   `claim-reconcile.py` STALE detection hook). The portable version adds
   Fortran and fixed-width outputs, removes Stata specific material, and keeps
-  the hook specific to the Claude plugin. Planned work includes the Monte
-  Carlo trio (`simulation-study` +
-  `sim-reviewer` + simulation conventions), the `r-reviewer` agent (esp. its
-  numerical-discipline checks), `r-package-check` (CRAN `--as-cran` gate), and
-  `capture-environment`. Stata- and econ-specific material is stripped.
+  the hook specific to the Claude plugin. The Monte Carlo trio
+  (`simulation-study`, `sim-reviewer`, and simulation conventions), the
+  `r-reviewer`, environment capture, and LaTeX compile workflow are also
+  adapted. Stata, economic estimator examples, and product specific control
+  flow are stripped. `r-package-check` was not ported.
 - **Credit string:** *Adapted from pedrohcgs/claude-code-my-workflow (MIT,
   © 2026 Pedro H. C. Sant'Anna).*
 - **Note:** Sant'Anna credits the "passport" concept itself to
@@ -47,11 +51,17 @@ source carry a one-line credit at the top; this page is the canonical list.
 
 - **Author:** Florian Burnat
 - **Repo:** <https://github.com/flonat/claude-research>
+- **Pinned revision:** `e7007d0b1e465ef96de7338599ca04079e83a972`
 - **License:** MIT — © 2026 Florian Burnat
-- **What we adapt (planned / in progress):** the `reproducibility-auditor`
-  agent and its 12-row PASS/FAIL checklist, bibliography / DOI validation via
-  the free OpenAlex + Crossref path, the `myst_to_quarto.py` converter, LaTeX
-  `latexmk` / overfull-box handling, and the `no-hardcoded-results` rule.
+- **Original paths:** `.claude/agents/reproducibility-auditor.md`,
+  `skills/pipeline-manifest/SKILL.md`, `skills/shared/overfull-boxes.md`,
+  `rules/doi-verification.md`, and `rules/no-hardcoded-results.md`.
+- **What we adapt:** the `reproducibility-auditor` and its 12-row checklist,
+  pipeline traceability, bibliography and DOI validation through OpenAlex and
+  Crossref, box-specific LaTeX diagnostics, and the no hardcoded results rule.
+  The pinned tree no longer contains the roadmap's named `myst_to_quarto.py`,
+  so Waterology implements that recorded conversion contract without copying
+  unavailable source.
 - **Credit string:** *Adapted from flonat/claude-research (MIT, © 2026 Florian
   Burnat).*
 

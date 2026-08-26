@@ -22,7 +22,15 @@ GENERATED_AGENT_SUFFIXES = {
     "agents": ".md",
     ".opencode/agents": ".md",
 }
-REQUIRED_AGENT_NAMES = ("researcher", "reviewer", "verifier", "writer")
+REQUIRED_AGENT_NAMES = (
+    "r-reviewer",
+    "reproducibility-auditor",
+    "researcher",
+    "reviewer",
+    "sim-reviewer",
+    "verifier",
+    "writer",
+)
 
 
 @dataclass(frozen=True)
@@ -252,7 +260,7 @@ def _validate_canonical_agents(
                 ValidationIssue(
                     relative,
                     "unexpected-asset",
-                    "canonical agent is not part of the Slice 1 inventory",
+                    "canonical agent is not part of the required inventory",
                 )
             )
         if path.suffix != ".md":
@@ -333,7 +341,7 @@ def _validate_generated_agents(
                 ValidationIssue(
                     f"{relative}/{filename}",
                     "orphaned-generated-agent",
-                    "generated agent is not part of the Slice 1 inventory",
+                    "generated agent is not part of the required inventory",
                 )
             )
         for name in REQUIRED_AGENT_NAMES:

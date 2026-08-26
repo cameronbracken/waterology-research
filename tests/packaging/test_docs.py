@@ -114,14 +114,11 @@ def test_canonical_guidance_has_required_commands() -> None:
     assert "python3 constraints/check-all.py ." in agents
 
 
-def test_roadmap_marks_platform_slices_complete() -> None:
+def test_roadmap_marks_platform_and_research_slices_complete() -> None:
     readme = (ROOT / "README.md").read_text()
     roadmap = (ROOT / "ROADMAP.md").read_text()
 
-    assert (
-        "The six platform slices are complete: cross runtime packaging, research methods, experiment state,\n"
-        "TORC execution, agent sessions and MCP, and the local research dashboard."
-    ) in readme
+    assert "The platform and research feature roadmaps are complete." in readme
     assert "Research workflows are runtime neutral." in readme
     assert "- [x] **Slice 1: cross runtime foundation**" in roadmap
     assert "- [x] **Slice 2: research methods**" in roadmap
@@ -133,3 +130,6 @@ def test_roadmap_marks_platform_slices_complete() -> None:
     assert "Task 10 owns the remaining acceptance checks." not in roadmap
     assert "Later skill migration remains planned for Slice 2." not in roadmap
     assert "## Research feature roadmap" in roadmap
+    for slice_number in range(3, 8):
+        assert f"## Slice {slice_number} -" in roadmap
+    assert roadmap.count("done 2026-08-26") == 5

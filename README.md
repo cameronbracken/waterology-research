@@ -293,6 +293,10 @@ hosted collaboration service.
 | `no-absolute-paths` | No paths specific to one machine in source |
 | `deterministic-seed` | Stochastic scripts set a seed |
 | `pixi-r-task-dollar` | R commands in `pixi.toml` tasks contain no `$` |
+| `mc-has-mcse` | Monte Carlo summaries report uncertainty for headline metrics |
+| `conservation-tol` | Declared conservation evidence closes within tolerance |
+| `overfull-boxes` | TeX overflow of at least 1 pt is reported by severity |
+| `no-hardcoded-results` | Recognizable computed prose values are imported, not copied |
 
 Run the checks with:
 
@@ -303,8 +307,9 @@ python3 constraints/check-all.py --only deterministic-seed src/
 
 ## Research workflows
 
-The research bundle provides four agents (`researcher`, `writer`, `verifier`,
-and `reviewer`), research skills, and Claude Code compatibility commands.
+The research bundle provides seven agents: `researcher`, `writer`, `verifier`,
+`reviewer`, `r-reviewer`, `sim-reviewer`, and `reproducibility-auditor`. It also
+installs research skills and Claude Code compatibility commands.
 
 The `writing-style` skill supplies shared prose guidance and a scientific
 writing layer. The `research-software-quality` skill scales testing, debugging,
@@ -319,6 +324,10 @@ in `quality_reports/passports/`. The Claude plugin hook marks affected claims
 `STALE` after a tracked source or output edit. Codex and OpenCode use the same
 skill and passport, but do not install the Claude specific hook.
 
+The completed research feature set adds Monte Carlo design and review,
+environment capture, bibliography validation, pipeline manifests with Fortran
+support, MyST to Quarto conversion, and verified LaTeX builds.
+
 | Command | Does |
 | --- | --- |
 | `/deepresearch` | Multi source investigation to a cited brief with provenance |
@@ -327,6 +336,12 @@ skill and passport, but do not install the Claude specific hook.
 | `/review` | Internal critique with severity and a revision plan |
 | `/audit` | Compare paper claims with a codebase |
 | `/audit-reproducibility` | Check numeric claims against produced outputs |
+| `/simulation-study` | Design and review a Monte Carlo experiment |
+| `/capture-environment` | Record R, Python, and Fortran environments |
+| `/bib-validate` | Check citation keys and optional DOI metadata |
+| `/pipeline-manifest` | Trace scripts, outputs, and document artifacts |
+| `/myst-to-quarto` | Convert common MyST constructs to Quarto |
+| `/compile-latex` | Build and verify LaTeX with latexmk and XeLaTeX |
 | `/compare` | Build a grounded comparison matrix across sources |
 | `/replicate` | Plan, then run a replication after an environment choice |
 | `/recipe` | Rank implementable ML training recipes |
@@ -335,9 +350,9 @@ skill and passport, but do not install the Claude specific hook.
 
 ## Status
 
-The six platform slices are complete: cross runtime packaging, research methods, experiment state,
-TORC execution, agent sessions and MCP, and the local research dashboard.
-The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
+The platform and research feature roadmaps are complete. The platform includes cross runtime
+packaging, research methods, experiment state, TORC execution, agent sessions and MCP, and the
+local research dashboard. The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## License
