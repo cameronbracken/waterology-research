@@ -22,6 +22,8 @@ agents/              generated Claude Code agents
 commands/           Claude Code compatibility commands
 rules/              path scoped conventions
 constraints/        paired checks run by check-all.py
+templates/          reproducibility record templates
+hooks/              Claude Code plugin event hooks
 .mcp.json           Claude Code and Codex plugin MCP registration
 .codex/config.toml  Codex project MCP registration
 opencode.json       OpenCode project MCP registration
@@ -218,6 +220,13 @@ pip install 'waterology-research[mcp]'
 waterology-mcp
 ```
 
+For a source checkout that must expose the bare command to Codex, install it as
+an isolated editable tool:
+
+```console
+uv tool install --editable '.[mcp]'
+```
+
 The server uses local stdio and offers bounded tools for experiments, runs, archives, metrics,
 evidence, artifact references, and session notes. It does not expose shell execution, arbitrary file
 reads, Git publication, or remote deletion. The plugin `.mcp.json` registers the server for Claude
@@ -304,6 +313,12 @@ The `agent-delegation` skill defines portable task briefs, worktree ownership,
 compute authorization, and return contracts. `source-summarization` keeps long
 source text on disk and reads it in bounded windows.
 
+The `audit-reproducibility` skill compares numeric manuscript claims with R,
+Python, Fortran, and text outputs. It records provenance and tolerance results
+in `quality_reports/passports/`. The Claude plugin hook marks affected claims
+`STALE` after a tracked source or output edit. Codex and OpenCode use the same
+skill and passport, but do not install the Claude specific hook.
+
 | Command | Does |
 | --- | --- |
 | `/deepresearch` | Multi source investigation to a cited brief with provenance |
@@ -311,6 +326,7 @@ source text on disk and reads it in bounded windows.
 | `/draft` | Findings to a paper style Quarto or LaTeX draft |
 | `/review` | Internal critique with severity and a revision plan |
 | `/audit` | Compare paper claims with a codebase |
+| `/audit-reproducibility` | Check numeric claims against produced outputs |
 | `/compare` | Build a grounded comparison matrix across sources |
 | `/replicate` | Plan, then run a replication after an environment choice |
 | `/recipe` | Rank implementable ML training recipes |

@@ -1,0 +1,39 @@
+# Adapted from pedrohcgs/claude-code-my-workflow,
+# templates/passport-template.yaml at commit
+# cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6 (MIT, Copyright 2026 Pedro H. C.
+# Sant'Anna). Material Passport concept credited upstream to
+# Imbad0202/academic-research-skills. See ATTRIBUTION.md.
+
+paper:
+  slug: example-paper
+  title: Replace with the manuscript title
+  manuscript: papers/example-paper.qmd
+  branch: main
+  last_audit: null
+  last_audit_by: null
+
+claims:
+  - id: C1
+    claim: "Replace with one numeric manuscript claim"
+    location: "papers/example-paper.qmd:Table 1, row and column label"
+    kind: point_estimate
+    reported:
+      value: 0.0
+      standard_error: 0.0
+      sample_size: 0
+      p_value: 1.0
+      percentage: 0.0
+    source_file: scripts/analyze.py
+    source_line: 1
+    output_file: results/summary.csv
+    output_field: estimate
+    tolerance:
+      point_estimate: 0.01
+      standard_error: 0.05
+      sample_size: exact
+      p_value: same_significance_level
+      percentage_points: 0.1
+    last_verified_on: null
+    last_verified_by: null
+    status: UNVERIFIED
+    notes: ""

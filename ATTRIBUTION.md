@@ -25,10 +25,16 @@ source carry a one-line credit at the top; this page is the canonical list.
 
 - **Author:** Pedro H. C. Sant'Anna
 - **Repo:** <https://github.com/pedrohcgs/claude-code-my-workflow>
+- **Pinned revision:** `cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6`
 - **License:** MIT — © 2026 Pedro H. C. Sant'Anna
-- **What we adapt (planned / in progress):** the reproducibility **passport**
-  (`audit-reproducibility` skill, `passport.yaml` schema, `claim-reconcile.py`
-  STALE-detection hook), the Monte Carlo trio (`simulation-study` +
+- **Original paths:** `.claude/skills/audit-reproducibility/SKILL.md`,
+  `.claude/hooks/claim-reconcile.py`, and `templates/passport-template.yaml`.
+- **What we adapt:** the reproducibility **passport**
+  (`audit-reproducibility` skill, `passport.yaml` schema, and the
+  `claim-reconcile.py` STALE detection hook). The portable version adds
+  Fortran and fixed-width outputs, removes Stata specific material, and keeps
+  the hook specific to the Claude plugin. Planned work includes the Monte
+  Carlo trio (`simulation-study` +
   `sim-reviewer` + simulation conventions), the `r-reviewer` agent (esp. its
   numerical-discipline checks), `r-package-check` (CRAN `--as-cran` gate), and
   `capture-environment`. Stata- and econ-specific material is stripped.
