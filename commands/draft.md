@@ -1,7 +1,8 @@
 ---
-description: Turn research findings into a polished paper-style draft with sections,
-  equations, and citations. Use when the user asks to write a paper, draft a report,
-  write up findings, or produce a technical document from collected research.
+description: Build a cited Quarto report with reviewed claims and interactive graphics,
+  or draft a research paper from collected evidence. Use when the user says "write
+  a report," asks for a technical report, writes up findings, or asks for a paper
+  or manuscript.
 argument-hint: <topic>
 ---
 
