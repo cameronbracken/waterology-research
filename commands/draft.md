@@ -1,8 +1,8 @@
 ---
-description: Build a cited Quarto report with reviewed claims and interactive graphics,
-  or draft a research paper from collected evidence. Use when the user says "write
-  a report," asks for a technical report, writes up findings, or asks for a paper
-  or manuscript.
+description: Build a targeted results report as a single interactive Quarto HTML file,
+  or draft an academic paper from collected evidence. Use when the user says "write
+  a report," asks for a technical report, writes up findings, or asks for a paper,
+  document, or manuscript.
 argument-hint: <topic>
 ---
 

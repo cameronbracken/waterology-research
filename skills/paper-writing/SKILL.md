@@ -1,10 +1,10 @@
 ---
 name: paper-writing
 description: >
-  Build a cited Quarto report with reviewed claims and interactive graphics,
-  or draft a research paper from collected evidence. Use when the user says
+  Build a targeted results report as a single interactive Quarto HTML file,
+  or draft an academic paper from collected evidence. Use when the user says
   "write a report," asks for a technical report, writes up findings, or asks
-  for a paper or manuscript.
+  for a paper, document, or manuscript.
 metadata:
   claude-command:
     name: draft
@@ -21,9 +21,11 @@ edit. Use `project-conventions` for Quarto settings and local research
 preferences. Apply `figure-style` to every plot.
 
 Choose _report mode_ when the user says "write a report," "draft a report," or
-asks for a technical report. Choose _paper mode_ for a paper, article, or
-manuscript. A request phrased as a report takes precedence over the general
-paper workflow.
+asks for a technical report. A report is a targeted summary of results from an
+analysis or model, gathered with its validation information into one shareable
+file. Choose _paper mode_ when the user asks for a paper, document, article, or
+manuscript, which calls for academic quality writing throughout. A request
+phrased as a report takes precedence over the general paper workflow.
 
 Derive a short topic slug with lowercase hyphenated words, no filler words, and
 at most five words. Write `docs/.plans/<slug>.md` before drafting. Include the
@@ -50,6 +52,14 @@ remove claims that exceed their support and remove unsupported numerics.
 
 ## Report mode
 
+A report collects the results and validation of an existing analysis or model
+in one place so the work can be reviewed and shared as a single HTML file.
+Interactive graphics are the primary content. Prose exists to explain the
+figures and tables, with a brief account of the methods and citations where
+they help a reader interpret the results. Keep the text static and explanatory
+so a parameterized or automated rerun stays correct without rewriting prose.
+Use tables only for summary metrics, never for large listings of raw numbers.
+
 Build a Quarto HTML report. Follow an existing project layout when one exists.
 Otherwise use:
 
@@ -73,6 +83,10 @@ format:
       light: flatly
       dark: darkly
 ```
+
+Reports are often parameterized or automated. When the report will be rerun
+for different sites, periods, or model versions, declare Quarto `params` in
+the YAML header and read them in code instead of hard coding values.
 
 Use Quarto citation keys and verified bibliography metadata. Prefer scholarly
 references. Cite a stable repository or source URL when no formal publication
@@ -110,6 +124,10 @@ path. Report the exact citation validation and render commands and any blocked
 or unverified checks.
 
 ## Paper mode
+
+A paper or document requires academic quality writing and referencing:
+thorough explanation of methods and results, complete citations, and polished
+publication quality figures.
 
 Use Quarto or LaTeX according to the target venue and existing project layout.
 For a format neutral draft with no venue requirements, save
