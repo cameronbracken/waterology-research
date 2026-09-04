@@ -21,6 +21,10 @@ ATTRIBUTION.md. -->
 
 Use `writing-style` for experiment summaries, decision notes, and reports.
 
+For long runs, remote runs, or runs with multiple agents, read and follow
+[token-discipline.md](references/token-discipline.md). It limits repeated model
+work without weakening the benchmark or completion criteria.
+
 If `autoresearch.md` and `autoresearch.jsonl` exist, ask whether to resume or
 start fresh. Read recent relevant `CHANGELOG.md` entries before resuming.
 
@@ -30,6 +34,7 @@ Before a new run, collect:
 - Metric name, unit, and whether higher or lower is better.
 - Files allowed to change.
 - Maximum number of iterations, defaulting to 20.
+- Token or cost budget, when one matters, and a useful status interval.
 - Linear or tree loop shape.
 
 Linear mode uses one working branch and keeps or reverts each loop owned edit.

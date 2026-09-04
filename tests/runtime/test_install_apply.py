@@ -75,11 +75,13 @@ def test_installed_autoresearch_tree_reference_resolves(
 
     skill = tmp_path / skill_root / "autoresearch/SKILL.md"
     reference = skill.parent / "references/experiment-tree.md"
+    token_reference = skill.parent / "references/token-discipline.md"
     assert skill.is_file()
     assert reference.is_file()
-    assert "[experiment-tree.md](references/experiment-tree.md)" in skill.read_text(
-        encoding="utf-8"
-    )
+    assert token_reference.is_file()
+    skill_text = skill.read_text(encoding="utf-8")
+    assert "[experiment-tree.md](references/experiment-tree.md)" in skill_text
+    assert "[token-discipline.md](references/token-discipline.md)" in skill_text
 
 
 def test_unowned_destination_blocks_every_write(tmp_path: Path) -> None:
