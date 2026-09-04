@@ -8,8 +8,8 @@ scientific scope, and completion criteria.
 
 - Set a benchmark run cap and, when relevant, a token or cost budget before the
   baseline. Stop at the first limit unless the user extends it.
-- Define the promotion margin, refill rule, and terminal conditions before
-  testing candidates.
+- In tree mode, define the promotion margin, refill rule, and terminal
+  conditions before testing candidates.
 - Keep experiment selection inside the autoresearch loop. Treat production
   deployment, publication, presentation, and cleanup as later phases unless
   the frozen run contract includes them.

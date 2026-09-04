@@ -5,7 +5,7 @@ from waterology.cli import app
 runner = CliRunner()
 
 
-def test_version_is_0_3_0() -> None:
+def test_version_is_0_3_1() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert result.stdout.strip() == "0.3.1"
