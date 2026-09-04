@@ -39,8 +39,10 @@ For adapted work, update the file header and `ATTRIBUTION.md`.
 
 ## Git
 
-Sign commits with the personal identity. Do not add coauthor trailers. Do not
+Sign commits with the personal identity on personal machine. Do not add coauthor trailers. Do not
 push without permission.
+
+Create descriptive branchnames eg. `feature/my-feature`, `bug/my-bug`, NOT `codex/my-feature`.
 
 ## Scope
 
