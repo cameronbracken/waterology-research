@@ -111,6 +111,10 @@ quarto render reports/<slug>/report.qmd --to html
 Inspect the rendered HTML, not only the source. Confirm citations and the
 reference list resolve, interactive controls work, the light and dark themes
 remain readable, figures are not clipped, and the output is self contained.
+When the report contains Plotly, run the `figure-style` Plotly layout checker
+on the rendered HTML. Resolve every finding before visual inspection; then
+inspect desktop and narrow layouts because the checker cannot detect every
+pixel collision.
 
 After the first successful render, apply `research-review` to the report. Check
 claim support, citation coverage, methods, limitations, figure provenance,
