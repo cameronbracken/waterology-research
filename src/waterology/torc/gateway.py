@@ -77,6 +77,7 @@ class TorcGateway(Protocol):
         slurm_account: str | None,
         output_dir: Path,
         cwd: Path,
+        access_group_id: int | None = None,
     ) -> TorcLaunchRecord: ...
 
 
@@ -112,6 +113,7 @@ class TorcCliGateway:
         slurm_account: str | None,
         output_dir: Path,
         cwd: Path,
+        access_group_id: int | None = None,
     ) -> TorcLaunchRecord:
         _prepare_output_directory(output_dir)
         if mode == "local":
@@ -145,6 +147,17 @@ class TorcCliGateway:
             raise TorcCommandError("Remote TORC launch requires an SSH alias")
         created = self.create(workflow, cwd=cwd)
         try:
+            if access_group_id is not None:
+                self._run(
+                    [
+                        "access-groups",
+                        "add-workflow",
+                        created.workflow_id,
+                        str(access_group_id),
+                    ],
+                    cwd=cwd,
+                    json_output=False,
+                )
             self._run(
                 ["remote", "add-workers", created.workflow_id, ssh_alias],
                 cwd=cwd,
@@ -194,9 +207,9 @@ class TorcCliGateway:
         if match is None:
             raise TorcIncompatibleVersionError(f"Unable to parse TORC version: {version}")
         parsed = tuple(int(value) for value in match.groups())
-        if parsed < (0, 39, 0):
+        if parsed < (0, 40, 0):
             raise TorcIncompatibleVersionError(
-                f"TORC 0.39.0 or newer is required; found {match.group(0)}"
+                f"TORC 0.40.0 or newer is required; found {match.group(0)}"
             )
         return version
 

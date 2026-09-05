@@ -24,7 +24,7 @@ api_url = "http://localhost:8080/torc-service/v1"
 
 [profiles.cluster]
 mode = "slurm"
-api_url = "http://localhost:8085/torc-service/v1"
+api_url = "http://control.example:8085/torc-service/v1"
 torc_profile = "cluster"
 slurm_account = "project-123"
 dashboard_url = "http://localhost:8085/dashboard"

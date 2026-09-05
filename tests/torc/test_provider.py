@@ -24,7 +24,7 @@ from waterology.torc.workflow import TorcWorkflowRequest
 class FakeGateway:
     def __init__(self) -> None:
         self.validated: Path | None = None
-        self.launched: tuple[str, str | None] | None = None
+        self.launched: tuple[str, str | None, int | None] | None = None
 
     def validate(self, workflow: Path, *, cwd: Path) -> dict[str, object]:
         self.validated = workflow
@@ -38,10 +38,11 @@ class FakeGateway:
         ssh_alias: str | None,
         torc_profile: str | None,
         slurm_account: str | None,
+        access_group_id: int | None,
         output_dir: Path,
         cwd: Path,
     ) -> TorcLaunchRecord:
-        self.launched = (mode, ssh_alias)
+        self.launched = (mode, ssh_alias, access_group_id)
         return TorcLaunchRecord("42", ("9",))
 
     def version(self, *, cwd: Path) -> str:
@@ -77,8 +78,9 @@ def test_provider_prepares_and_launches_remote_workflow(tmp_path: Path) -> None:
         profile_name="remote",
         profile=ComputeProfile(
             mode="remote",
-            api_url="http://localhost:8080",
+            api_url="http://control.example:8080",
             ssh_alias="worker-a",
+            access_group_id=2,
         ),
         worktree=worktree,
         staging=staging,
@@ -89,7 +91,7 @@ def test_provider_prepares_and_launches_remote_workflow(tmp_path: Path) -> None:
     launched = provider.launch(prepared)
 
     assert gateway.validated == staging / "torc-workflow.yaml"
-    assert gateway.launched == ("remote", "worker-a")
+    assert gateway.launched == ("remote", "worker-a", 2)
     assert launched.reference is not None
     assert launched.reference.workflow_id == "42"
     assert launched.reference.job_ids == ("9",)

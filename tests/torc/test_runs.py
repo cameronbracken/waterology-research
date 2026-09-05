@@ -217,7 +217,7 @@ def test_remote_profile_requires_confirmation_then_records_trust(tmp_path: Path)
 [profiles.remote]
 provider = "torc"
 mode = "remote"
-api_url = "http://localhost:8080/torc-service/v1"
+api_url = "http://control.example:8080/torc-service/v1"
 ssh_alias = "worker-a"
 """,
         encoding="utf-8",

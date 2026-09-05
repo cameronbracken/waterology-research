@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import os
 import re
@@ -27,6 +28,7 @@ class ComputeProfile(BaseModel):
     target_shell: Literal["posix", "windows"] = "windows" if os.name == "nt" else "posix"
     api_url: str = Field(min_length=1)
     torc_profile: str | None = None
+    access_group_id: int | None = Field(default=None, gt=0)
     slurm_account: str | None = None
     ssh_alias: str | None = None
     local_output_root: str | None = None
@@ -49,10 +51,16 @@ class ComputeProfile(BaseModel):
 
     @model_validator(mode="after")
     def _require_remote_fields(self) -> "ComputeProfile":
+        if self.access_group_id is not None and self.mode != "remote":
+            raise ValueError("access_group_id is only supported for remote profiles")
         if self.mode == "remote" and not self.ssh_alias:
             raise ValueError("remote profiles require ssh_alias")
         if self.mode == "slurm" and not self.slurm_account:
             raise ValueError("slurm profiles require slurm_account")
+        if self.mode in {"remote", "slurm"}:
+            hostname = urlparse(self.api_url).hostname
+            if hostname is not None and _is_loopback_host(hostname):
+                raise ValueError("remote and Slurm profiles require a routable TORC API URL")
         return self
 
 
@@ -141,6 +149,7 @@ def machine_config_toml(config: MachineConfig) -> str:
         )
         for field in (
             "torc_profile",
+            "access_group_id",
             "slurm_account",
             "target_shell",
             "ssh_alias",
@@ -154,6 +163,15 @@ def machine_config_toml(config: MachineConfig) -> str:
 
 def _toml_array(values: tuple[str, ...]) -> str:
     return "[" + ", ".join(json.dumps(value) for value in values) + "]"
+
+
+def _is_loopback_host(hostname: str) -> bool:
+    if hostname.casefold() in {"localhost", "localhost.localdomain"}:
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
 
 
 def _normalize_profile_paths(profile: ComputeProfile, config_directory: Path) -> ComputeProfile:
