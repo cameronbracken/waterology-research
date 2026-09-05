@@ -51,6 +51,8 @@ def start_direct_run(
     *,
     run_id: str | None = None,
 ) -> RunManifest:
+    from waterology.core.studies import guard_submission
+    guard_submission(start, experiment_id)
     inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
     project = inputs.project
     experiment = inputs.experiment

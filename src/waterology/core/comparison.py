@@ -1,0 +1,90 @@
+"""Comparable measurements from sealed archives; missing evidence stays visible."""
+
+import json
+import math
+from pathlib import Path
+
+from waterology.core.archive import load_archive, verify_project_archive
+from waterology.core.errors import WaterologyError
+from waterology.core.project import discover_project
+from waterology.core.studies import StudyContract, fingerprint
+
+
+def compare_runs(start: Path, run_ids: list[str], *, baseline: str) -> dict[str, object]:
+    if baseline not in run_ids or len(run_ids) != len(set(run_ids)):
+        raise ValueError("Select a unique run list containing the baseline")
+    project = discover_project(start)
+    rows = []
+    for run_id in run_ids:
+        row = {
+            "run_id": run_id,
+            "status": "unverified",
+            "reason": None,
+            "metrics": {},
+            "deltas": {},
+            "contract": None,
+            "source_hash": None,
+        }
+        try:
+            manifest = load_archive(start, run_id)
+            row.update(
+                experiment_id=manifest.experiment_id,
+                commit_sha=manifest.commit_sha,
+                operational_state=manifest.terminal_state,
+            )
+            if not verify_project_archive(start, run_id).valid:
+                raise ValueError("Archive integrity failed")
+            directory = project.paths.runs / run_id
+            row["source_hash"] = fingerprint((directory / "checksums.sha256").read_text())
+            if not (directory / "study.json").is_file():
+                raise ValueError("Legacy run has no verified comparison contract")
+            context = json.loads((directory / "study.json").read_text())
+            contract = StudyContract.model_validate(context["contract"])
+            if fingerprint(contract.model_dump(mode="json")) != context["contract_hash"]:
+                raise ValueError("Study contract hash mismatch")
+            # Budgets, allowed edits and selection strategies do not define an estimand.
+            row["contract"] = {
+                "mode": contract.mode,
+                "input_files": contract.input_files,
+                "evaluation_hash": context["evaluation_hash"],
+                "evaluation": contract.evaluation,
+                "metrics": [r.model_dump() for r in contract.acceptance],
+                "uncertainty": contract.uncertainty,
+            }
+            row["contract_hash"] = fingerprint(row["contract"])
+            metrics = json.loads((directory / "metrics.json").read_text())
+            row["metrics"] = {
+                r.name: metrics.get(r.name)
+                if type(metrics.get(r.name)) in (int, float) and math.isfinite(metrics[r.name])
+                else None
+                for r in contract.acceptance
+            }
+            if manifest.terminal_state != "completed":
+                raise ValueError(f"Run ended {manifest.terminal_state}")
+            if any(v is None for v in row["metrics"].values()):
+                raise ValueError("Missing or nonfinite measurements")
+            row["status"] = "verified"
+        except (WaterologyError, ValueError, KeyError, OSError) as error:
+            row["reason"] = str(error)
+        rows.append(row)
+    base = next(row for row in rows if row["run_id"] == baseline)
+    for row in rows:
+        if row["status"] != "verified":
+            continue
+        if base["status"] != "verified":
+            row.update(status="incomparable", reason="Baseline is not verified")
+        elif row["contract_hash"] != base["contract_hash"]:
+            row.update(
+                status="incomparable", reason="Evaluation, units or metric definitions differ"
+            )
+        else:
+            row["deltas"] = {
+                name: value - base["metrics"][name] for name, value in row["metrics"].items()
+            }
+    return {
+        "schema_version": 1,
+        "baseline": baseline,
+        "rows": rows,
+        "complete": all(r["status"] == "verified" for r in rows),
+        "uncertainty": "Only declared uncertainty is reported; no intervals inferred from point estimates.",
+    }

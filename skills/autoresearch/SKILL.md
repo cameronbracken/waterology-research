@@ -1,8 +1,8 @@
 ---
 name: autoresearch
 description: >
-  Bounded research experiment loop that tries hypotheses, measures benchmark
-  evidence, keeps what works, and records what fails. Use when the user asks to
+  Bounded autonomous research and engineering loop through TORC that evaluates
+  committed candidates against a saved objective and constraints. Use when the user asks to
   optimize a research metric, run an experiment loop, or iteratively improve
   model, retrieval, or forecast performance.
 metadata:
@@ -19,60 +19,110 @@ alphaXiv/openresearch-cli, agent-skills/orx-experiment-tree/SKILL.md at commit
 13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
 ATTRIBUTION.md. -->
 
-Use `writing-style` for experiment summaries, decision notes, and reports.
+Use `writing-style` for summaries and `research-software-quality` for changes.
+Read [token-discipline.md](references/token-discipline.md) for long runs.
 
-For long runs, remote runs, or runs with multiple agents, read and follow
-[token-discipline.md](references/token-discipline.md). It limits repeated model
-work without weakening the benchmark or completion criteria.
+## Choose the objective
 
-If `autoresearch.md` and `autoresearch.jsonl` exist, ask whether to resume or
-start fresh. Read recent relevant `CHANGELOG.md` entries before resuming.
+Use one managed loop with an explicit mode:
 
-Before a new run, collect:
+- __Engineering:__ build to a specification, optimize performance or efficiency,
+  or solve a problem under constraints. Define acceptance tests, hard limits,
+  regression criteria and a stopping target. Feasibility comes before speed.
+- __Research:__ answer a scientific question. Define the estimand, evaluation
+  design, uncertainty and evidence needed. A negative or inconclusive result is
+  valid. A numeric improvement alone does not establish an explanation.
 
-- Optimization target and benchmark command.
-- Metric name, unit, and whether higher or lower is better.
-- Files allowed to change.
-- Maximum number of iterations, defaulting to 20.
-- Token or cost budget, when one matters, and a useful status interval.
-- Linear or tree loop shape.
+Keep `autoresearch` as the entry point for both. Do not force engineering work
+into a hypothesis narrative or require tree search for cumulative implementation.
+For tree search, read [experiment-tree.md](references/experiment-tree.md).
 
-Linear mode uses one working branch and keeps or reverts each loop owned edit.
-Tree mode applies when the study spans several design decisions. Read and follow
-[experiment-tree.md](references/experiment-tree.md) for the entire tree run.
+## Establish authority once
 
-Require an execution environment: local, a new Git branch, a Pixi environment,
-or remote SSH or Slurm. Then present the target, command, files, environment,
-iteration cap, and loop shape. Do not run the baseline or edit code without the
-user's explicit confirmation of that plan.
+Read the existing study record and relevant project instructions first. If the
+user asks to continue or resume an existing loop, resume it. Do not ask whether
+it should start fresh unless there is a real ambiguity about which study.
 
-Create `autoresearch.md`, `autoresearch.jsonl`, and `autoresearch.sh`. Record a
-seed and RNG details, run the baseline, then repeat:
+Resolve the objective, allowed paths, evaluation/input identities, seeds, units,
+acceptance rules, environment, TORC profile, concurrency, iteration/time budget,
+retry cap and drain/cancel stop behavior. Record authority already given by the
+user. Ask only for missing decisions or an action outside that authority.
+Do not request permission again for each iteration, an allowed retry, or an
+unchanged resume. Host trust and bounded study authorization are separate.
 
-1. State one hypothesis and make one scoped change.
-2. Run the fixed benchmark.
-3. Append the metric, evidence, and decision to `autoresearch.jsonl`.
-4. Keep the change, revert only the loop owned edit, or record the failed
-   hypothesis. Preserve unrelated user changes.
-5. Append concise `CHANGELOG.md` entries after the baseline and meaningful
-   milestones.
+Write the contract as NestedText (`.nt`), then use the installed Waterology CLI or equivalent
+MCP study tools:
 
-Stop when interrupted, explicitly stopped, or the iteration cap is reached. Do
-not silently extend the cap. Report progress during long runs.
+```bash
+waterology study create study-contract.nt --profile local --authorized-by "user approved this contract"
+waterology study show STUDY_ID
+waterology study enqueue STUDY_ID EXPERIMENT_ID
+waterology study advance STUDY_ID
+waterology study watch STUDY_ID
+waterology study driver STUDY_ID --runtime codex --max-proposals 10
+waterology study run STUDY_ID
+waterology study stop STUDY_ID
+```
 
-In tree mode, a round tests sibling options for one decision. Log each node with
-its branch and parent, then refill, promote, or stop as the rule describes. The
-baseline stays frozen and the benchmark command never changes. Only committed
-code or configuration varies. The cap counts benchmark runs rather than rounds.
+Replace the profile and identifiers with resolved values. The authorization
+text must accurately describe authority already given, not invent approval.
+`create` queues the baseline experiment. `watch` drives queued evaluations and
+waits for new candidates until a stopping condition. It does not generate code
+or scientific conclusions by itself. The active agent owns candidate proposals unless the user authorizes a bounded
+driver. `driver` records that choice and `run` resumes supervised candidate
+sessions plus the TORC controller. Choose the runtime and proposal cap from the
+existing authorization. Driver configuration does not grant runtime permissions.
+A failed or ambiguous submission remains blocked until its identity is resolved.
 
-Treat a request to `stop` or `off` as ending the loop while retaining state and
-results.
-Treat a request to `clear` as permission to remove only the resolved
-`autoresearch.md`, `autoresearch.jsonl`, and `autoresearch.sh` files before a
-fresh start. Verify those exact paths first and preserve code, results, and
-unrelated files.
+Human-facing managed commands emit NestedText. Automation can request
+`waterology --output-format json ...`; MCP and archived evidence retain their
+typed machine format. Existing JSON contracts remain readable.
 
-Output: `autoresearch.md`, `autoresearch.jsonl`, `autoresearch.sh`.
+If these commands are unavailable, report the missing Waterology capability.
+Do not replace managed execution with a shell loop or ad hoc remote commands.
+
+## Standard execution
+
+Every candidate evaluation uses the study's pinned TORC profile, including
+local compute. Use the same committed project command and environment identity.
+Never fall back to direct execution, SSH scripts, another host or a different
+resource request when TORC fails. Retry within the saved policy or retain a
+blocked state with the exact recovery action.
+
+Source isolation, dependency setup and scheduling are separate choices: use
+owned Git worktrees for candidates, the project's environment manager for
+software, and TORC for evaluation. Lightweight local checks must be named and
+bounded in the contract. They cannot substitute for the acceptance benchmark.
+Check runtime permissions and the exact unattended execution path before a
+long run. Do not bypass runtime safeguards to avoid prompts.
+
+## Iterate within the contract
+
+1. Read the current study and the latest archived evidence.
+2. Choose one scoped candidate change consistent with the objective mode.
+3. Create an owned experiment branch, edit only allowed paths, run declared
+   lightweight checks, and commit the candidate. Preserve unrelated changes.
+4. Queue it through `study enqueue` and advance the controller. Do not edit a
+   queued, running, unknown or collecting candidate.
+5. Read archived measurements and assessments. Keep failed and unfavorable
+   runs. Do not promote incomparable evidence or change acceptance criteria.
+6. Propose the next candidate while the saved budgets allow. Persist a concise
+   handoff with the study ID and next decision at meaningful milestones.
+
+The controller owns TORC submissions, retries, collection and checkpoint state.
+Use its durable records as the execution authority. Existing `autoresearch.md`,
+`autoresearch.jsonl` and `autoresearch.sh` are legacy records, not a second live
+controller. Preserve them when resuming old work and explicitly migrate the
+contract before launching a managed study.
+
+Stop new work when asked to stop. Apply the saved drain/cancel policy to active
+jobs. Stop also at the budget or acceptance boundary. Never extend limits,
+change test data, deploy a candidate, publish results or delete history without
+corresponding authority. Report the stopping reason and exact saved study ID.
+
+Output: durable `.waterology/studies/` records, sealed run archives, and a
+concise project handoff. Use `waterology compare-runs` for measurements and
+`waterology report` for a portable Quarto bundle.
 
 ---
 *Adapted from Feynman (companion-inc/feynman, MIT); tree mode from

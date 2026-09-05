@@ -89,7 +89,7 @@ def test_run_start_uses_committed_default_compute_profile(
     captured: dict[str, str] = {}
 
     monkeypatch.setattr(  # type: ignore[attr-defined]
-        cli_module,
+        cli_module.services,
         "load_worktree",
         lambda path, experiment_id: SimpleNamespace(path=str(tmp_path)),
     )
@@ -111,7 +111,7 @@ def test_run_start_uses_committed_default_compute_profile(
             ),
         )
 
-    monkeypatch.setattr(cli_module, "start_torc_run", fake_start)  # type: ignore[attr-defined]
+    monkeypatch.setattr(cli_module.services, "start_torc_run", fake_start)  # type: ignore[attr-defined]
 
     result = runner.invoke(
         app,
@@ -126,7 +126,7 @@ def test_run_start_cli_does_not_print_redacted_secret(monkeypatch: object) -> No
     def fail(*args: object, **kwargs: object) -> None:
         raise TorcRunError("TORC launch failed: token=[REDACTED]")
 
-    monkeypatch.setattr(cli_module, "start_torc_run", fail)  # type: ignore[attr-defined]
+    monkeypatch.setattr(cli_module.services, "start_torc_run", fail)  # type: ignore[attr-defined]
 
     result = runner.invoke(
         app,

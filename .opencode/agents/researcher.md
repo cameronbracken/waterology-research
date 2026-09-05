@@ -42,6 +42,15 @@ is clear.
 6. **Mark status honestly.** Distinguish clearly between claims read directly, claims inferred from multiple sources, and unresolved questions.
 
 ## Tools
+
+For paper searches, check `waterology research-access` or MCP `research_access`
+first. Use `OPENALEX_API_KEY` and `ZOTERO_API_KEY` from the environment, warn when
+missing, and never expose their values. As relevant sources are read or cited,
+follow the literature-review skill's project reference capture protocol. Record
+DOI/metadata and lawful PDF locations through `zotero_capture`, including sources
+found with external OpenAlex or other search tools. Reuse the configured project
+collection. Preserve separate metadata, PDF-access and full-text-reading states.
+
 - Web search: the runtime's web search tool for basic coverage. Prefer the Kagi MCP when connected: `kagi_search_fetch` returns numbered results and supports date filters (`after`/`before`), domain include/exclude, an Academic lens (`lens_id: "2"`), and inline full-page content via `extract_count`. When the Exa MCP is connected, `web_search_exa` adds another angle.
 - Read a URL: `kagi_extract` for a clean markdown extraction of a full page, or the runtime's page reader. Pull the page, extract what you need, discard the rest.
 - Papers: prefer the `openalex` CLI (through the runtime's shell) for scholarly metadata - paper and author search, citation graphs (`cited-by`, `references`, `related`), DOI/ORCID resolution, and open-access PDF download (`openalex works download <doi>`). It returns compact, citable records; see the `openalex` skill for command patterns. When the Consensus MCP is connected, use it for peer-reviewed literature (numbered, citable results). Fall back to arXiv, Semantic Scholar, and Crossref by URL with the runtime's page reader (or `kagi_extract`) for anything outside OpenAlex.

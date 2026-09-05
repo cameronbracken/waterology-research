@@ -21,12 +21,38 @@ ATTRIBUTION.md. -->
 
 Use `writing-style` for the review and source synthesis.
 
+At entry, run `waterology research-access` or MCP `research_access`. Use
+`OPENALEX_API_KEY` and `ZOTERO_API_KEY` from the environment when present. Warn
+clearly when the relevant key is missing. Do not print keys, request them in
+chat, or treat their presence as verified provider access.
+
 Derive a short slug from the topic. Write `docs/.plans/<slug>.md` with the
 questions, source types, period, expected themes, task ledger, and verification
 log. For a lab, PI, author, or institution, plan a publication corpus review:
 resolve the identity, collect the reachable publication list, then map the
 research trajectory. Briefly summarize the plan and continue unless the user
 asked to review it first.
+
+When working in an initialized Waterology project, record retrieval through
+`waterology discover "QUERY"` or MCP `literature_search`. Save explicit date
+bounds only when the question calls for them. The service retains exact queries,
+provider failures and DOI provenance. Use `source-decision` to append inclusion
+or exclusion reasons, and `source-add` for agency reports or local sources.
+Search records establish retrieval history, not full-text access or claim support.
+Use existing bibliography validation for DOI checks before citation.
+
+Build the project Zotero collection as sources become relevant. An include
+decision and `source-add` automatically queue the source and sync when configured.
+For papers found through another search tool, call MCP `zotero_capture` or
+`waterology zotero capture source.nt` when reading or citing them. Supply DOI,
+title, authors, publication date, stable URL, and a lawful PDF URL or an existing
+project-relative PDF path when available. The configured library applies across
+iterations without further approval. Do not substitute a different library.
+
+By default, raw search hits remain discovery records until selected. A project
+can explicitly use `capture: discovered` to save every returned source. Before
+delivery, run `waterology zotero sync` and retain pending metadata/PDF states in
+the handoff. A downloaded PDF is not proof it was read or supports a claim.
 
 Search in hops rather than stopping after one query pass:
 

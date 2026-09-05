@@ -52,6 +52,14 @@ remove claims that exceed their support and remove unsupported numerics.
 
 ## Report mode
 
+For archived Waterology runs, start with `waterology compare-runs` and export
+selected runs with `waterology report --baseline RUN_ID --destination reports/SLUG`.
+Supply the selected run IDs as arguments. The bundle contains Quarto source,
+measurement data, figure code and provenance. Regenerate with its `render.py`,
+then render and inspect the HTML as described below. Claim-reference integrity
+and assessed claim support are separate. Do not describe an unassessed claim as
+verified merely because its archive bytes match.
+
 A report collects the results and validation of an existing analysis or model
 in one place so the work can be reviewed and shared as a single HTML file.
 Interactive graphics are the primary content. Prose exists to explain the

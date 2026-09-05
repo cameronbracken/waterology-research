@@ -1,0 +1,76 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/waterology-openresearch-plan-20260905
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.15.1
+collected 540 items
+
+tests/agents/test_adapters.py ............                               [  2%]
+tests/agents/test_agent_cli.py ....                                      [  2%]
+tests/agents/test_supervisor.py ........................                 [  7%]
+tests/constraints/test_scanners.py ..                                    [  7%]
+tests/core/test_archive.py .................                             [ 10%]
+tests/core/test_assessments.py ......                                    [ 12%]
+tests/core/test_config.py .........                                      [ 13%]
+tests/core/test_database.py ......                                       [ 14%]
+tests/core/test_evidence.py ......                                       [ 15%]
+tests/core/test_execution.py ..............                              [ 18%]
+tests/core/test_experiment_cli.py ...                                    [ 19%]
+tests/core/test_experiments.py .......                                   [ 20%]
+tests/core/test_profiles.py ..................                           [ 23%]
+tests/core/test_project.py ...............                               [ 26%]
+tests/core/test_project_cli.py ....                                      [ 27%]
+tests/core/test_records.py ...                                           [ 27%]
+tests/core/test_repair.py ...................                            [ 31%]
+tests/core/test_sessions.py ..............                               [ 33%]
+tests/dashboard/test_app.py .....................                        [ 37%]
+tests/dashboard/test_dashboard_cli.py ...                                [ 38%]
+tests/dashboard/test_styles.py .                                         [ 38%]
+tests/hooks/test_claim_reconcile.py ....                                 [ 39%]
+tests/mcp/test_server.py ....                                            [ 40%]
+tests/mcp/test_stdio.py .                                                [ 40%]
+tests/packaging/test_docs.py .......                                     [ 41%]
+tests/packaging/test_wheel.py .....                                      [ 42%]
+tests/runtime/test_agents.py ..                                          [ 42%]
+tests/runtime/test_assets.py ..                                          [ 43%]
+tests/runtime/test_doctor.py .........                                   [ 44%]
+tests/runtime/test_install_apply.py .................................... [ 51%]
+.........................                                                [ 56%]
+tests/runtime/test_install_plan.py ...........                           [ 58%]
+tests/runtime/test_mcp_registration.py .....                             [ 59%]
+tests/runtime/test_render.py ......                                      [ 60%]
+tests/runtime/test_skills.py ..                                          [ 60%]
+tests/runtime/test_validate.py ....................................      [ 67%]
+tests/skills/test_figure_layout.py ......                                [ 68%]
+tests/skills/test_paper_writing.py .....                                 [ 69%]
+tests/skills/test_plugin_consolidation.py .......................        [ 73%]
+tests/skills/test_remaining_roadmap.py ........                          [ 75%]
+tests/skills/test_reproducibility_passport.py ....                       [ 75%]
+tests/studies/test_contracts.py ....                                     [ 76%]
+tests/studies/test_controller.py .......................                 [ 80%]
+tests/studies/test_formats_learning.py ....                              [ 81%]
+tests/studies/test_research_access.py ...                                [ 82%]
+tests/studies/test_zotero.py ..............                              [ 84%]
+tests/test_cli.py ..                                                     [ 85%]
+tests/test_install_cli.py .............                                  [ 87%]
+tests/test_services.py .....                                             [ 88%]
+tests/torc/test_gateway.py .....................                         [ 92%]
+tests/torc/test_provider.py .......                                      [ 93%]
+tests/torc/test_reconcile.py ...                                         [ 94%]
+tests/torc/test_runs.py .................                                [ 97%]
+tests/torc/test_states.py .......                                        [ 98%]
+tests/torc/test_torc_cli.py .....                                        [ 99%]
+tests/torc/test_workflow.py ...                                          [100%]
+
+=============================== warnings summary ===============================
+.pixi/envs/default/lib/python3.14/site-packages/starlette/testclient.py:53
+  /private/tmp/waterology-openresearch-plan-20260905/.pixi/envs/default/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+tests/studies/test_controller.py::test_recorded_search_preserves_query_failure_and_doi_provenance
+  /private/tmp/waterology-openresearch-plan-20260905/src/waterology/core/zotero.py:192: RuntimeWarning: ZOTERO_API_KEY is not available; Zotero references remain queued
+    result = sync_references(start, identifiers=[identifier], limit=1)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================== 540 passed, 2 warnings in 76.00s (0:01:16) ==================

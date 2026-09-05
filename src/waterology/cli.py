@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from rich.console import Console
 from rich.table import Table
 
-from waterology import __version__
+from waterology import __version__, services
 from waterology.agents.supervisor import interrupt_session, launch_session, reconcile_session
 from waterology.core.archive import (
     ArchiveNotFoundError,
@@ -22,9 +22,7 @@ from waterology.core.archive import (
     verify_project_archive,
 )
 from waterology.core.assessments import assess_run
-from waterology.core.config import load_project_config
 from waterology.core.errors import InvalidInputError, WaterologyError
-from waterology.core.execution import start_direct_run
 from waterology.core.experiments import (
     add_experiment_note,
     create_experiment,
@@ -36,7 +34,7 @@ from waterology.core.experiments import (
 )
 from waterology.core.profiles import load_machine_config, machine_config_path, trust_profile
 from waterology.core.project import initialize_project, inspect_project
-from waterology.core.records import RunManifest
+from waterology.core.records import ManagedRunRecord, RunManifest
 from waterology.core.repair import repair_index
 from waterology.core.sessions import (
     create_session,
@@ -44,6 +42,7 @@ from waterology.core.sessions import (
     load_session,
     read_session_logs,
 )
+from waterology.knowledge_cli import register_knowledge_commands
 from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.doctor import run_diagnostics
 from waterology.runtime.install import (
@@ -60,12 +59,14 @@ from waterology.runtime.install import (
 from waterology.runtime.mcp import registration_command, runtime_mcp_config
 from waterology.runtime.render import GeneratedAssetsStaleError, render_assets
 from waterology.runtime.validate import ValidationIssue, validate_assets
-from waterology.torc.runs import cancel_torc_run, inspect_torc_run, start_torc_run
+from waterology.torc.runs import cancel_torc_run, inspect_torc_run
+from waterology.workflow_cli import register_workflow_commands
 
 app = typer.Typer(
     help="Waterology research workflows for Claude Code, Codex, and OpenCode.",
     no_args_is_help=True,
 )
+register_knowledge_commands(app)
 experiment_app = typer.Typer(help="Create and inspect research experiments.")
 worktree_app = typer.Typer(help="Inspect experiment worktrees.")
 archive_app = typer.Typer(help="Inspect and verify sealed run archives.")
@@ -82,6 +83,7 @@ app.add_typer(agent_app, name="agent")
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(compute_app, name="compute")
 compute_app.add_typer(profile_app, name="profile")
+register_workflow_commands(app)
 
 _INSTALL_SCOPE_OPTION = typer.Option(InstallScope.PROJECT, "--scope")
 _INSTALL_TARGET_OPTION = typer.Option(Path("."), "--target")
@@ -101,6 +103,8 @@ def _version(value: bool) -> None:
 
 @app.callback()
 def main(
+    ctx: typer.Context,
+    output_format: str = typer.Option("nestedtext", "--output-format", help="Managed workflow output: nestedtext or json."),
     version: bool = typer.Option(
         False,
         "--version",
@@ -110,6 +114,11 @@ def main(
     ),
 ) -> None:
     """Run Waterology commands."""
+    if output_format not in {"nestedtext", "json"}:
+        raise typer.BadParameter("Use nestedtext or json")
+    from waterology.workflow_cli import WORKFLOW_OUTPUT_FORMAT
+
+    WORKFLOW_OUTPUT_FORMAT.set(output_format)
 
 
 def _console() -> Console:
@@ -654,25 +663,15 @@ def run_start_command(
 ) -> None:
     """Run a clean committed variant directly or through TORC."""
     try:
-        if profile is None:
-            worktree = load_worktree(path, experiment_id)
-            profile = load_project_config(
-                Path(worktree.path) / "waterology.toml"
-            ).default_compute_profile
+        profile = services.resolve_run_profile(path, experiment_id, profile)
         provider_name = "direct" if profile == "direct" else "torc"
         if not json_output:
             _console().print(f"Starting {provider_name} run for {experiment_id}...")
-        if provider_name == "direct":
-            run = start_direct_run(path, experiment_id, run_id=run_id)
-        else:
-            run = start_torc_run(
-                path,
-                experiment_id,
-                profile_name=profile or "",
-                machine_config_file=machine_config_path(),
-                run_id=run_id,
-                confirm_remote=confirm_remote,
-            )
+        payload = services.start_run(
+            path, experiment_id, profile=profile, run_id=run_id,
+            confirm_remote=confirm_remote,
+        )
+        run = (RunManifest if provider_name == "direct" else ManagedRunRecord).model_validate(payload)
     except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run failed")
         raise typer.Exit(1) from error

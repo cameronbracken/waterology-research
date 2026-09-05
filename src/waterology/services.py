@@ -11,6 +11,7 @@ from waterology.core.archive import (
     read_archive_logs,
 )
 from waterology.core.assessments import assess_run, list_assessments
+from waterology.core.config import load_project_config
 from waterology.core.database import open_database
 from waterology.core.errors import WaterologyError
 from waterology.core.evidence import (
@@ -26,6 +27,7 @@ from waterology.core.experiments import (
     list_experiment_notes,
     list_experiments,
     load_experiment,
+    load_worktree,
 )
 from waterology.core.profiles import load_machine_config, machine_config_path
 from waterology.core.project import Project, discover_project, inspect_project
@@ -84,20 +86,30 @@ def record_experiment_note(
     return add_experiment_note(path, experiment_id, text, author=author).model_dump(mode="json")
 
 
+def resolve_run_profile(path: Path, experiment_id: str, profile: str | None = None) -> str:
+    if profile is not None:
+        return profile
+    worktree = load_worktree(path, experiment_id)
+    return load_project_config(Path(worktree.path) / "waterology.toml").default_compute_profile
+
+
 def start_run(
     path: Path,
     experiment_id: str,
     *,
-    profile: str = "direct",
+    profile: str | None = None,
     confirm_remote: bool = False,
+    run_id: str | None = None,
 ) -> dict[str, object]:
+    profile = resolve_run_profile(path, experiment_id, profile)
     if profile == "direct":
-        run = start_direct_run(path, experiment_id)
+        run = start_direct_run(path, experiment_id, run_id=run_id)
     else:
         run = start_torc_run(
             path,
             experiment_id,
             profile_name=profile,
+            run_id=run_id,
             machine_config_file=machine_config_path(),
             confirm_remote=confirm_remote,
         )

@@ -1,5 +1,38 @@
 # Attribution
 
+## ECC project learning adaptation, 2026-09-05
+
+- Source: [affaan-m/ECC](https://github.com/affaan-m/ECC/tree/e04ea0b9cc8248686edf5ac751cadff550e162b8),
+  commit `e04ea0b9cc8248686edf5ac751cadff550e162b8`.
+- Adapted concepts: project-scoped atomic lessons, evidence retention and
+  improvement proposals from `skills/continuous-learning-v2/SKILL.md`.
+  Checkpoint guidance in `skills/strategic-compact/SKILL.md` informed additions
+  to the existing session-log skill.
+- Waterology files: `skills/project-learning/SKILL.md`, generated `commands/learn.md`,
+  `core/learning.py` and the session-log checkpoint extension. Existing planning,
+  review, research, retrieval and orchestration capabilities were retained.
+- No ECC executable scripts, observer hooks or agent definitions were copied.
+
+MIT License, copyright (c) 2026 Affaan Mustafa:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 `waterology` is original work by Cameron Bracken, but its methodology and
 several components are adapted from open-source Claude Code projects. This
 ledger records what was borrowed and from whom. Files that derive from a
@@ -122,6 +155,21 @@ source carry a one-line credit at the top; this page is the canonical list.
   to plain git and the R / Stan / hydrology-energy stack.
 - **Credit string:** *Adapted from openresearch-cli (alphaXiv/openresearch-cli,
   MIT per Cargo.toml).*
+
+### alphaXiv/OpenResearch - connected research workflow design
+
+- **Repository:** <https://github.com/alphaXiv/OpenResearch>
+- **Inspected revision:** `95b2d961966c128b27f9d49753e227791a01c909`
+- **License:** MIT, Copyright (c) 2026 alphaXiv, verified in the current LICENSE.
+- **Design references:** `agent-skills/orx-evidence/SKILL.md`,
+  `agent-skills/orx-lit-review/SKILL.md`, `agent-skills/orx-reports/SKILL.md`,
+  `agent-skills/orx-agent-delegation/SKILL.md` and `ui/src/components/`.
+- **Use:** source comparison informed the connected study, evidence and report
+  plan. New Python services and managed research/engineering contracts are
+  original Waterology implementations. No upstream runtime code or UI assets
+  are copied. Earlier adapted skill content retains its historical credit above.
+- **Current difference:** OpenResearch now includes OpenAlex discovery. The
+  arXiv-only rationale in the historical roadmap applies to the earlier snapshot.
 
 ### William Strunk Jr. - concise prose principles
 

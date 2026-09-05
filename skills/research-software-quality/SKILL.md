@@ -40,6 +40,13 @@ reasoning.
 
 ## Persistence
 
+For substantial work in an initialized project, use `project-learning` to
+retrieve relevant verified lessons before planning. After verification or a
+meaningful failure recovery, record the supported lesson and its evidence.
+Keep shared workflow changes as reviewable proposals. This completes
+plan -> test -> implement -> review -> verify -> remember -> improve without
+requiring every phase for a trivial change.
+
 Continue while the requested outcome and the next safe action are clear. A
 failed command is evidence to investigate, not a reason to stop. Stop when
 progress requires user input, new authority, external coordination, or a change

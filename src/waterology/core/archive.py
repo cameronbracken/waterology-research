@@ -35,6 +35,8 @@ _STAGING_PAYLOADS = {
     ".execution.json.tmp",
     "manifest.json",
     "metrics.json",
+    "study.json",
+    "execution-config.json",
     "result.md",
     "source.tar.zst",
     "stderr.log",
@@ -460,6 +462,8 @@ def _prepare_staging(staging: Path) -> None:
             child.name
             in {
                 "execution.json",
+                "study.json",
+                "execution-config.json",
                 "stdout.log",
                 "stderr.log",
                 "torc.json",

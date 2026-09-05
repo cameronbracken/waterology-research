@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en" data-theme="system"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Waterology studies</title><link rel="stylesheet" href="/static/dashboard.css"><script src="/static/dashboard.js" defer></script></head>
+<body><main class="main-content"><button class="theme-button" type="button" data-theme-toggle aria-label="Change color theme">Theme: system</button><nav aria-label="Research navigation"><a href="/">Overview</a> | <a href="/experiments">Experiment tree</a> | <a href="/studies">Studies</a> | <a href="/comparison">Compare runs</a> | <a href="/evidence">Evidence</a></nav>
+<h1>{{ 'Managed studies' if studies is not none else 'Compare archived runs' }}</h1>
+{% if studies is not none %}
+{% for study in studies %}<section class="panel"><h2>{{ study.contract.objective }}</h2><p>{{ study.id }} | {{ study.contract.mode }} | {{ study.state }}</p><p>{{ study.reason or 'Within the saved authorization and execution contract.' }}</p><p>Profile: {{ study.profile }}. Attempts: {{ study.attempts | length }} / {{ study.contract.max_iterations }}.</p>
+<details><summary>Authorization and contract</summary><p>{{ study.authorized_by }}</p><code>{{ study.contract_hash }}</code></details>
+{% if study.attempts %}<a href="/comparison?baseline={{ study.attempts[0].run_id }}{% for attempt in study.attempts %}&amp;run={{ attempt.run_id }}{% endfor %}">Compare this study</a>{% endif %}
+<ul>{% for attempt in study.attempts %}<li><a href="/experiments/{{ attempt.experiment_id }}">{{ attempt.experiment_id }}</a>: {{ attempt.state }}. <a href="/archives/{{ attempt.run_id }}">Run evidence</a>. Acceptance: {% if attempt.assessment %}{{ 'met' if attempt.assessment.accepted else 'not met' if study.contract.mode == 'engineering' else 'scientific assessment pending' }}{% else %}unassessed{% endif %}. <a href="/changes/{{ attempt.run_id }}">Code changes</a></li>{% endfor %}</ul></section>{% else %}<p>No managed studies yet. Create a bounded contract with <code>waterology study create</code>.</p>{% endfor %}
+{% else %}
+<form method="get"><label>Baseline run <input name="baseline" required></label><label>Candidate run <input name="run" required></label><button type="submit">Compare</button></form>
+{% if comparison %}<p>Baseline: {{ comparison.baseline }}. Deltas are candidate minus baseline. Scientific assessments remain separate from process status.</p>
+<div class="table-wrap"><table><thead><tr><th>Run</th><th>Evidence status</th><th>Metric</th><th>Unit</th><th>Value</th><th>Delta</th><th>Reason</th></tr></thead><tbody>
+{% for row in comparison.rows %}{% for name,value in (row.metrics or {'unavailable':none}).items() %}<tr><td><a href="/archives/{{ row.run_id }}">{{ row.run_id }}</a></td><td>{{ row.status }}</td><td>{{ name }}</td><td>{% if row.contract %}{% for rule in row.contract.metrics %}{% if rule.name == name %}{{ rule.unit }}{% endif %}{% endfor %}{% endif %}</td><td>{{ value }}</td><td>{{ row.deltas.get(name, '') }}</td><td>{{ row.reason or '' }}</td></tr>{% endfor %}{% endfor %}
+</tbody></table></div><p>{{ comparison.uncertainty }}</p>{% endif %}
+{% endif %}</main></body></html>

@@ -24,6 +24,7 @@ from waterology.dashboard.security import (
     require_action,
     token_matches,
 )
+from waterology.dashboard.workflows import workflow_routes
 
 _COOKIE = "waterology_dashboard"
 _VIEW_TITLES = {
@@ -135,6 +136,7 @@ def create_dashboard_app(
         Route("/compute", view_page("compute")),
         Route("/events", events),
         *action_routes,
+        *workflow_routes(project.root, templates),
         Mount("/static", StaticFiles(directory=package / "static"), name="static"),
     ]
     app = Starlette(routes=routes, exception_handlers={WaterologyError: _domain_error})
@@ -229,7 +231,7 @@ def _action_routes(project_root: Path, action_token: str) -> list[Route]:
             lambda: services.start_run(
                 project_root,
                 form.get("experiment_id", ""),
-                profile=form.get("profile", "direct") or "direct",
+                profile=form.get("profile") or None,
                 confirm_remote=form.get("confirm_remote") == "yes",
             ),
         )

@@ -24,6 +24,7 @@ from waterology.core.providers import PreparedRun, ProviderInspection
 from waterology.core.records import ExecutorReference, ManagedRunRecord, RunManifest
 from waterology.torc.gateway import TorcCliGateway, TorcGateway
 from waterology.torc.provider import TorcProvider
+from waterology.torc.study_snapshot import load_snapshot, save_snapshot, verify_fresh_outputs
 from waterology.torc.workflow import TorcWorkflowRequest
 
 
@@ -44,7 +45,10 @@ def start_torc_run(
     run_id: str | None = None,
     confirm_remote: bool = False,
     gateway: TorcGateway | None = None,
+    study_context: dict[str, object] | None = None,
 ) -> ManagedRunRecord:
+    from waterology.core.studies import guard_submission
+    guard_submission(start, experiment_id, str(study_context["study_id"]) if study_context else None)
     inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
     machine_config = load_machine_config(machine_config_file)
     profile = machine_config.profile(profile_name)
@@ -80,6 +84,10 @@ def start_torc_run(
             command=inputs.config.command,
             started_at=started_at,
         )
+        if study_context is not None:
+            from waterology.core.atomic import write_json
+            write_json(staging / "study.json", study_context)
+            save_snapshot(staging, inputs.worktree, inputs.config, profile, inputs.commit_sha)
         provider = TorcProvider(
             config=inputs.config,
             request=TorcWorkflowRequest(
@@ -214,8 +222,12 @@ def inspect_torc_run(
         experiment = load_experiment(project.root, row["experiment_id"])
         worktree_record = load_worktree(project.root, experiment.id)
         worktree = Path(worktree_record.path)
-        config = load_project_config(worktree / "waterology.toml")
-        profile = load_machine_config(machine_config_file).profile(reference.compute_profile)
+        snapshot = load_snapshot(project.paths.staging / run_id)
+        if snapshot is not None:
+            config, profile = snapshot
+        else:
+            config = load_project_config(worktree / "waterology.toml")
+            profile = load_machine_config(machine_config_file).profile(reference.compute_profile)
         selected_gateway = gateway or TorcCliGateway(reference.api_url)
         provider = TorcProvider(
             config=config,
@@ -300,6 +312,8 @@ def inspect_torc_run(
             except Exception as error:
                 message = _redact_text(str(error), config.archive.log_redactions)
                 raise TorcRunError(f"TORC collection failed: {message}") from error
+            if inspection.terminal_state == "completed":
+                verify_fresh_outputs(project.paths.staging / run_id, worktree, config)
             scientific_metrics = _extract_metrics(
                 config,
                 worktree,
@@ -379,7 +393,6 @@ def cancel_torc_run(
             )
             if not cancellation_was_requested and row["operational_state"] not in {
                 "completed",
-                "failed",
                 "cancelled",
                 "lost",
             }:

@@ -46,5 +46,6 @@ Create descriptive branchnames eg. `feature/my-feature`, `bug/my-bug`, NOT `code
 
 ## Scope
 
-Experiment storage, TORC, agent sessions, MCP, and the dashboard belong to
-later plans.
+Experiment storage, TORC, agent sessions, MCP, and the dashboard are implemented.
+Extend their shared service and durable record layers. See docs/managed-studies.md
+for bounded autonomous execution and its validation boundaries.

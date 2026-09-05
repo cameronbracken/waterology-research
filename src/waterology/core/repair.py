@@ -61,6 +61,9 @@ def repair_index(start: Path) -> RepairResult:
 
 
 def _repair_index_locked(project: Project) -> RepairResult:
+    from waterology.core.studies import list_studies
+    if any(a.state in {"submitting", "running"} for study in list_studies(project.root) for a in study.attempts):
+        raise RepairRecordError("Reconcile active or ambiguous study attempts before index repair")
     validate_database_path(project.paths.database)
     _validate_durable_layout(project)
     experiments = list_experiments(project.root)

@@ -96,7 +96,7 @@ def create_server() -> MCPServer:
     def start_run(
         experiment_id: str,
         project_path: str = ".",
-        profile: str = "direct",
+        profile: str | None = None,
         confirm_remote: bool = False,
     ) -> dict[str, object]:
         """Start a validated run; this executes the committed project command."""
@@ -218,6 +218,8 @@ def create_server() -> MCPServer:
         """Append a durable note to an agent session."""
         return services.record_session_note(Path(project_path), session_id, text, author)
 
+    from waterology.mcp.workflows import register_workflow_tools
+    register_workflow_tools(server, _bounded_tool)
     return server
 
 

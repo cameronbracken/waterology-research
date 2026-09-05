@@ -2,6 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from waterology import services
 from waterology.core.database import open_database
 from waterology.core.experiments import create_experiment
@@ -61,9 +63,7 @@ def test_dashboard_snapshot_reconciles_active_torc_runs(
     root.mkdir()
     subprocess.run(["git", "init", "--quiet", str(root)], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
-    subprocess.run(
-        ["git", "-C", str(root), "config", "user.email", "test@example.org"], check=True
-    )
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.org"], check=True)
     initialize_project(root)
     (root / "model.py").write_text("print('baseline')\n", encoding="utf-8")
     subprocess.run(
@@ -116,9 +116,7 @@ def test_dashboard_snapshot_marks_dead_direct_process_unknown(
     root.mkdir()
     subprocess.run(["git", "init", "--quiet", str(root)], check=True)
     subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
-    subprocess.run(
-        ["git", "-C", str(root), "config", "user.email", "test@example.org"], check=True
-    )
+    subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.org"], check=True)
     initialize_project(root)
     (root / "model.py").write_text("print('baseline')\n", encoding="utf-8")
     subprocess.run(
@@ -163,3 +161,28 @@ def test_dashboard_snapshot_marks_dead_direct_process_unknown(
     collecting = services.dashboard_snapshot(root)["managed_runs"][0]  # type: ignore[index]
     assert collecting["operational_state"] == "collecting"
     assert "without a sealed archive" in collecting["inspection_error"]
+
+
+def test_omitted_run_profile_uses_variant_configuration(monkeypatch, tmp_path):
+    from waterology.core.config import ProjectConfig, project_config_toml
+
+    (tmp_path / "waterology.toml").write_text(
+        project_config_toml(ProjectConfig(name="test", default_compute_profile="worker"))
+    )
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        services, "load_worktree", lambda *args: SimpleNamespace(path=str(tmp_path)), raising=False
+    )
+    calls = []
+
+    def launch(*args, **kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(model_dump=lambda **kwargs: {"run_id": "run-test"})
+
+    monkeypatch.setattr(services, "start_torc_run", launch)
+    monkeypatch.setattr(
+        services, "start_direct_run", lambda *args, **kwargs: pytest.fail("direct fallback")
+    )
+    assert services.start_run(tmp_path, "exp-test")["run_id"] == "run-test"
+    assert calls[0]["profile_name"] == "worker"
