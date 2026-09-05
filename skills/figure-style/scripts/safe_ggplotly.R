@@ -68,13 +68,13 @@ waterology_ggplotly = function(
     entry_width = min(260, max(120, 36 + 8 * longest_label))
     legend_columns = max(1, floor((target_width_px - 48) / entry_width))
     legend_rows = ceiling(length(trace_labels) / legend_columns)
-    margin$b = max(margin$b, 72 + 28 * legend_rows)
+    margin$b = max(margin$b, 120 + 32 * legend_rows)
     widget$x$layout$legend = modifyList(
       widget$x$layout$legend,
       list(
         orientation = "h",
         x = 0,
-        y = -0.16,
+        y = -0.18,
         xanchor = "left",
         yanchor = "top",
         entrywidth = entry_width,

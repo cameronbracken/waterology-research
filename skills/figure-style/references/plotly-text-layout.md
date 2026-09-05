@@ -70,7 +70,7 @@ figure.update_layout(
         "xanchor": "left",
         "yanchor": "top",
     },
-    margin={"t": 24, "r": 24, "b": 120, "l": 48},
+    margin={"t": 24, "r": 24, "b": 160, "l": 48},
 )
 figure.update_xaxes(automargin=True, title_standoff=12)
 figure.update_yaxes(automargin=True, title_standoff=12)
