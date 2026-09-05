@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "skills/figure-style/scripts/check_plotly_layout.py"
 CONSTRAINT = ROOT / "constraints/plotly-text-overlap.py"
+REPORT_FIGURE_CSS = ROOT / "skills/figure-style/assets/report-figure.css"
 
 
 def _load_checker():
@@ -153,3 +154,13 @@ def test_constraint_ignores_environment_html(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     assert result.stdout == ""
+
+
+def test_report_figure_css_uses_whitespace_instead_of_container_chrome() -> None:
+    styles = REPORT_FIGURE_CSS.read_text(encoding="utf-8")
+
+    assert "border: 0" in styles
+    assert "border-radius: 0" in styles
+    assert "box-shadow: none" in styles
+    assert "background: transparent" in styles
+    assert "overflow: visible" in styles

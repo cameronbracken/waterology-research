@@ -28,10 +28,14 @@ Checklist:
 3. **Color carries meaning only.** Use it for real grouping, keep palettes
    colorblind-safe (Okabe-Ito for categories, viridis for sequential), lean on
    earth tones, and keep the mapping consistent across panels.
-4. **Render and inspect** text, tick labels, legends, clipping, and
+4. **Separate figures with whitespace, not container chrome.** Do not add a
+   border, rounded box, background card, or shadow around a plot unless the
+   boundary encodes information. For report HTML, use the bundled
+   `assets/report-figure.css` or an equivalent borderless wrapper.
+5. **Render and inspect** text, tick labels, legends, clipping, and
    overplotting before saving. Inspect the target width and a narrower layout;
    source inspection is not evidence that the rendered text fits.
-5. **Save the code and data to regenerate it**, not just the image. A polished
+6. **Save the code and data to regenerate it**, not just the image. A polished
    plot with unverifiable data is not acceptable; preserve provenance first.
 
 For Plotly or `ggplotly` output, read

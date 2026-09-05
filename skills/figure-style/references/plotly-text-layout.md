@@ -17,17 +17,24 @@ object. A correct static image does not validate its interactive conversion.
 
 For interactive Plotly figures:
 
-1. Put the title and explanatory caption in the document, outside the Plotly
+1. Keep the figure wrapper borderless. Use whitespace for separation instead
+   of a rounded box, background card, outline, or shadow.
+2. Put the title and explanatory caption in the document, outside the Plotly
    canvas. Keep a title in a standalone static fallback if useful.
-2. Place the legend below or to the right of the plotting domain. Never rely on
+3. Place the legend below or to the right of the plotting domain. Never rely on
    the default top horizontal legend for titled or faceted output.
-3. Reserve margin for the chosen legend position and its longest labels.
-4. Set `automargin = TRUE` on every visible text bearing axis. Give axis titles
+4. Reserve margin for the chosen legend position and its longest labels.
+5. Set `automargin = TRUE` on every visible text bearing axis. Give axis titles
    a small standoff.
-5. Render at the intended desktop width and at about 768 px. Inspect the figure
+6. Render at the intended desktop width and at about 768 px. Inspect the figure
    with the longest title, legend labels, category labels, and facet labels.
-6. Run the structural checker after the final render. A passing checker does
+7. Run the structural checker after the final render. A passing checker does
    not prove that every pixel is legible, so keep the visual inspection.
+
+The bundled `assets/report-figure.css` provides a neutral wrapper for report
+widgets and their static fallbacks. Copy it into the report stylesheet or match
+its declarations in the project theme. Leave borders on legends, annotations,
+or subpanels only when they carry information.
 
 ## R and ggplotly
 
