@@ -29,9 +29,17 @@ Checklist:
    colorblind-safe (Okabe-Ito for categories, viridis for sequential), lean on
    earth tones, and keep the mapping consistent across panels.
 4. **Render and inspect** text, tick labels, legends, clipping, and
-   overplotting before saving — actually look at the output, do not assume.
+   overplotting before saving. Inspect the target width and a narrower layout;
+   source inspection is not evidence that the rendered text fits.
 5. **Save the code and data to regenerate it**, not just the image. A polished
    plot with unverifiable data is not acceptable; preserve provenance first.
+
+For Plotly or `ggplotly` output, read
+[Plotly text layout](references/plotly-text-layout.md). Do not accept the
+default `ggplotly` title and top legend layout. Use the bundled safe conversion
+helper when practical, then run the bundled layout checker on the rendered
+HTML. The checker catches known structural risks; it does not replace visual
+inspection.
 
 Stack defaults (match a project's existing style first):
 - **ggplot2** with a clean theme (`theme_minimal()` or a project theme), native
