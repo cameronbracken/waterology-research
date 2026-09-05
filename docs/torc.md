@@ -1,6 +1,6 @@
 # TORC execution
 
-Waterology 0.3.1 requires TORC 0.40.0 or newer for managed execution. TORC owns workflow scheduling,
+Waterology 0.3.2 requires TORC 0.40.0 or newer for managed execution. TORC owns workflow scheduling,
 workers, retries, resource accounting, and its server. Waterology supplies the committed research
 command, records the TORC identifiers, collects declared results, and seals the run archive.
 
