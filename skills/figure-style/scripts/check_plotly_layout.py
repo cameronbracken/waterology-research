@@ -11,6 +11,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, NamedTuple
 
+SKIP_DIRS = {".git", ".pixi", ".venv", "__pycache__", "node_modules", "renv"}
+
 
 class LayoutRecord(NamedTuple):
     location: str
@@ -167,7 +169,9 @@ def _input_files(targets: list[Path]) -> list[Path]:
             files.extend(
                 path
                 for path in target.rglob("*")
-                if path.is_file() and path.suffix.lower() in {".html", ".htm", ".json"}
+                if path.is_file()
+                and not SKIP_DIRS.intersection(path.parts)
+                and path.suffix.lower() in {".html", ".htm", ".json"}
             )
         else:
             files.append(target)

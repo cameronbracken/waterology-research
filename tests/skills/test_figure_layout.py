@@ -137,3 +137,19 @@ def test_constraint_rejects_hazardous_html_and_accepts_safe_html(tmp_path: Path)
     )
     assert passed.returncode == 0
     assert passed.stdout == ""
+
+
+def test_constraint_ignores_environment_html(tmp_path: Path) -> None:
+    environment_html = tmp_path / ".pixi" / "site-packages" / "template.html"
+    environment_html.parent.mkdir(parents=True)
+    environment_html.write_text("{{ not_json }}", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(CONSTRAINT), str(tmp_path)],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout == ""

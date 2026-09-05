@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER_PATH = ROOT / "skills/figure-style/scripts/check_plotly_layout.py"
+SKIP_DIRS = {".git", ".pixi", ".venv", "__pycache__", "node_modules", "renv"}
 
 
 def _load_checker():
@@ -27,7 +28,9 @@ def _html_files(targets: list[Path]) -> list[Path]:
             files.extend(
                 path
                 for path in target.rglob("*")
-                if path.is_file() and path.suffix.lower() in {".html", ".htm"}
+                if path.is_file()
+                and not SKIP_DIRS.intersection(path.parts)
+                and path.suffix.lower() in {".html", ".htm"}
             )
         elif target.suffix.lower() in {".html", ".htm"}:
             files.append(target)
