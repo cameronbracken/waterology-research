@@ -54,7 +54,7 @@ def test_cli_gateway_reports_missing_binary(
         TorcCliGateway("http://localhost:8080").version(cwd=tmp_path)
 
 
-@pytest.mark.parametrize("version", ["torc 0.35.0", "unknown"])
+@pytest.mark.parametrize("version", ["torc 0.39.0", "unknown"])
 def test_cli_gateway_rejects_incompatible_or_unparseable_versions(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, version: str
 ) -> None:
@@ -335,6 +335,7 @@ def test_cli_gateway_launches_each_supported_mode(
         ssh_alias=ssh_alias,
         torc_profile="kestrel" if mode == "slurm" else None,
         slurm_account="project-123" if mode == "slurm" else None,
+        access_group_id=2 if mode == "remote" else None,
         output_dir=tmp_path / "output",
         cwd=tmp_path,
     )
@@ -363,5 +364,6 @@ def test_cli_gateway_launches_each_supported_mode(
             str(workflow),
         ]
     if mode == "remote":
+        assert calls[-3] == ["torc", "access-groups", "add-workflow", "17", "2"]
         assert calls[-2] == ["torc", "remote", "add-workers", "17", "worker-a"]
         assert calls[-1] == ["torc", "remote", "run", "17"]

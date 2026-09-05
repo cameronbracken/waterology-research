@@ -30,6 +30,16 @@ opencode.json       OpenCode project MCP registration
 ATTRIBUTION.md      citation ledger for adapted upstream material
 ```
 
+## Documentation
+
+The [documentation index](docs/README.md) links the maintained user guides:
+
+- [Getting started](docs/getting-started.md)
+- [Configuration](docs/configuration.md)
+- [TORC execution](docs/torc.md)
+
+Files under `docs/superpowers/` are design and implementation records rather than setup guides.
+
 ## Install
 
 Install the development environment, then install the runtime adapters needed
@@ -131,10 +141,8 @@ repair commands support structured JSON where automation needs it.
 
 ## TORC managed execution
 
-Direct execution remains available without TORC. Managed execution uses the
-TORC command line client and its JSON output. Install TORC 0.39.0 or newer
-from the official [TORC repository](https://github.com/NatLabRockies/torc),
-then define machine local profiles in `~/.config/waterology/config.toml`:
+Direct execution remains available without TORC. Managed execution requires TORC 0.40.0 or newer
+and a running TORC server. Define machine profiles in `$HOME/.config/waterology/config.toml`:
 
 ```toml
 [profiles.local]
@@ -145,18 +153,18 @@ api_url = "http://localhost:8080/torc-service/v1"
 [profiles.cluster]
 provider = "torc"
 mode = "slurm"
-api_url = "http://localhost:8085/torc-service/v1"
+api_url = "http://cluster-control:8085/torc-service/v1"
 torc_profile = "kestrel"
 slurm_account = "your-project"
 target_shell = "posix"
-dashboard_url = "http://localhost:8085/dashboard"
+dashboard_url = "http://localhost:8090"
 ```
 
-Profiles may also use `mode = "remote"` with an `ssh_alias`. Keep passwords,
-tokens, SSH settings, and TORC credentials outside this file. Set
-`WATEROLOGY_CONFIG` to use another machine configuration path. Profiles default
-to the host shell and may set `target_shell = "posix"` or `"windows"` when the
-workers use a different operating system.
+Remote profiles use `mode = "remote"` with an `ssh_alias` and a server URL reachable from the
+worker. Remote profiles cannot use a loopback API URL. An optional `access_group_id` lets
+Waterology share new workflows with separately authenticated workers while TORC access control
+remains enabled. Keep passwords, tokens, SSH settings, and TORC credentials outside this file. Set
+`WATEROLOGY_CONFIG` to use another machine configuration path.
 
 List profiles and start a managed run with:
 
@@ -184,11 +192,10 @@ TORC submits from the experiment worktree and the generated job changes to
 therefore need the experiment worktree at the same shared path. Waterology does
 not add a separate SSH file transfer layer.
 
-Use `waterology compute inspect <profile>` for the configured TUI command, or
-add `--dashboard` to print the dashboard URL. `waterology doctor` reports TORC
-binary and profile availability while leaving direct execution usable. Run
-`waterology doctor --torc-profile <profile>` to check the installed version and
-API connection for one profile.
+Use `waterology compute inspect <profile>` for the configured TUI command, or add `--dashboard` to
+print the dashboard URL. Run `waterology doctor --torc-profile <profile>` to check the installed
+version and API connection. The [TORC guide](docs/torc.md) covers installation, server services,
+remote PATH requirements, network security, upgrades, and troubleshooting.
 
 ## Agent sessions and MCP
 

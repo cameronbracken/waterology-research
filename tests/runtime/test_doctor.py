@@ -50,6 +50,7 @@ def test_render_check_returns_exit_one_for_stale_generated_assets(
 
 def test_doctor_json_reports_runtime_commands(monkeypatch, tmp_path: Path) -> None:
     codex = tmp_path / "bin" / "codex"
+    monkeypatch.setenv("WATEROLOGY_CONFIG", str(tmp_path / "missing-config.toml"))
     monkeypatch.setattr("shutil.which", lambda name: str(codex) if name == "codex" else None)
 
     result = runner.invoke(app, ["doctor", "--json"])
@@ -93,7 +94,7 @@ def test_doctor_checks_requested_torc_version_and_api(monkeypatch, tmp_path: Pat
     monkeypatch.setattr("shutil.which", lambda name: "/bin/torc" if name == "torc" else None)
 
     def fake_run(arguments: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        stdout = "torc 0.39.0\n" if "--version" in arguments else '{"items": []}\n'
+        stdout = "torc 0.40.0\n" if "--version" in arguments else '{"items": []}\n'
         return subprocess.CompletedProcess(arguments, 0, stdout=stdout, stderr="")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -103,7 +104,7 @@ def test_doctor_checks_requested_torc_version_and_api(monkeypatch, tmp_path: Pat
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["torc"]["connectivity"]["status"] == "pass"
-    assert "0.39.0" in payload["torc"]["connectivity"]["message"]
+    assert "0.40.0" in payload["torc"]["connectivity"]["message"]
 
 
 def test_doctor_rejects_incompatible_torc_version(monkeypatch, tmp_path: Path) -> None:
@@ -118,7 +119,7 @@ def test_doctor_rejects_incompatible_torc_version(monkeypatch, tmp_path: Path) -
         subprocess,
         "run",
         lambda *args, **kwargs: subprocess.CompletedProcess(
-            args[0], 0, stdout="torc 0.35.0\n", stderr=""
+            args[0], 0, stdout="torc 0.39.0\n", stderr=""
         ),
     )
 
@@ -127,7 +128,7 @@ def test_doctor_rejects_incompatible_torc_version(monkeypatch, tmp_path: Path) -
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
     assert payload["torc"]["connectivity"]["status"] == "fail"
-    assert "0.39.0 or newer" in payload["torc"]["connectivity"]["message"]
+    assert "0.40.0 or newer" in payload["torc"]["connectivity"]["message"]
 
 
 def test_doctor_returns_exit_one_when_requested_runtime_is_missing(monkeypatch) -> None:

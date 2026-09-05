@@ -37,10 +37,17 @@ api_url = "http://localhost:8080/torc-service/v1"
 [profiles.cluster]
 provider = "torc"
 mode = "slurm"
-api_url = "http://localhost:8085/torc-service/v1"
+api_url = "http://control.example:8085/torc-service/v1"
 torc_profile = "cluster"
 slurm_account = "project-123"
 dashboard_url = "http://localhost:8085/dashboard"
+
+[profiles.worker]
+provider = "torc"
+mode = "remote"
+api_url = "http://control.example:8085/torc-service/v1"
+ssh_alias = "worker"
+access_group_id = 2
 """,
         encoding="utf-8",
     )
@@ -50,12 +57,40 @@ dashboard_url = "http://localhost:8085/dashboard"
     assert config.profile("local").mode == "local"
     assert config.profile("cluster").trusted is True
     assert config.profile("cluster").slurm_account == "project-123"
+    assert config.profile("worker").access_group_id == 2
     assert config.profile("cluster").dashboard_url == "http://localhost:8085/dashboard"
 
 
 def test_remote_profile_requires_ssh_alias() -> None:
     with pytest.raises(ValidationError, match="ssh_alias"):
         ComputeProfile(mode="remote", api_url="http://localhost:8080")
+
+
+def test_access_group_is_only_supported_for_remote_profiles() -> None:
+    with pytest.raises(ValidationError, match="only supported for remote profiles"):
+        ComputeProfile(mode="local", api_url="http://localhost:8080", access_group_id=2)
+
+
+@pytest.mark.parametrize(
+    "api_url",
+    [
+        "http://localhost:8080/torc-service/v1",
+        "http://127.0.0.1:8080/torc-service/v1",
+        "http://[::1]:8080/torc-service/v1",
+    ],
+)
+def test_remote_profile_rejects_loopback_api_url(api_url: str) -> None:
+    with pytest.raises(ValidationError, match="routable TORC API URL"):
+        ComputeProfile(mode="remote", api_url=api_url, ssh_alias="worker-a")
+
+
+def test_slurm_profile_rejects_loopback_api_url() -> None:
+    with pytest.raises(ValidationError, match="routable TORC API URL"):
+        ComputeProfile(
+            mode="slurm",
+            api_url="http://localhost:8080/torc-service/v1",
+            slurm_account="project-123",
+        )
 
 
 def test_slurm_profile_requires_account() -> None:
@@ -100,7 +135,7 @@ def test_machine_config_rejects_unsafe_profile_name() -> None:
                     "../cluster": {
                         "provider": "torc",
                         "mode": "slurm",
-                        "api_url": "http://localhost:8080",
+                        "api_url": "http://control.example:8080",
                         "slurm_account": "project-123",
                     }
                 }
@@ -115,7 +150,7 @@ def test_trust_profile_is_atomic_and_preserves_profiles(tmp_path: Path) -> None:
 [profiles.cluster]
 provider = "torc"
 mode = "slurm"
-api_url = "http://localhost:8085/torc-service/v1"
+api_url = "http://control.example:8085/torc-service/v1"
 torc_profile = "cluster"
 slurm_account = "project-123"
 """,

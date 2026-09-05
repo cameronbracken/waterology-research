@@ -65,6 +65,7 @@ class TorcProvider:
                 ssh_alias=self.profile.ssh_alias,
                 torc_profile=self.profile.torc_profile,
                 slurm_account=self.profile.slurm_account,
+                access_group_id=self.profile.access_group_id,
                 output_dir=self._output_directory(),
                 cwd=prepared.worktree,
             )
