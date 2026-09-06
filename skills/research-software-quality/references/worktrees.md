@@ -37,11 +37,32 @@ branch and worktree.
 The machine-checked examples in
 [worktree-cases.yaml](worktree-cases.yaml) cover the required cutoff cases.
 
+## Location and manager
+
+Create development worktrees under the repository root at
+`.worktrees/<sanitized-branch>`. Verify that `.worktrees/` is ignored before
+creating the first one. Reuse an existing linked worktree even when it predates
+this convention. Do not relocate or remove it without the required authority.
+
+Use Worktrunk when `command -v wt` succeeds. Its configured default may place a
+worktree beside the repository, so enforce the project location when creating
+one:
+
+```bash
+wt --config-set 'worktree-path="{{ repo_path }}/.worktrees/{{ branch | sanitize }}"' \
+  switch --create <branch> --base=@ --no-cd
+```
+
+Use `wt list` and `wt remove` for routine worktree management when available.
+Inspect the state and command options before any merge or removal because those
+operations may also change branches or commits. If Worktrunk is unavailable,
+use Git worktree fallback commands with an explicit `.worktrees/<name>` path.
+
+Waterology experiment worktrees under `.waterology/worktrees/` belong to the
+experiment runtime. Do not use that directory for agent development worktrees.
+
 ## Safety checks
 
-- Prefer the runtime's native worktree support when available.
-- For a manual worktree, use the repository's declared location or its existing
-  `.worktrees/` directory and verify that the parent is ignored.
 - Do not overwrite an existing branch or directory.
 - Run project setup and baseline checks in the isolated checkout.
 - Keep unrelated user changes intact. Integrate or remove a worktree only with

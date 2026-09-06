@@ -8,7 +8,7 @@ runner = CliRunner()
 def test_version() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.5.4"
+    assert result.stdout.strip() == "0.5.5"
 
 
 def test_help_names_the_research_package() -> None:
