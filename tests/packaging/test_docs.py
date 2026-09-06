@@ -13,6 +13,7 @@ def test_distribution_name_preserves_waterology_cli() -> None:
     assert project["project"]["scripts"] == {
         "waterology": "waterology.cli:app",
         "waterology-mcp": "waterology.mcp.server:main",
+        "wgy": "waterology.cli:app",
     }
     assert project["project"]["optional-dependencies"]["mcp"] == ["mcp>=2,<3"]
     assert project["project"]["optional-dependencies"]["dashboard"] == [

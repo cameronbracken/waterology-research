@@ -11,6 +11,9 @@ installs runtime adapters for each supported tool. Packaging and agents support
 all three runtimes. Research workflows are runtime neutral. Claude slash
 commands are generated compatibility shims that invoke the canonical skills.
 
+The installed `wgy` command is an alias for `waterology` and accepts the same
+subcommands and options, for example `wgy workflow list`.
+
 ## What's here
 
 ```

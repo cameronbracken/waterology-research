@@ -36,6 +36,7 @@ mcp = ["mcp>=2,<3"]
 
 [project.scripts]
 waterology = "waterology.cli:app"
+wgy = "waterology.cli:app"
 waterology-mcp = "waterology.mcp.server:main"
 
 [tool.hatch.build.targets.wheel]
