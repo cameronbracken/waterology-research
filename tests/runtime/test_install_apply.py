@@ -46,7 +46,7 @@ def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
     assert (tmp_path / ".opencode/agents/researcher.md").is_file()
     manifest = json.loads((tmp_path / ".opencode/.waterology-install.json").read_text())
     assert manifest["schema"] == 1
-    assert manifest["waterology_version"] == "0.4.1"
+    assert manifest["waterology_version"] == "0.4.2"
     assert "agents/researcher.md" in manifest["assets"]
     serialized = (tmp_path / ".opencode/.waterology-install.json").read_text()
     assert serialized == json.dumps(manifest, indent=2, sort_keys=True) + "\n"
