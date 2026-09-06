@@ -32,7 +32,7 @@ def test_runtime_manifests_have_matching_identity() -> None:
     codex = json.loads(catalog.path(".codex-plugin/plugin.json").read_text())
 
     assert claude["name"] == codex["name"] == "waterology"
-    assert claude["version"] == codex["version"] == "0.5.3"
+    assert claude["version"] == codex["version"] == "0.5.4"
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
         assert claude[field] == codex[field]
     assert "Claude Code plugin" not in claude["description"]
