@@ -1,7 +1,7 @@
 # Constraint: Monte Carlo summaries include MCSE
 
 **Check:** `mc-has-mcse.py`
-**Applies to:** CSV result tables whose filename contains `simulation`, `monte-carlo`, or `mc-results`
+**Applies to:** CSV or Parquet result tables whose filename contains `simulation`, `monte-carlo`, or `mc-results`
 
 Tables that report bias, coverage, power, or rejection rates must include an
 MCSE column for each reported metric family. Column matching normalizes common

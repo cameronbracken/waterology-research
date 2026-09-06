@@ -1,5 +1,8 @@
 # Plotly text overlap
 
+**Check:** `plotly-text-overlap.py`
+**Applies to:** `.Rmd` and `.qmd` documents
+
 Interactive Plotly layouts must reserve separate regions for titles, legends,
 facet labels, axes, and tick labels.
 
