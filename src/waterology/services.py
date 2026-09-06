@@ -61,6 +61,7 @@ def create_experiment_record(
     parent_experiment_id: str | None = None,
     owner: str | None = None,
     experiment_id: str | None = None,
+    workflow: str | None = None,
 ) -> dict[str, object]:
     return create_experiment(
         path,
@@ -69,6 +70,7 @@ def create_experiment_record(
         parent_experiment_id=parent_experiment_id,
         owner=owner,
         experiment_id=experiment_id,
+        workflow=workflow,
     ).model_dump(mode="json")
 
 

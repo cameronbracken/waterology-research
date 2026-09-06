@@ -604,7 +604,7 @@ def test_launch_failure_preserves_queryable_staging_record(tmp_path: Path) -> No
         machine_config_file=machine,
         gateway=FakeGateway(),  # type: ignore[arg-type]
     )
-    assert status.operational_state == "failed"
+    assert status.operational_state == "unknown"
     assert status.reference is None
     staging = root / ".waterology/staging/run-rejected"
     assert (staging / "torc.json").is_file()
@@ -615,7 +615,7 @@ def test_launch_failure_preserves_queryable_staging_record(tmp_path: Path) -> No
     ("gateway", "phase"),
     [
         (ValidationFailureGateway(), "preparation"),
-        (SecretLaunchFailureGateway(), "launch"),
+        (SecretLaunchFailureGateway(), "submission"),
     ],
 )
 def test_start_errors_are_redacted(tmp_path: Path, gateway: FakeGateway, phase: str) -> None:

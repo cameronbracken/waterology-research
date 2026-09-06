@@ -94,7 +94,13 @@ def workflow_routes(root: Path, templates):
         except (WaterologyError, ValueError, OSError):
             return HTMLResponse("Recorded code changes unavailable", status_code=404)
 
+    async def registry(request):
+        from waterology.core.project import discover_project
+        config = await run_in_threadpool(lambda: discover_project(root).config)
+        return templates.TemplateResponse(request, "registry.html", {"config": config})
+
     return [
+        Route("/workflows", registry),
         Route("/studies", studies),
         Route("/changes/{run_id}", changes),
         Route("/comparison", comparison),

@@ -4,7 +4,14 @@ import tomllib
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 
@@ -73,6 +80,83 @@ class MetricExtractor(BaseModel):
     _validate_path = field_validator("path")(_portable_project_path)
 
 
+class WorkflowConfig(BaseModel):
+    """Portable execution and evidence contract; TORC owns job dependencies."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    command: tuple[str, ...] = ()
+    torc_file: str | None = None
+    outputs: tuple[str, ...] = ()
+    metrics: tuple[MetricExtractor, ...] = ()
+    environment_files: tuple[str, ...] = ()
+    input_files: dict[str, str] = Field(default_factory=dict)
+    input_instructions: dict[str, str] = Field(default_factory=dict)
+    restore: tuple[tuple[str, ...], ...] = ()
+    environment_probe: tuple[str, ...] = ()
+    description: str = ""
+
+    _paths = field_validator("outputs", "environment_files")(_portable_project_paths)
+
+    @model_validator(mode="after")
+    def validate_contract(self):
+        if bool(self.command) == bool(self.torc_file):
+            raise ValueError("Specify exactly one of command or torc_file")
+        if self.torc_file:
+            _portable_project_path(self.torc_file)
+        for command in (self.command, self.environment_probe, *self.restore):
+            if any(not arg or "\x00" in arg for arg in command):
+                raise ValueError("Command arguments must be nonempty and contain no null bytes")
+        if any(not command for command in self.restore):
+            raise ValueError("Restore commands cannot be empty")
+        for path, digest in self.input_files.items():
+            _portable_project_path(path)
+            if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                raise ValueError("Input identity must be a SHA-256 digest")
+        for path in self.input_instructions:
+            _portable_project_path(path)
+        if any(
+            PurePosixPath(p).parts[0] in {".git", ".waterology", ".waterology-reference"}
+            for p in self.outputs
+        ):
+            raise ValueError("Outputs cannot overlap workflow control state")
+        paths = [PurePosixPath(p) for p in self.outputs]
+        for i, path in enumerate(paths):
+            if any(path in other.parents or other in path.parents for other in paths[i + 1 :]):
+                raise ValueError("Output paths may not overlap")
+        return self
+
+
+class OutputCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    path: str
+    mode: Literal["bytes", "numeric", "statistical"] = "bytes"
+    field: str | None = None
+    atol: float = Field(default=0, ge=0, allow_inf_nan=False)
+    rtol: float = Field(default=0, ge=0, allow_inf_nan=False)
+    validator: str | None = None
+    _path = field_validator("path")(_portable_project_path)
+
+    @model_validator(mode="after")
+    def validate_check(self):
+        if self.mode == "numeric" and not self.field:
+            raise ValueError("Numeric checks require a JSON field")
+        if self.mode == "statistical" and not self.validator:
+            raise ValueError("Statistical checks require a validator workflow")
+        if self.mode != "numeric" and (self.field is not None or self.atol != 0 or self.rtol != 0):
+            raise ValueError("Field and tolerances apply only to numeric checks")
+        if self.mode != "statistical" and self.validator:
+            raise ValueError("validator applies only to statistical checks")
+        return self
+
+
+class DeliverableConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    workflow: str
+    reference_run: str = Field(pattern=r"^run-[a-z0-9][a-z0-9-]{0,62}$")
+    checks: tuple[OutputCheck, ...] = Field(min_length=1)
+    description: str = ""
+
+
 class ProjectConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -83,6 +167,13 @@ class ProjectConfig(BaseModel):
     environment_files: tuple[str, ...] = ()
     outputs: tuple[str, ...] = ()
     default_compute_profile: str = Field(default="direct", min_length=1)
+    workflows: dict[str, WorkflowConfig] = Field(default_factory=dict)
+    deliverables: dict[str, DeliverableConfig] = Field(default_factory=dict)
+    study_contracts: dict[str, str] = Field(default_factory=dict)
+    discovery: dict[str, object] = Field(default_factory=dict)
+    torc_file: str | None = None
+    restore: tuple[tuple[str, ...], ...] = ()
+    environment_probe: tuple[str, ...] = ()
     concurrency: ConcurrencyConfig = ConcurrencyConfig()
     resources: ResourceConfig = ResourceConfig()
     archive: ArchiveConfig = ArchiveConfig()
@@ -90,6 +181,36 @@ class ProjectConfig(BaseModel):
 
     _validate_artifact_roots = field_validator("artifact_roots")(_portable_project_paths)
     _validate_environment_files = field_validator("environment_files")(_portable_project_paths)
+
+    @model_serializer(mode="wrap")
+    def serialize_compatible(self, handler):
+        payload = handler(self)
+        for key in (
+            "workflows",
+            "deliverables",
+            "study_contracts",
+            "discovery",
+            "torc_file",
+            "restore",
+            "environment_probe",
+        ):
+            if not payload.get(key):
+                payload.pop(key, None)
+        return payload
+
+    @model_validator(mode="after")
+    def validate_registry(self):
+        for group in (self.workflows, self.deliverables, self.study_contracts):
+            for name in group:
+                if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,95}", name):
+                    raise ValueError("Invalid registry name")
+        for relative in self.study_contracts.values():
+            _portable_project_path(relative)
+        if self.torc_file:
+            _portable_project_path(self.torc_file)
+            if self.command != ("torc", "workflow", self.torc_file):
+                raise ValueError("Use a named workflow for native TORC YAML")
+        return self
 
     @field_validator("outputs")
     @classmethod
@@ -175,7 +296,26 @@ def project_config_toml(config: ProjectConfig) -> str:
                 f"field = {json.dumps(metric.field)}",
             ]
         )
-    return "\n".join(lines) + "\n"
+    import tomlkit
+
+    document = tomlkit.parse("\n".join(lines) + "\n")
+    for key in (
+        "workflows",
+        "deliverables",
+        "study_contracts",
+        "discovery",
+        "torc_file",
+        "restore",
+        "environment_probe",
+    ):
+        value = (
+            config.model_dump(mode="json", exclude_none=True).get(key)
+            if key != "torc_file"
+            else config.torc_file
+        )
+        if value:
+            document[key] = value
+    return tomlkit.dumps(document)
 
 
 def _toml_array(values: tuple[str, ...]) -> str:

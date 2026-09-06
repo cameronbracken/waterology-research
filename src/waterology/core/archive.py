@@ -36,9 +36,11 @@ _STAGING_PAYLOADS = {
     "manifest.json",
     "metrics.json",
     "study.json",
+    "job-logs.json",
     "execution-config.json",
     "result.md",
     "source.tar.zst",
+    "source-commit.txt",
     "stderr.log",
     "stdout.log",
     "torc-output",
@@ -163,6 +165,8 @@ def build_run_archive(
         encoding="utf-8",
     )
     _write_source_archive(project.root, commit_sha, staging / "source.tar.zst")
+    commit_object = subprocess.run(["git", "-C", str(project.root), "cat-file", "commit", commit_sha], capture_output=True, check=True)
+    (staging / "source-commit.txt").write_bytes(commit_object.stdout)
     _write_checksums(staging)
     (staging / "execution.json").unlink(missing_ok=True)
     (staging / ".execution.json.tmp").unlink(missing_ok=True)
@@ -463,6 +467,7 @@ def _prepare_staging(staging: Path) -> None:
             in {
                 "execution.json",
                 "study.json",
+                "job-logs.json",
                 "execution-config.json",
                 "stdout.log",
                 "stderr.log",
@@ -514,6 +519,7 @@ def _environment_payload(
         if name in os.environ
     }
     return {
+        "metadata_role": "controller",
         "architecture": platform.machine(),
         "compute_profile": compute_profile or config.default_compute_profile,
         "environment_files": environment_files,

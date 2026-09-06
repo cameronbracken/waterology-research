@@ -7,11 +7,9 @@ from pathlib import Path
 
 import typer
 
-from waterology.core.formats import load_document, readable
+from waterology.core.formats import readable
 from waterology.core.studies import (
-    StudyContract,
     advance_study,
-    create_study,
     enqueue_candidate,
     list_studies,
     load_study,
@@ -44,14 +42,9 @@ def create(
     path: Path = _PATH_OPTION,
 ):
     """Record already-given authorization and pin the TORC execution contract."""
-    emit(
-        create_study(
-            path,
-            StudyContract.model_validate(load_document(contract)),
-            profile=profile,
-            authorized_by=authorized_by,
-        )
-    )
+    from waterology.core.workflows import create_registered_study
+    emit(create_registered_study(path, contract, profile=profile, authorized_by=authorized_by))
+
 
 
 @study_app.command("list")

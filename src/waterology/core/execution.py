@@ -54,6 +54,8 @@ def start_direct_run(
     from waterology.core.studies import guard_submission
     guard_submission(start, experiment_id)
     inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
+    if inputs.experiment.workflow is not None or inputs.config.torc_file:
+        raise RunPreparationError("Named workflows require TORC execution")
     project = inputs.project
     experiment = inputs.experiment
     worktree = inputs.worktree
@@ -229,6 +231,9 @@ def prepare_run_inputs(
     if not worktree_record.exists:
         raise RunPreparationError(f"Experiment worktree is missing: {experiment_id}")
     config = load_project_config(worktree / "waterology.toml")
+    if experiment.workflow:
+        from waterology.core.registry import resolve_workflow
+        config = resolve_workflow(worktree, experiment.workflow)
     if config.name != experiment.project_id:
         raise RunPreparationError(
             f"Experiment project {experiment.project_id} does not match waterology.toml"
@@ -246,7 +251,7 @@ def prepare_run_inputs(
         raise RunPreparationError(
             f"Experiment commit is not descended from its base commit: {experiment_id}"
         )
-    if commit_sha == experiment.base_commit:
+    if commit_sha == experiment.base_commit and experiment.workflow is None:
         raise RunPreparationError(f"Experiment must contain a committed variant: {experiment_id}")
 
     return RunInputs(project, experiment, worktree, config, identifier, commit_sha)

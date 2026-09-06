@@ -22,7 +22,7 @@
     <nav class="site-nav" aria-label="Research views">
       {% for slug, label in [('overview', 'Overview'), ('experiments', 'Experiments'),
       ('agents', 'Agents'), ('evidence', 'Evidence'), ('archives', 'Archives'),
-      ('compute', 'Compute'), ('studies', 'Studies'), ('comparison', 'Compare runs')] %}
+      ('workflows', 'Workflows'), ('compute', 'Compute'), ('studies', 'Studies'), ('comparison', 'Compare runs')] %}
       <a href="{{ '/' if slug == 'overview' else '/' ~ slug }}"
          {% if view == slug or view == slug[:-1] ~ '_detail' %}aria-current="page"{% endif %}>
         {{ label }}

@@ -360,7 +360,7 @@ def _state_from_status_counts(counts: object) -> str:
         return "running"
     if count("pending"):
         return "pending"
-    if count("ready") or count("blocked") or count("uninitialized"):
+    if count("ready") or count("uninitialized"):
         return "ready"
     known_states = {
         "blocked",
@@ -383,10 +383,12 @@ def _state_from_status_counts(counts: object) -> str:
         return "failed"
     if count("canceled"):
         return "canceled"
+    if count("blocked"):
+        return "ready"
     if count("completed"):
         return "completed"
     if count("disabled"):
-        return "completed"
+        return "unknown"
     return "unknown"
 
 

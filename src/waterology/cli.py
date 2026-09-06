@@ -84,6 +84,9 @@ app.add_typer(mcp_app, name="mcp")
 app.add_typer(compute_app, name="compute")
 compute_app.add_typer(profile_app, name="profile")
 register_workflow_commands(app)
+from waterology.execution_cli import register_execution_commands
+
+register_execution_commands(app)
 
 _INSTALL_SCOPE_OPTION = typer.Option(InstallScope.PROJECT, "--scope")
 _INSTALL_TARGET_OPTION = typer.Option(Path("."), "--target")
@@ -386,6 +389,7 @@ def repair_index_command(
 @experiment_app.command("create")
 def experiment_create_command(
     hypothesis: str = typer.Argument(...),
+    workflow: str | None = typer.Option(None, "--workflow"),
     path: Path = _PROJECT_PATH_OPTION,
     experiment_id: str | None = typer.Option(None, "--id"),
     parent_ref: str = typer.Option("HEAD", "--parent"),
@@ -398,6 +402,7 @@ def experiment_create_command(
         experiment = create_experiment(
             path,
             hypothesis=hypothesis,
+            workflow=workflow,
             parent_ref=parent_ref,
             parent_experiment_id=parent_experiment_id,
             owner=owner,

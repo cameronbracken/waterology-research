@@ -74,8 +74,47 @@ def write_workflow(
     destination: Path,
     config: ProjectConfig,
     request: TorcWorkflowRequest,
+    *, worktree: Path | None = None,
 ) -> TorcWorkflowFile:
-    content = render_workflow(config, request)
+    if config.torc_file:
+        from waterology.core.registry import project_file
+        if worktree is None:
+            raise ValueError("Native TORC workflows require a project directory")
+        content = project_file(worktree, config.torc_file).read_text()
+        document = yaml.safe_load(content)
+        if not isinstance(document, dict) or not isinstance(document.get("jobs"), list) or not document["jobs"]:
+            raise ValueError("TORC workflow must contain jobs")
+        metadata = document.setdefault("metadata", {})
+        metadata.update(waterology_commit=request.commit_sha, waterology_run_id=request.run_id,
+                        waterology_experiment_id=request.experiment_id)
+        content = yaml.safe_dump(document, sort_keys=False)
+    else:
+        content = render_workflow(config, request)
+    if config.restore or config.environment_probe:
+        document = yaml.safe_load(content)
+        join = subprocess.list2cmdline if request.target_shell == "windows" else shlex.join
+        prefix = 'cd /d "%TORC_WORKFLOW_SUBMISSION_DIR%"' if request.target_shell == "windows" else 'cd "$TORC_WORKFLOW_SUBMISSION_DIR"'
+        restore_name = "waterology_restore_environment"
+        if any(job.get("name") == restore_name for job in document["jobs"]):
+            raise ValueError("Reserved TORC job name: " + restore_name)
+        for job in document["jobs"]:
+            dependencies = job.get("depends_on", [])
+            if not isinstance(dependencies, list):
+                raise TypeError("Native depends_on must be a YAML list")
+            job["depends_on"] = [*dependencies, restore_name]
+        steps = [prefix, *(join(c) for c in config.restore)]
+        if config.environment_probe:
+            steps.extend(["echo WATEROLOGY_WORKER_ENVIRONMENT", join(config.environment_probe)])
+        document["jobs"].insert(0, {"name": restore_name, "command": " && ".join(steps)})
+        content = yaml.safe_dump(document, sort_keys=False)
+    if config.environment_probe:
+        document = yaml.safe_load(content)
+        join = subprocess.list2cmdline if request.target_shell == "windows" else shlex.join
+        prefix = 'cd /d "%TORC_WORKFLOW_SUBMISSION_DIR%"' if request.target_shell == "windows" else 'cd "$TORC_WORKFLOW_SUBMISSION_DIR"'
+        for job in document["jobs"]:
+            if job["name"] != "waterology_restore_environment":
+                job["command"] = " && ".join([prefix, "echo WATEROLOGY_WORKER_ENVIRONMENT", join(config.environment_probe), job["command"]])
+        content = yaml.safe_dump(document, sort_keys=False)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.tmp")
     temporary.write_text(content, encoding="utf-8")

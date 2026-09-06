@@ -366,3 +366,6 @@ local research dashboard. The research roadmap is in [ROADMAP.md](ROADMAP.md). A
 
 MIT Copyright Cameron Bracken. Adapted material is credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
+
+Named workflow registration and final-deliverable verification are described in
+[Execute and reproduce a project](docs/workflow-execution.md).

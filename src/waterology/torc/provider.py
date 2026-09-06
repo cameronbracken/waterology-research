@@ -44,6 +44,7 @@ class TorcProvider:
             self.staging / "torc-workflow.yaml",
             self.config,
             self.request,
+            worktree=self.worktree,
         )
         self.gateway.validate(self.workflow_file.path, cwd=self.worktree)
         return PreparedRun(
@@ -144,6 +145,26 @@ class TorcProvider:
             if terminal_state == "lost"
             else self.gateway.results(reference.workflow_id, cwd=self.worktree)
         )
+        import re
+
+        from waterology.core.atomic import write_json
+        logs = {}
+        total = 0
+        for path in sorted(output.rglob("*")) if output.is_dir() else []:
+            if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(output.resolve()):
+                continue
+            if path.suffix not in {".log", ".out", ".err", ".o", ".e"}:
+                continue
+            size = path.stat().st_size
+            if size > 10_000_000 or total + size > 50_000_000:
+                logs[path.relative_to(output).as_posix()] = {"omitted": "log retention size limit", "bytes": size}
+                continue
+            total += size
+            text = path.read_bytes().decode("utf-8", errors="replace")
+            for pattern in self.config.archive.log_redactions:
+                text = re.sub(pattern, "[REDACTED]", text)
+            logs[path.relative_to(output).as_posix()] = {"text": text}
+        write_json(self.staging / "job-logs.json", logs)
         metrics = {"resource_metrics": metrics, "results": results}
         if terminal_state not in {"completed", "failed", "cancelled", "lost"}:
             raise RuntimeError(f"Invalid terminal TORC state: {terminal_state}")

@@ -22,6 +22,32 @@ ATTRIBUTION.md. -->
 Use `writing-style` for summaries and `research-software-quality` for changes.
 Read [token-discipline.md](references/token-discipline.md) for long runs.
 
+## Enter the managed workflow
+
+Use `waterology init` for an uninitialized Git project, then
+`waterology config refresh --check` and `waterology workflow list`. Apply
+`waterology config refresh` when safe discoveries are needed. Register an
+explicit definition with `waterology workflow register NAME --definition FILE`
+when the native task is ambiguous or needs outputs, metrics or input identities.
+Commit the resulting execution configuration with the project code.
+
+Put `workflow: NAME` in the saved study contract. `waterology study create`
+registers the contract reference and creates a baseline experiment when the
+contract omits `baseline_experiment`. The study driver carries the same workflow
+into candidate experiments. For manually created candidates, use
+`waterology experiment create --workflow NAME`. The CLI and MCP services own
+registration, execution and evidence collection; no skill is required to run them.
+
+Use `waterology workflow run NAME --profile PROFILE` for an ordinary evaluation
+that does not need a bounded candidate loop. It waits for TORC and collects results.
+After interruption, use `waterology workflow watch RUN_ID` to resume collection.
+Do not recreate run records or copy metrics into a parallel agent log.
+
+After selecting the final result explicitly, use `waterology deliverable register`
+and `waterology reproduce` to verify the exported source and declared outputs in
+an isolated directory. See `docs/workflow-execution.md` in the Waterology source
+for complete CLI examples and `waterology config schema` for configuration fields.
+
 ## Choose the objective
 
 Use one managed loop with an explicit mode:

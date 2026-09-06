@@ -71,6 +71,7 @@ def create_server() -> MCPServer:
         parent_experiment_id: str | None = None,
         owner: str | None = None,
         experiment_id: str | None = None,
+        workflow: str | None = None,
     ) -> dict[str, object]:
         """Create a hypothesis branch and isolated worktree; this changes Git and local state."""
         return services.create_experiment_record(
@@ -80,6 +81,7 @@ def create_server() -> MCPServer:
             parent_experiment_id=parent_experiment_id,
             owner=owner,
             experiment_id=experiment_id,
+            workflow=workflow,
         )
 
     @_bounded_tool(server)
@@ -220,6 +222,8 @@ def create_server() -> MCPServer:
 
     from waterology.mcp.workflows import register_workflow_tools
     register_workflow_tools(server, _bounded_tool)
+    from waterology.mcp.execution import register_execution_tools
+    register_execution_tools(server, _bounded_tool)
     return server
 
 

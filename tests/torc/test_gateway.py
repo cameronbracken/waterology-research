@@ -149,7 +149,7 @@ def test_cli_gateway_maps_official_status_counts(
 
 @pytest.mark.parametrize(
     ("torc_state", "expected"),
-    [("terminated", "failed"), ("disabled", "completed")],
+    [("terminated", "failed"), ("disabled", "unknown")],
 )
 def test_cli_gateway_maps_terminal_status_counts(
     monkeypatch: pytest.MonkeyPatch,
@@ -367,3 +367,14 @@ def test_cli_gateway_launches_each_supported_mode(
         assert calls[-3] == ["torc", "access-groups", "add-workflow", "17", "2"]
         assert calls[-2] == ["torc", "remote", "add-workers", "17", "worker-a"]
         assert calls[-1] == ["torc", "remote", "run", "17"]
+
+
+@pytest.mark.parametrize(("counts", "expected"), [
+    ({"failed": 1, "blocked": 2}, "failed"),
+    ({"failed": 1, "blocked": 2, "running": 1}, "running"),
+    ({"canceled": 1, "blocked": 2}, "canceled"),
+    ({"pending_failed": 1, "blocked": 2}, "unknown"),
+])
+def test_graph_terminal_states(counts, expected):
+    from waterology.torc.gateway import _state_from_status_counts
+    assert _state_from_status_counts(counts) == expected

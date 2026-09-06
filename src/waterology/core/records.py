@@ -39,6 +39,7 @@ class ExperimentRecord(BaseModel):
     project_id: str = Field(min_length=1)
     parent_experiment_id: str | None = None
     hypothesis: str = Field(min_length=1)
+    workflow: str | None = None
     base_commit: str = Field(pattern=r"^[0-9a-f]{40,64}$")
     branch: str = Field(min_length=1)
     worktree: str = Field(min_length=1)

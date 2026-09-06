@@ -32,7 +32,10 @@ Run the initializer at the repository root:
 waterology init
 ```
 
-Edit the generated `waterology.toml`. At minimum, set `command`, `environment_files`, and `outputs`.
+Initialization discovers native tasks and environment files. Start with
+`waterology workflow list` and the [named workflow guide](workflow-execution.md).
+For the legacy single-command interface below, set `command`, `environment_files`,
+and `outputs` in the generated `waterology.toml`.
 See [Configuration](configuration.md) for every field.
 
 Commit the configuration before creating an experiment:

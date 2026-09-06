@@ -46,10 +46,14 @@ def start_torc_run(
     confirm_remote: bool = False,
     gateway: TorcGateway | None = None,
     study_context: dict[str, object] | None = None,
+    config_override=None,
 ) -> ManagedRunRecord:
     from waterology.core.studies import guard_submission
     guard_submission(start, experiment_id, str(study_context["study_id"]) if study_context else None)
     inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
+    if config_override is not None:
+        from dataclasses import replace
+        inputs = replace(inputs, config=config_override)
     machine_config = load_machine_config(machine_config_file)
     profile = machine_config.profile(profile_name)
     if profile.mode != "local" and not profile.trusted:
@@ -87,7 +91,8 @@ def start_torc_run(
         if study_context is not None:
             from waterology.core.atomic import write_json
             write_json(staging / "study.json", study_context)
-            save_snapshot(staging, inputs.worktree, inputs.config, profile, inputs.commit_sha)
+        save_snapshot(staging, inputs.worktree, inputs.config, profile, inputs.commit_sha,
+                      fresh=study_context is not None or inputs.experiment.workflow is not None)
         provider = TorcProvider(
             config=inputs.config,
             request=TorcWorkflowRequest(
@@ -147,19 +152,19 @@ def start_torc_run(
                 intent.id,
                 payload={
                     "error": message,
-                    "outcome": "failed",
+                    "outcome": "unknown",
                     "workflow_id": reference.workflow_id if reference else None,
                 },
             )
             _write_torc_metadata(
                 staging,
-                state="failed",
+                state="unknown",
                 profile_name=profile_name,
                 reference=reference,
                 error=message,
             )
-            _transition(database, inputs.run_id, "preparing", "failed", finished_at=_utc_now())
-            raise TorcRunError(f"TORC launch failed: {message}") from error
+            _transition(database, inputs.run_id, "preparing", "unknown")
+            raise TorcRunError(f"TORC submission unresolved: {message}") from error
         reference = launched.reference
         observed_at = _utc_now()
         _record_reference(

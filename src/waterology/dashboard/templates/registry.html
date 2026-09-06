@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Waterology workflows</title><link rel="stylesheet" href="/static/dashboard.css"><script src="/static/dashboard.js" defer></script></head>
+<body><main class="main-content"><button class="theme-button" type="button" data-theme-toggle>Theme: system</button>
+<nav aria-label="Research navigation"><a href="/">Overview</a> | <a href="/experiments">Experiments</a> | <a href="/studies">Studies</a> | <a href="/comparison">Compare runs</a></nav>
+<h1>Registered workflows</h1>
+<p>Execute a workflow with <code>waterology workflow run NAME</code>. Inspect saved runs in <a href="/archives">Archives</a>.</p>
+{% for name, workflow in config.workflows.items() %}
+<section class="panel"><h2>{{ name }}</h2><p>{{ workflow.description }}</p><pre>{{ workflow.torc_file or workflow.command | join(' ') }}</pre><p>Outputs: {{ workflow.outputs | join(', ') or 'No outputs declared' }}</p></section>
+{% else %}<p>No workflows registered. Run <code>waterology config refresh</code> to discover native tasks.</p>{% endfor %}
+<h2>Selected deliverables</h2>
+{% for name, deliverable in config.deliverables.items() %}
+<section class="panel"><h3>{{ name }}</h3><p>{{ deliverable.description }}</p><p>Workflow: {{ deliverable.workflow }}. <a href="/archives/{{ deliverable.reference_run }}">Reference evidence</a>. {{ deliverable.checks | length }} output checks.</p><p><code>waterology reproduce {{ name }} NEW_DIRECTORY</code></p></section>
+{% else %}<p>No final deliverable selected.</p>{% endfor %}
+</main></body></html>

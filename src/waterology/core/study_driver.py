@@ -171,6 +171,7 @@ def _drive_study(start: Path, study_id: str) -> dict:
         parent_commit = parent.commit_sha if parent else study.baseline_commit
         experiment = create_experiment(
             start,
+            workflow=study.contract.workflow,
             hypothesis=f"{study.contract.mode}: {study.contract.objective}",
             parent_ref=parent_commit,
             experiment_id=proposal["experiment_id"],

@@ -113,3 +113,21 @@ def test_project_config_rejects_invalid_log_redaction() -> None:
                 "archive": {"log_redactions": ["["]},
             }
         )
+
+
+def test_legacy_configuration_keeps_its_execution_fingerprint_shape():
+    # These are the fields included in saved pre-registry study execution hashes.
+    expected = {
+        "schema_version",
+        "name",
+        "artifact_roots",
+        "command",
+        "environment_files",
+        "outputs",
+        "default_compute_profile",
+        "concurrency",
+        "resources",
+        "archive",
+        "metrics",
+    }
+    assert set(ProjectConfig(name="legacy").model_dump(mode="json")) == expected

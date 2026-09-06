@@ -9,12 +9,20 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from waterology.core.atomic import write_json
 from waterology.core.config import _portable_project_paths
 from waterology.core.errors import WaterologyError
 from waterology.core.execution import prepare_run_inputs
+from waterology.core.experiments import load_experiment
 from waterology.core.git import git_output
 from waterology.core.profiles import load_machine_config, machine_config_path
 from waterology.core.project import discover_project, project_state_lock
@@ -38,6 +46,7 @@ class StudyContract(BaseModel):
     schema_version: Literal[1] = 1
     mode: Literal["research", "engineering"]
     objective: str = Field(min_length=1)
+    workflow: str | None = None
     baseline_experiment: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
     allowed_paths: tuple[str, ...] = Field(min_length=1)
     evaluation: dict[str, object] = Field(min_length=1)
@@ -54,6 +63,13 @@ class StudyContract(BaseModel):
     uncertainty: str = "not estimated"
 
     _paths = field_validator("allowed_paths")(_portable_project_paths)
+
+    @model_serializer(mode="wrap")
+    def serialize_compatible(self, handler):
+        payload = handler(self)
+        if self.workflow is None:
+            payload.pop("workflow", None)
+        return payload
 
     @model_validator(mode="after")
     def validate_rules(self):
@@ -186,6 +202,8 @@ def create_study(
             raise StudyError("Managed studies require a TORC profile, including local studies")
         if not authorized_by.strip():
             raise StudyError("Record the existing authorization before creating a study")
+        if contract.workflow and load_experiment(start, contract.baseline_experiment).workflow != contract.workflow:
+            raise StudyError("Baseline must use the study workflow")
         identity, commit = execution_identity(start, contract.baseline_experiment, selected)
         config = prepare_run_inputs(start, contract.baseline_experiment).config
         if contract.max_parallel > config.concurrency.max_runs:

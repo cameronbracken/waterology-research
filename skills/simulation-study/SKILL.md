@@ -22,6 +22,28 @@ and the project R conventions before writing code. Use an isolated worktree for
 the study. Do not start a long run until the user authorizes its compute and
 storage cost.
 
+## Execute and preserve the study
+
+Initialize project records with `waterology init`, inspect native task discovery
+with `waterology workflow list`, and refresh with `waterology config refresh`.
+Register the simulation command or TORC YAML with
+`waterology workflow register simulate --definition workflow.nt`. Declare raw
+replication outputs, metric extractors, environment files and input identities.
+Keep the DGP settings in the simulation's existing configuration.
+
+Once code and execution configuration are committed and compute is authorized,
+run `waterology workflow run simulate --profile PROFILE`. TORC manages jobs and
+dependencies; Waterology collects outputs, metrics and failed attempts. Resume
+collection with `waterology workflow watch RUN_ID` after interruption. Use a
+managed study through `autoresearch` only when iterating candidate changes under
+a saved objective and budget.
+
+Select the final run with `waterology deliverable register final definition.nt`.
+Use `waterology reproduce final NEW_DIRECTORY --profile PROFILE` to restore and
+validate that deliverable. Statistical acceptance must use a declared validator
+workflow and retain its evidence. A process exit alone does not establish Monte
+Carlo precision or scientific support. These CLI services work without skills.
+
 ## Preflight
 
 Record the research question, target estimand, truth formula, maintained

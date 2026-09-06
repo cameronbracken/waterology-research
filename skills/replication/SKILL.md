@@ -21,6 +21,30 @@ ATTRIBUTION.md. -->
 
 Use `writing-style` for the plan, evidence ledger, and report.
 
+For an existing Waterology deliverable, use the CLI reproduction workflow after
+resolving the already-authorized environment and compute profile:
+
+```console
+waterology reproduce final NEW_DIRECTORY --profile PROFILE
+waterology reproduce final NEW_DIRECTORY --path EXPORTED_BUNDLE --bundle --profile PROFILE
+```
+
+The service restores the selected source, restores its environment through the
+project manager, verifies supplied input identities, executes through TORC and
+checks fresh outputs. Use `--resume` with the same directory after an interrupted
+or blocked attempt. Inspect the saved reason before changing anything. Never
+replace the selected source, reference output or tolerance to obtain a pass.
+
+For a new replication, initialize records with `waterology init`, inspect
+`waterology workflow list`, and register the evaluation definition with
+`waterology workflow register replicate --definition workflow.nt`. Commit the
+execution configuration and source before `waterology workflow run replicate`.
+TORC owns compute and dependencies; Waterology automatically collects run evidence.
+Select the resulting deliverable explicitly with `waterology deliverable register`
+and export it with `waterology deliverable export`. These services are usable
+without this skill. Output agreement and support for the paper's claims remain
+separate assessments.
+
 Read the target paper, linked code, and recent relevant `CHANGELOG.md` entries.
 Delegate broad implementation extraction to the `researcher` through the
 runtime's available agent mechanism.

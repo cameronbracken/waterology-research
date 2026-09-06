@@ -1,0 +1,20 @@
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 37%]
+........................................................................ [ 49%]
+........................................................................ [ 61%]
+........................................................................ [ 74%]
+........................................................................ [ 86%]
+........................................................................ [ 99%]
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.pixi/envs/default/lib/python3.14/site-packages/starlette/testclient.py:53
+  /private/tmp/waterology-workflow-reproducibility/.pixi/envs/default/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+tests/studies/test_controller.py::test_recorded_search_preserves_query_failure_and_doi_provenance
+  /private/tmp/waterology-workflow-reproducibility/src/waterology/core/zotero.py:202: RuntimeWarning: ZOTERO_API_KEY is not available; Zotero references remain queued
+    result = sync_references(start, identifiers=[identifier], limit=1)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+581 passed, 2 warnings in 110.46s (0:01:50)

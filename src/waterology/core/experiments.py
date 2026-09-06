@@ -37,6 +37,7 @@ def create_experiment(
     parent_experiment_id: str | None = None,
     owner: str | None = None,
     experiment_id: str | None = None,
+    workflow: str | None = None,
 ) -> ExperimentRecord:
     project = discover_project(start)
     identifier = experiment_id or f"exp-{uuid4().hex[:12]}"
@@ -47,6 +48,7 @@ def create_experiment(
     parent_commit = None
     if parent_experiment_id is not None:
         parent = load_experiment(project.root, parent_experiment_id)
+        workflow = workflow or parent.workflow
         if parent.status != "frozen":
             raise ExperimentConflictError(
                 f"Parent experiment must be frozen: {parent_experiment_id}"
@@ -77,6 +79,7 @@ def create_experiment(
         project_id=project.config.name,
         parent_experiment_id=parent_experiment_id,
         hypothesis=hypothesis,
+        workflow=workflow,
         base_commit=base_commit,
         branch=branch,
         worktree=worktree_relative,

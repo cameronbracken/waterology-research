@@ -29,7 +29,7 @@ def output_signatures(worktree: Path, config: ProjectConfig) -> dict:
 
 
 def save_snapshot(
-    staging: Path, worktree: Path, config: ProjectConfig, profile: ComputeProfile, commit: str
+    staging: Path, worktree: Path, config: ProjectConfig, profile: ComputeProfile, commit: str, *, fresh: bool = True
 ) -> None:
     write_json(
         staging / "execution-config.json",
@@ -37,6 +37,7 @@ def save_snapshot(
             "config": config.model_dump(mode="json"),
             "profile": profile.model_dump(mode="json", exclude={"trusted"}),
             "commit_sha": commit,
+            "fresh": fresh,
             "outputs_before": output_signatures(worktree, config),
         },
     )
@@ -61,6 +62,8 @@ def verify_fresh_outputs(staging: Path, worktree: Path, config: ProjectConfig) -
     saved = json.loads(path.read_text())
     if current_commit(worktree) != saved["commit_sha"] or not is_clean(worktree):
         raise ValueError("Candidate commit changed during execution")
+    if not saved.get("fresh", True):
+        return
     before = saved["outputs_before"]
     after = output_signatures(worktree, config)
     stale = [relative for relative, signature in after.items() if before.get(relative) == signature]
