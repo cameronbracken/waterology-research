@@ -99,6 +99,22 @@ when working from the remote:
 Troubleshooting: `.waterology-install.lock` may remain after a crash. Remove it
 only after confirming that no Waterology install process is running.
 
+### Development plugin refresh
+
+Reinstall Waterology in each runtime where it is already installed:
+
+```console
+pixi run reinstall-plugins --dry-run
+pixi run reinstall-plugins
+```
+
+The script detects Codex and Claude installations, preserves Claude's scope and
+persistent plugin data, and refreshes a stale local marketplace path. It uses a
+temporary development version to avoid stale plugin caches, then restores the
+tracked manifests. Use `--runtime codex`, `--runtime claude`, or `--runtime all`
+for a first install. Start a new Codex thread or restart Claude Code after the
+refresh.
+
 ## Experiment core
 
 Waterology manages local experiments as committed Git variants. Initialize a

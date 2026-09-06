@@ -34,3 +34,4 @@ test = "pytest"
 lint = "ruff check ."
 format = "ruff format ."
 check = { depends-on = ["lint", "test"] }
+reinstall-plugins = "python scripts/reinstall_plugins.py"
