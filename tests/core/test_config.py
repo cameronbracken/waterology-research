@@ -44,8 +44,11 @@ field = "rmse"
     assert config.metrics[0].field == "rmse"
 
 
-def test_project_config_has_torc_compatible_default_memory() -> None:
-    assert ProjectConfig(name="study").resources.memory_mb == 1024
+def test_project_config_leaves_scheduling_and_resources_to_torc_by_default() -> None:
+    config = ProjectConfig(name="study")
+
+    assert config.concurrency is None
+    assert config.resources is None
 
 
 @pytest.mark.parametrize(
@@ -125,8 +128,6 @@ def test_legacy_configuration_keeps_its_execution_fingerprint_shape():
         "environment_files",
         "outputs",
         "default_compute_profile",
-        "concurrency",
-        "resources",
         "archive",
         "metrics",
     }

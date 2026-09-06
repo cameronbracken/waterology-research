@@ -202,11 +202,14 @@ def create_study(
             raise StudyError("Managed studies require a TORC profile, including local studies")
         if not authorized_by.strip():
             raise StudyError("Record the existing authorization before creating a study")
-        if contract.workflow and load_experiment(start, contract.baseline_experiment).workflow != contract.workflow:
+        if (
+            contract.workflow
+            and load_experiment(start, contract.baseline_experiment).workflow != contract.workflow
+        ):
             raise StudyError("Baseline must use the study workflow")
         identity, commit = execution_identity(start, contract.baseline_experiment, selected)
         config = prepare_run_inputs(start, contract.baseline_experiment).config
-        if contract.max_parallel > config.concurrency.max_runs:
+        if config.concurrency is not None and contract.max_parallel > config.concurrency.max_runs:
             raise StudyError("Study concurrency exceeds project concurrency")
         return _save(
             start,

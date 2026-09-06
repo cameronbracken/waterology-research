@@ -197,6 +197,7 @@ def refresh_configuration(start: Path, *, check: bool = False) -> dict:
             write_text(project.paths.config_file, after)
         return {
             "changed": before != after,
+            "discovered_workflows": sorted(detected["workflows"]),
             "drift": drift,
             "notes": detected["notes"],
             "check": check,

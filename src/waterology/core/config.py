@@ -174,8 +174,8 @@ class ProjectConfig(BaseModel):
     torc_file: str | None = None
     restore: tuple[tuple[str, ...], ...] = ()
     environment_probe: tuple[str, ...] = ()
-    concurrency: ConcurrencyConfig = ConcurrencyConfig()
-    resources: ResourceConfig = ResourceConfig()
+    concurrency: ConcurrencyConfig | None = None
+    resources: ResourceConfig | None = None
     archive: ArchiveConfig = ArchiveConfig()
     metrics: tuple[MetricExtractor, ...] = ()
 
@@ -193,6 +193,8 @@ class ProjectConfig(BaseModel):
             "torc_file",
             "restore",
             "environment_probe",
+            "concurrency",
+            "resources",
         ):
             if not payload.get(key):
                 payload.pop(key, None)
@@ -265,17 +267,21 @@ def project_config_toml(config: ProjectConfig) -> str:
         f"environment_files = {_toml_array(config.environment_files)}",
         f"outputs = {_toml_array(config.outputs)}",
         f"default_compute_profile = {json.dumps(config.default_compute_profile)}",
-        "",
-        "[concurrency]",
-        f"max_runs = {config.concurrency.max_runs}",
-        "",
-        "[resources]",
-        f"cpus = {config.resources.cpus}",
-        f"gpus = {config.resources.gpus}",
     ]
-    lines.append(f"memory_mb = {config.resources.memory_mb}")
-    if config.resources.walltime_minutes is not None:
-        lines.append(f"walltime_minutes = {config.resources.walltime_minutes}")
+    if config.concurrency is not None:
+        lines.extend(["", "[concurrency]", f"max_runs = {config.concurrency.max_runs}"])
+    if config.resources is not None:
+        lines.extend(
+            [
+                "",
+                "[resources]",
+                f"cpus = {config.resources.cpus}",
+                f"gpus = {config.resources.gpus}",
+                f"memory_mb = {config.resources.memory_mb}",
+            ]
+        )
+        if config.resources.walltime_minutes is not None:
+            lines.append(f"walltime_minutes = {config.resources.walltime_minutes}")
     lines.extend(
         [
             "",

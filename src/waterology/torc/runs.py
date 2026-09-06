@@ -49,10 +49,14 @@ def start_torc_run(
     config_override=None,
 ) -> ManagedRunRecord:
     from waterology.core.studies import guard_submission
-    guard_submission(start, experiment_id, str(study_context["study_id"]) if study_context else None)
+
+    guard_submission(
+        start, experiment_id, str(study_context["study_id"]) if study_context else None
+    )
     inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
     if config_override is not None:
         from dataclasses import replace
+
         inputs = replace(inputs, config=config_override)
     machine_config = load_machine_config(machine_config_file)
     profile = machine_config.profile(profile_name)
@@ -75,7 +79,11 @@ def start_torc_run(
             inputs.experiment.id,
             inputs.commit_sha,
             started_at,
-            max_runs=inputs.config.concurrency.max_runs,
+            max_runs=(
+                inputs.config.concurrency.max_runs
+                if inputs.config.concurrency is not None
+                else None
+            ),
             executor="torc",
             compute_profile=profile_name,
         )
@@ -90,9 +98,16 @@ def start_torc_run(
         )
         if study_context is not None:
             from waterology.core.atomic import write_json
+
             write_json(staging / "study.json", study_context)
-        save_snapshot(staging, inputs.worktree, inputs.config, profile, inputs.commit_sha,
-                      fresh=study_context is not None or inputs.experiment.workflow is not None)
+        save_snapshot(
+            staging,
+            inputs.worktree,
+            inputs.config,
+            profile,
+            inputs.commit_sha,
+            fresh=study_context is not None or inputs.experiment.workflow is not None,
+        )
         provider = TorcProvider(
             config=inputs.config,
             request=TorcWorkflowRequest(

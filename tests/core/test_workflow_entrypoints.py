@@ -21,11 +21,21 @@ def test_cli_registration_and_schema(tmp_path):
     listing = runner.invoke(
         app, ["--output-format", "json", "workflow", "list", "--path", str(tmp_path)]
     )
-    assert "evaluate" in json.loads(listing.stdout)
+    assert json.loads(listing.stdout) == {}
+    discovery = runner.invoke(
+        app,
+        ["--output-format", "json", "config", "refresh", "--check", "--path", str(tmp_path)],
+    )
+    assert discovery.exit_code == 1
+    assert json.loads(discovery.stdout)["discovered_workflows"] == ["evaluate"]
     registered = runner.invoke(
         app, ["workflow", "register", "evaluate", "--task", "evaluate", "--path", str(tmp_path)]
     )
     assert registered.exit_code == 0, registered.output
+    listing = runner.invoke(
+        app, ["--output-format", "json", "workflow", "list", "--path", str(tmp_path)]
+    )
+    assert "evaluate" in json.loads(listing.stdout)
     schema = runner.invoke(app, ["--output-format", "json", "config", "schema"])
     assert "workflows" in json.loads(schema.stdout)["properties"]
     failure = runner.invoke(app, ["workflow", "run", "missing", "--path", str(tmp_path)])

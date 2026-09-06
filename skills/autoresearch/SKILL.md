@@ -24,12 +24,14 @@ Read [token-discipline.md](references/token-discipline.md) for long runs.
 
 ## Enter the managed workflow
 
-Use `waterology init` for an uninitialized Git project, then
-`waterology config refresh --check` and `waterology workflow list`. Apply
-`waterology config refresh` when safe discoveries are needed. Register an
-explicit definition with `waterology workflow register NAME --definition FILE`
-when the native task is ambiguous or needs outputs, metrics or input identities.
-Commit the resulting execution configuration with the project code.
+Use `waterology init` for an uninitialized Git project. It creates a small
+configuration without importing native tasks. Inspect available definitions with
+`waterology config refresh --check`. Register only the intended task with
+`waterology workflow register NAME --task TASK`, or register an explicit definition
+with `waterology workflow register NAME --definition FILE` when the native task is
+ambiguous or needs outputs, metrics or input identities. Use `waterology config refresh`
+only when importing every unambiguous discovery is appropriate. Commit the resulting
+execution configuration with the project code.
 
 Put `workflow: NAME` in the saved study contract. `waterology study create`
 registers the contract reference and creates a baseline experiment when the

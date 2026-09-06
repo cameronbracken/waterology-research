@@ -26,9 +26,7 @@ def test_discover_pixi_and_refresh_preserves_manual_values(tmp_path: Path):
     assert proposal["workflows"]["evaluate"]["command"] == ["pixi", "run", "--locked", "evaluate"]
     refresh_configuration(root)
     path = root / "waterology.toml"
-    path.write_text(
-        "# researcher comment\n" + path.read_text().replace("max_runs = 1", "max_runs = 3")
-    )
+    path.write_text("# researcher comment\n" + path.read_text() + "\n[concurrency]\nmax_runs = 3\n")
     before = path.read_text()
     assert refresh_configuration(root)["changed"] is False
     assert path.read_text() == before
@@ -48,7 +46,10 @@ def test_refresh_check_does_not_mutate(tmp_path: Path):
     root = project(tmp_path)
     (root / "pixi.toml").write_text('[tasks]\ntest = "pytest"\n')
     before = (root / "waterology.toml").read_bytes()
-    assert refresh_configuration(root, check=True)["changed"]
+    result = refresh_configuration(root, check=True)
+
+    assert result["changed"]
+    assert result["discovered_workflows"] == ["test"]
     assert (root / "waterology.toml").read_bytes() == before
 
 

@@ -24,9 +24,9 @@ storage cost.
 
 ## Execute and preserve the study
 
-Initialize project records with `waterology init`, inspect native task discovery
-with `waterology workflow list`, and refresh with `waterology config refresh`.
-Register the simulation command or TORC YAML with
+Initialize project records with `waterology init`, then inspect native tasks with
+`waterology config refresh --check`. Register the selected simulation task with
+`waterology workflow register simulate --task TASK`, or register a command or TORC YAML with
 `waterology workflow register simulate --definition workflow.nt`. Declare raw
 replication outputs, metric extractors, environment files and input identities.
 Keep the DGP settings in the simulation's existing configuration.

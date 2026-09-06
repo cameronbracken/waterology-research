@@ -108,15 +108,13 @@ def initialize_project(start: Path, name: str | None = None) -> InitializationRe
         _ensure_state_directory(paths.state / directory, paths.root)
     for artifact_root in config.artifact_roots:
         # Named workflows may declare a root-level output file as its own artifact root.
-        file_outputs = {output for workflow in config.workflows.values() for output in workflow.outputs}
+        file_outputs = {
+            output for workflow in config.workflows.values() for output in workflow.outputs
+        }
         if artifact_root not in file_outputs:
             _ensure_project_directory(root / artifact_root, root)
 
     updated_gitignore = _ensure_state_is_ignored(root / ".gitignore")
-    if created_config:
-        from waterology.core.registry import refresh_configuration
-        refresh_configuration(root)
-        config = load_project_config(paths.config_file)
     return InitializationResult(
         project=Project(root, config, paths),
         created_config=created_config,

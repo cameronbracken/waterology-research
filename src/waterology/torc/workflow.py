@@ -29,14 +29,6 @@ class TorcWorkflowFile:
 
 
 def render_workflow(config: ProjectConfig, request: TorcWorkflowRequest) -> str:
-    resource_requirements: dict[str, int | str] = {
-        "name": "waterology-resources",
-        "num_cpus": config.resources.cpus,
-        "num_gpus": config.resources.gpus,
-    }
-    resource_requirements["memory"] = f"{config.resources.memory_mb}m"
-    if config.resources.walltime_minutes is not None:
-        resource_requirements["runtime"] = f"PT{config.resources.walltime_minutes}M"
     execution_config = {"mode": "slurm" if request.mode == "slurm" else "direct"}
     if request.target_shell == "windows":
         fixed_command = subprocess.list2cmdline(config.command)
@@ -44,6 +36,7 @@ def render_workflow(config: ProjectConfig, request: TorcWorkflowRequest) -> str:
     else:
         fixed_command = shlex.join(config.command)
         command = f'cd "$TORC_WORKFLOW_SUBMISSION_DIR" && exec {fixed_command}'
+    job = {"name": request.run_id, "command": command}
     document = {
         "name": f"waterology-{request.run_id}",
         "description": f"Waterology experiment {request.experiment_id}",
@@ -53,20 +46,24 @@ def render_workflow(config: ProjectConfig, request: TorcWorkflowRequest) -> str:
             "waterology_run_id": request.run_id,
             "waterology_declared_outputs": list(config.outputs),
         },
-        "resource_requirements": [resource_requirements],
         "execution_config": execution_config,
         "resource_monitor": {
             "sample_interval_seconds": 5,
             "jobs": {"enabled": True, "granularity": "time_series"},
         },
-        "jobs": [
-            {
-                "name": request.run_id,
-                "command": command,
-                "resource_requirements": "waterology-resources",
-            }
-        ],
+        "jobs": [job],
     }
+    if config.resources is not None:
+        resource_requirements: dict[str, int | str] = {
+            "name": "waterology-resources",
+            "num_cpus": config.resources.cpus,
+            "num_gpus": config.resources.gpus,
+            "memory": f"{config.resources.memory_mb}m",
+        }
+        if config.resources.walltime_minutes is not None:
+            resource_requirements["runtime"] = f"PT{config.resources.walltime_minutes}M"
+        document["resource_requirements"] = [resource_requirements]
+        job["resource_requirements"] = "waterology-resources"
     return yaml.safe_dump(document, sort_keys=False, allow_unicode=False)
 
 
@@ -74,26 +71,39 @@ def write_workflow(
     destination: Path,
     config: ProjectConfig,
     request: TorcWorkflowRequest,
-    *, worktree: Path | None = None,
+    *,
+    worktree: Path | None = None,
 ) -> TorcWorkflowFile:
     if config.torc_file:
         from waterology.core.registry import project_file
+
         if worktree is None:
             raise ValueError("Native TORC workflows require a project directory")
         content = project_file(worktree, config.torc_file).read_text()
         document = yaml.safe_load(content)
-        if not isinstance(document, dict) or not isinstance(document.get("jobs"), list) or not document["jobs"]:
+        if (
+            not isinstance(document, dict)
+            or not isinstance(document.get("jobs"), list)
+            or not document["jobs"]
+        ):
             raise ValueError("TORC workflow must contain jobs")
         metadata = document.setdefault("metadata", {})
-        metadata.update(waterology_commit=request.commit_sha, waterology_run_id=request.run_id,
-                        waterology_experiment_id=request.experiment_id)
+        metadata.update(
+            waterology_commit=request.commit_sha,
+            waterology_run_id=request.run_id,
+            waterology_experiment_id=request.experiment_id,
+        )
         content = yaml.safe_dump(document, sort_keys=False)
     else:
         content = render_workflow(config, request)
     if config.restore or config.environment_probe:
         document = yaml.safe_load(content)
         join = subprocess.list2cmdline if request.target_shell == "windows" else shlex.join
-        prefix = 'cd /d "%TORC_WORKFLOW_SUBMISSION_DIR%"' if request.target_shell == "windows" else 'cd "$TORC_WORKFLOW_SUBMISSION_DIR"'
+        prefix = (
+            'cd /d "%TORC_WORKFLOW_SUBMISSION_DIR%"'
+            if request.target_shell == "windows"
+            else 'cd "$TORC_WORKFLOW_SUBMISSION_DIR"'
+        )
         restore_name = "waterology_restore_environment"
         if any(job.get("name") == restore_name for job in document["jobs"]):
             raise ValueError("Reserved TORC job name: " + restore_name)
@@ -110,10 +120,21 @@ def write_workflow(
     if config.environment_probe:
         document = yaml.safe_load(content)
         join = subprocess.list2cmdline if request.target_shell == "windows" else shlex.join
-        prefix = 'cd /d "%TORC_WORKFLOW_SUBMISSION_DIR%"' if request.target_shell == "windows" else 'cd "$TORC_WORKFLOW_SUBMISSION_DIR"'
+        prefix = (
+            'cd /d "%TORC_WORKFLOW_SUBMISSION_DIR%"'
+            if request.target_shell == "windows"
+            else 'cd "$TORC_WORKFLOW_SUBMISSION_DIR"'
+        )
         for job in document["jobs"]:
             if job["name"] != "waterology_restore_environment":
-                job["command"] = " && ".join([prefix, "echo WATEROLOGY_WORKER_ENVIRONMENT", join(config.environment_probe), job["command"]])
+                job["command"] = " && ".join(
+                    [
+                        prefix,
+                        "echo WATEROLOGY_WORKER_ENVIRONMENT",
+                        join(config.environment_probe),
+                        job["command"],
+                    ]
+                )
         content = yaml.safe_dump(document, sort_keys=False)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.tmp")

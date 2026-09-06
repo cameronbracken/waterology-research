@@ -21,15 +21,23 @@ def make_git_repository(path: Path) -> Path:
 def test_initialize_project_writes_portable_layout(tmp_path: Path) -> None:
     root = make_git_repository(tmp_path / "river-study")
 
+    (root / "pixi.toml").write_text(
+        '[tasks]\ntest = "pytest"\nreport = "quarto render"\n', encoding="utf-8"
+    )
+
     result = initialize_project(root)
+
+    config_text = (root / "waterology.toml").read_text(encoding="utf-8")
 
     assert result.created_config is True
     assert result.updated_gitignore is True
-    assert (
-        (root / "waterology.toml")
-        .read_text(encoding="utf-8")
-        .startswith('schema_version = 1\nname = "river-study"\n')
-    )
+    assert config_text.startswith('schema_version = 1\nname = "river-study"\n')
+    assert result.project.config.workflows == {}
+    assert result.project.config.environment_files == ()
+    assert "[workflows" not in config_text
+    assert "[discovery" not in config_text
+    assert "[concurrency]" not in config_text
+    assert "[resources]" not in config_text
     assert (root / ".gitignore").read_text(encoding="utf-8") == ".waterology/\n"
     assert (root / "artifacts").is_dir()
     assert (root / ".waterology" / "experiments").is_dir()

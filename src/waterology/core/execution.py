@@ -52,6 +52,7 @@ def start_direct_run(
     run_id: str | None = None,
 ) -> RunManifest:
     from waterology.core.studies import guard_submission
+
     guard_submission(start, experiment_id)
     inputs = prepare_run_inputs(start, experiment_id, run_id=run_id)
     if inputs.experiment.workflow is not None or inputs.config.torc_file:
@@ -72,7 +73,7 @@ def start_direct_run(
             experiment.id,
             commit_sha,
             started_at,
-            max_runs=config.concurrency.max_runs,
+            max_runs=config.concurrency.max_runs if config.concurrency is not None else None,
         )
         _transition(database, identifier, "queued", "preparing")
         staging = _prepare_execution_staging(
@@ -233,6 +234,7 @@ def prepare_run_inputs(
     config = load_project_config(worktree / "waterology.toml")
     if experiment.workflow:
         from waterology.core.registry import resolve_workflow
+
         config = resolve_workflow(worktree, experiment.workflow)
     if config.name != experiment.project_id:
         raise RunPreparationError(
@@ -340,7 +342,7 @@ def _reserve_run(
     commit_sha: str,
     started_at: str,
     *,
-    max_runs: int,
+    max_runs: int | None,
     executor: str = "direct",
     compute_profile: str | None = None,
 ) -> None:
@@ -361,7 +363,7 @@ def _reserve_run(
                 f"Experiment already has an active run: {same_experiment}",
                 details={"active_run_id": same_experiment},
             )
-        if len(active) >= max_runs:
+        if max_runs is not None and len(active) >= max_runs:
             raise RunPreparationError(
                 f"Project concurrency limit reached ({max_runs})",
                 details={"active_run_ids": [row["id"] for row in active]},

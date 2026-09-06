@@ -15,12 +15,13 @@ waterology config refresh --check
 waterology config show
 ```
 
-Initialization discovers root Pixi tasks and literal outputs, environment files,
-and `workflows/*.yaml` / `*.yml` TORC definitions. Root `torc.yaml` and
-`workflow.yaml` files (also `.yml`) are recognized. It reads configuration without executing
-it. `waterology config refresh` applies discoveries while preserving manually
-changed workflows and other options. `--check` reports drift without writing and
-returns a nonzero status when updates or unresolved drift exist.
+Initialization creates a small project configuration. It does not copy native tasks.
+`waterology config refresh --check` inspects root Pixi tasks, literal outputs, environment files,
+and `workflows/*.yaml` / `*.yml` TORC definitions without writing or executing them. Root
+`torc.yaml` and `workflow.yaml` files (also `.yml`) are recognized. `waterology config refresh`
+imports all unambiguous discoveries while preserving manually changed workflows and other options.
+The check command returns a nonzero status when updates or unresolved drift exist. To avoid a bulk
+import, register only the intended task with `waterology workflow register NAME --task TASK`.
 
 Discovery cannot infer the scientific metric, acceptance criterion or which task
 is the final evaluation. A missing lock, multiple environment managers, a name
@@ -32,6 +33,10 @@ Inspect the resolved definitions and select a configured TORC profile. Named
 workflows require TORC even for local compute. The legacy `direct` profile remains
 available to the older single-command API. Keep profile endpoints and credentials
 in machine configuration, described in [configuration](configuration.md).
+
+Native TORC workflows own job resources, dependencies, and scheduling. Generated command wrappers
+omit resource requirements by default, so TORC applies its configured execution capacity. Existing
+project files with explicit `[resources]` or `[concurrency]` tables retain their prior overrides.
 
 ## Register and run an evaluation
 

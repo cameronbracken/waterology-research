@@ -32,8 +32,9 @@ Run the initializer at the repository root:
 waterology init
 ```
 
-Initialization discovers native tasks and environment files. Start with
-`waterology workflow list` and the [named workflow guide](workflow-execution.md).
+Initialization creates a small project configuration without copying native tasks. Register the
+tasks Waterology should execute, or run `waterology config refresh --check` to inspect available
+discoveries. See the [named workflow guide](workflow-execution.md).
 For the legacy single-command interface below, set `command`, `environment_files`,
 and `outputs` in the generated `waterology.toml`.
 See [Configuration](configuration.md) for every field.

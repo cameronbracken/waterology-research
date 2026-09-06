@@ -4,7 +4,7 @@ Waterology separates portable project settings from machine settings and credent
 
 | File or environment | Scope | Commit it? |
 | --- | --- | --- |
-| `waterology.toml` | Research command, outputs, resources, and archive contract | Yes |
+| `waterology.toml` | Research command, outputs, and archive contract | Yes |
 | `$HOME/.config/waterology/config.toml` | Compute profiles for one machine | No |
 | SSH and TORC configuration | Host access and service credentials | No |
 | `WATEROLOGY_CONFIG` | Alternate machine configuration path | No |
@@ -22,15 +22,6 @@ command = ["pixi", "run", "analysis"]
 environment_files = ["pixi.toml", "pixi.lock"]
 outputs = ["results/metrics.json"]
 default_compute_profile = "direct"
-
-[concurrency]
-max_runs = 1
-
-[resources]
-cpus = 4
-gpus = 0
-memory_mb = 8192
-walltime_minutes = 60
 
 [archive]
 allow_missing_outputs = false
@@ -106,11 +97,11 @@ and reads existing single-command projects without migration.
 | `environment_files` | string array, `[]` | Environment manifests and locks whose identities are captured. Discovery populates existing files. |
 | `outputs` | string array, `[]` | Legacy output paths to archive; paths must not overlap. |
 | `default_compute_profile` | string, `"direct"` | Machine profile name. Select a TORC profile for named workflows and studies. |
-| `concurrency.max_runs` | integer, `1`, minimum 1 | Maximum active Waterology runs, including unresolved submissions. |
-| `resources.cpus` | integer, `1`, minimum 1 | CPU request for a generated single-job workflow. |
-| `resources.gpus` | integer, `0`, minimum 0 | GPU request for a generated single-job workflow. |
-| `resources.memory_mb` | integer, `1024`, minimum 1 | Memory request for a generated single-job workflow. |
-| `resources.walltime_minutes` | optional positive integer | Runtime request. Omitted by default. |
+| `concurrency.max_runs` | optional positive integer | Legacy Waterology admission limit. Omit it to let TORC control execution concurrency. |
+| `resources.cpus` | optional positive integer | Legacy CPU override for a generated command wrapper. Prefer native TORC resource requirements. |
+| `resources.gpus` | optional nonnegative integer | Legacy GPU override for a generated command wrapper. |
+| `resources.memory_mb` | optional positive integer | Legacy memory override for a generated command wrapper. |
+| `resources.walltime_minutes` | optional positive integer | Legacy runtime override for a generated command wrapper. |
 | `archive.allow_missing_outputs` | boolean, `false` | Whether a completed run may omit declared outputs. Does not waive deliverable checks. |
 | `archive.environment_allowlist` | string array, `[]` | Environment variables whose value hashes may be captured. Values are not stored. |
 | `archive.log_redactions` | regex string array, `[]` | Redactions applied to aggregate and retained job logs. |
@@ -125,9 +116,9 @@ and reads existing single-command projects without migration.
 | `restore` | array of argument arrays, `[]` | Resolved environment restore commands in execution snapshots. Prefer workflow declarations. |
 | `environment_probe` | string array, `[]` | Resolved worker inventory command in execution snapshots. Prefer workflow declarations. |
 
-Native TORC YAML owns its resource requirements and job dependencies. The project
-`resources` defaults apply to generated command workflows; they do not overwrite
-native job requirements. Machine configuration remains outside this file.
+Native TORC YAML owns its resource requirements, job dependencies, and scheduling. Generated
+command workflows omit resource requirements unless an existing project explicitly provides the
+legacy `resources` table. Machine configuration remains outside this file.
 
 ### Named workflows
 
@@ -146,11 +137,10 @@ Each `[workflows.NAME]` table supports:
 | `input_files` | path-to-SHA-256 table, `{}` | Immutable local input identities, checked before submission and reproduction. |
 | `input_instructions` | path-to-string table, `{}` | Retrieval/version/access guidance; never credentials or proof of access. |
 
-Initialization discovers root Pixi tasks, not arbitrary shell scripts. Pixi
-feature-specific environments and ambiguous mixed projects need explicit workflow
-definitions. uv (`pyproject.toml`, `uv.lock`) and rv (`rproject.toml`, `rv.lock`, `.Rprofile`)
-environment files are detected but no task syntax is
-invented for them. For uv, an explicit definition can invoke `uv run --locked`
+Configuration refresh discovers root Pixi tasks, not arbitrary shell scripts. Pixi feature
+environments and ambiguous mixed projects need explicit workflow definitions. uv
+(`pyproject.toml`, `uv.lock`) and rv (`rproject.toml`, `rv.lock`, `.Rprofile`) environment files are
+detected but no task syntax is invented for them. For uv, an explicit definition can invoke `uv run --locked`
 and restore with `uv sync --locked`. For rv, supply the commands supported by your
 project's installed version. Environment managers perform restoration themselves.
 

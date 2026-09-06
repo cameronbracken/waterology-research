@@ -70,12 +70,9 @@ def test_write_workflow_uses_atomic_destination(tmp_path: Path) -> None:
     assert yaml.safe_load(record.path.read_text(encoding="utf-8"))["execution_config"] == {
         "mode": "direct"
     }
-    assert (
-        yaml.safe_load(record.path.read_text(encoding="utf-8"))["resource_requirements"][0][
-            "memory"
-        ]
-        == "1024m"
-    )
+    document = yaml.safe_load(record.path.read_text(encoding="utf-8"))
+    assert "resource_requirements" not in document
+    assert "resource_requirements" not in document["jobs"][0]
 
 
 def test_render_workflow_uses_cmd_quoting_for_windows_targets() -> None:
