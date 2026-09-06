@@ -32,6 +32,10 @@ class ZoteroSettings(BaseModel):
     download_pdfs: bool = True
 
 
+_SETTINGS_NAME = ".zotero.nt"
+_LEGACY_SETTINGS_NAME = "zotero.nt"
+
+
 def _directory(start: Path) -> Path:
     path = discover_project(start).paths.state / "references"
     if path.is_symlink():
@@ -50,16 +54,22 @@ def configure_zotero(start: Path, settings: dict) -> dict:
     settings = {**settings}
     settings.setdefault("collection_key", _key(uuid4().hex))
     config = ZoteroSettings.model_validate(settings)
-    path = discover_project(start).root / "zotero.nt"
+    root = discover_project(start).root
+    path = root / _SETTINGS_NAME
     with exclusive_file_lock(_directory(start) / "sync.lock"):
-        if path.exists():
-            raise ValueError("zotero.nt exists; edit it deliberately to change library settings")
+        if path.exists() or (root / _LEGACY_SETTINGS_NAME).exists():
+            raise ValueError(
+                ".zotero.nt or zotero.nt exists; edit it deliberately to change library settings"
+            )
         write_document(path, config.model_dump())
     return config.model_dump()
 
 
 def settings_for(start: Path) -> ZoteroSettings | None:
-    path = discover_project(start).root / "zotero.nt"
+    root = discover_project(start).root
+    path = root / _SETTINGS_NAME
+    if not path.exists():
+        path = root / _LEGACY_SETTINGS_NAME
     if path.is_symlink():
         raise ValueError("Zotero settings must not be a symlink")
     return ZoteroSettings.model_validate(load_document(path)) if path.exists() else None

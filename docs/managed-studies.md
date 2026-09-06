@@ -232,10 +232,11 @@ download_pdfs: true
 ```
 
 Replace the library ID with the selected personal or group library ID. Save this
-input outside `zotero.nt`, then run `waterology zotero configure SETTINGS.nt`.
-This writes a project `zotero.nt` with a stable collection key. It makes no
-network request. The first sync creates that collection if absent. An API key
-with write access to the chosen library is required. Keys stay outside settings.
+input outside `.zotero.nt`, then run `waterology zotero configure SETTINGS.nt`.
+This writes a project `.zotero.nt` with a stable collection key. Existing
+`zotero.nt` files remain readable. It makes no network request. The first sync
+creates that collection if absent. An API key with write access to the chosen
+library is required. Keys stay outside settings.
 
 An included search result or a registered local/agency source is automatically
 queued and synchronized when configured. By default, unselected search hits
