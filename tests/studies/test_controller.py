@@ -282,7 +282,20 @@ def test_report_retains_incomplete_run_and_reproduces_table(sealed_run):
     report = root / "reports/test"
     assert "run-missing" in (report / "measurements.csv").read_text()
     assert "0.5" in (report / "measurements.csv").read_text()
-    assert "embed-resources: true" in (report / "report.qmd").read_text()
+    report_source = (report / "report.qmd").read_text()
+    assert "embed-resources: true" in report_source
+    assert report_source.index("dark: darkly") < report_source.index("light: flatly")
+    palette = json.loads((report / "palette.json").read_text())
+    assert palette["default_mode"] == "dark"
+    assert palette["algorithm"]["name"] == "Chameleon"
+    assert (report / "theme-sync.html").is_file()
+    theme_sync = (report / "theme-sync.html").read_text()
+    assert "quarto-light" in theme_sync
+    assert "Plotly.restyle" in theme_sync
+    assert "Plotly.relayout" in theme_sync
+    render_script = (report / "render.py").read_text()
+    assert "plotly_dark" in render_script
+    assert "customdata=color_indices" in render_script
     manifest = json.loads((report / "provenance.json").read_text())
     assert manifest["sources"][0]["archive_hash"]
     with pytest.raises(ValueError):

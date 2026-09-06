@@ -48,8 +48,9 @@ def test_report_mode_builds_and_reviews_a_cited_interactive_quarto_report() -> N
         "bib-validate",
         "research-review",
         "embed-resources: true",
-        "light: flatly",
         "dark: darkly",
+        "light: flatly",
+        "Chameleon",
         "Plotly",
         "figure-style",
         "project-conventions",
@@ -59,3 +60,4 @@ def test_report_mode_builds_and_reviews_a_cited_interactive_quarto_report() -> N
 
     assert "invent" in instructions.lower()
     assert "provenance" in instructions.lower()
+    assert instructions.index("dark: darkly") < instructions.index("light: flatly")

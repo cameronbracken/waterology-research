@@ -15,6 +15,8 @@ metadata:
 
 <!-- Adapted from companion-inc/feynman, skills/paper-writing/SKILL.md at commit
 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
+<!-- Dark palette guidance adapts the published VIDA-Lab/Chameleon method.
+See ATTRIBUTION.md. -->
 
 Use `writing-style` and its scientific prose layer for the draft and final
 edit. Use `project-conventions` for Quarto settings and local research
@@ -87,10 +89,23 @@ bibliography: references.bib
 format:
   html:
     embed-resources: true
+    respect-user-color-scheme: false
     theme:
-      light: flatly
       dark: darkly
+      light: flatly
 ```
+
+The first theme is the default, so reports open in Darkly and retain the Quarto
+switch to Flatly. Design each graphic and its semantic palette against the light
+theme first. Derive the dark data colors with the Chameleon algorithm: preserve
+background luminance contrast, CIEDE2000 similarity to each light color, and
+perceptual differences between adjacent colors. Use a fixed seed and record the
+source palette, transformed palette, background colors, weights, and algorithm
+reference with the figure inputs. Treat the transformed palette as a design
+starting point. Check mark contrast and color meaning in both modes, and refine
+with explicit constraints when the raw optimization produces ambiguous or
+unappealing colors. Let the Quarto themes control text, axes, and page chrome.
+Do not transform those elements as if they were data marks.
 
 Reports are often parameterized or automated. When the report will be rerun
 for different sites, periods, or model versions, declare Quarto `params` in
@@ -104,7 +119,7 @@ unverified, not as a pass.
 
 Include interactive graphics when supported data can clarify a result. Use
 Plotly for ordinary interaction and Bokeh only when richer linked interaction
-materially helps. Keep the display clean, use earth tones and colorblind
+materially helps. Keep the light design clean, use earth tones and colorblind
 friendly palettes, and retain units, uncertainty, captions, and source links.
 Save the data and code needed to regenerate each graphic. Provide a useful
 static or tabular fallback when the report may be printed. Do not add a graphic

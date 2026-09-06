@@ -171,6 +171,24 @@ source carry a one-line credit at the top; this page is the canonical list.
 - **Current difference:** OpenResearch now includes OpenAlex discovery. The
   arXiv-only rationale in the historical roadmap applies to the earlier snapshot.
 
+### VIDA-Lab/Chameleon - dark visualization palette adaptation
+
+- **Authors:** Manusha Karunathilaka, Songheng Zhang, Anthony Tang, Kotaro Hara,
+  Jiannan Li, and Yong Wang.
+- **Paper:** _Chameleon: Automated Color Palette Adaptation for Dark Mode Data
+  Visualizations_, <https://doi.org/10.1145/3786995.3787017>.
+- **Repository:** <https://github.com/VIDA-Lab/Chameleon>, inspected at commit
+  `aa46f01455c8aa8a681b41975084b2ae6a665177`.
+- **License note:** The inspected repository does not include a license file.
+- **What we adapt:** The published Chameleon objective combines luminance
+  contrast consistency, CIEDE2000 color consistency, and adjacent color
+  difference consistency through seeded simulated annealing in LCH space.
+  Waterology implements the described method independently and adds explicit
+  contrast, hue, and chroma constraints for its report palette. No repository
+  source code or notebook cells are copied.
+- **Waterology files:** `src/waterology/core/report_colors.py`, managed report
+  bundles, `skills/paper-writing/SKILL.md`, and `rules/quarto-conventions.md`.
+
 ### William Strunk Jr. - concise prose principles
 
 - **Author:** William Strunk Jr.
