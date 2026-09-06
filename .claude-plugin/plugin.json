@@ -1,6 +1,6 @@
 {
   "name": "waterology",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Reproducible computational research workflows for Claude Code, Codex, and OpenCode.",
   "author": {
     "name": "Cameron Bracken",
