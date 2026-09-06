@@ -24,6 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+constraints = ["pyarrow>=18"]
 zotero = ["pyzotero>=1.6,<2"]
 reports = ["plotly>=6,<7"]
 dashboard = [

@@ -17,3 +17,16 @@ Place the figure title and caption in the document. Put interactive legends
 below or to the right of the plotting domain, reserve their margin, and enable
 axis automargins. The `figure-style` skill includes a reusable R helper and a
 standalone checker for this layout contract.
+
+For `.Rmd` and `.qmd` sources, the scanner detects Plotly references in executable
+chunks and checks the corresponding rendered HTML. It reads `output-file` from
+front matter and a Quarto project's `output-dir` (including the `_site` and
+`_book` defaults). Missing HTML, HTML older than the source or project config,
+and renders without inspectable layouts fail with an instruction to render.
+The scanner does not execute document code.
+
+R htmlwidgets and Python Plotly HTML with literal JSON `Plotly.newPlot` arguments
+are supported. Embedded htmlwidgets are also checked. Arbitrary JavaScript and
+Plotly calls hidden inside external helpers cannot be resolved statically. Pass
+the rendered HTML explicitly when the source does not name Plotly. Timestamp
+checks do not establish freshness of external data or helper scripts.
