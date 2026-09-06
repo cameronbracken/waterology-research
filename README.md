@@ -331,6 +331,10 @@ python3 constraints/check-all.py [PATH ...]
 python3 constraints/check-all.py --only deterministic-seed src/
 ```
 
+Run constraints after changing content they cover and target the changed paths.
+Do not repeat a successful check for unchanged content. Use `.` when changing a
+constraint, validating the full repository, or preparing a release.
+
 ## Research workflows
 
 The research bundle provides seven agents: `researcher`, `writer`, `verifier`,

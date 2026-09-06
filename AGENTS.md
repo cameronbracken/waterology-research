@@ -21,6 +21,12 @@ pixi run waterology render --check
 python3 constraints/check-all.py .
 ```
 
+These commands form the full validation suite for new development. Run
+Waterology constraints only for applicable files changed since their last
+successful check. Skip them for read only work and unchanged validated content.
+Use the whole repository target when a constraint changes or full repository
+validation is required.
+
 ## Quality
 
 Use `research-software-quality` for testing, debugging, verification, review,
