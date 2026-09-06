@@ -22,6 +22,28 @@ ATTRIBUTION.md. -->
 Use `writing-style` for summaries and `research-software-quality` for changes.
 Read [token-discipline.md](references/token-discipline.md) for long runs.
 
+## Start and continue by default
+
+Treat an explicit autoresearch invocation with an actionable objective as a
+request to start the bounded workflow, not as a request to explain it. Begin in
+the same turn. Inspect existing state, establish or resume the saved contract,
+configure the bounded driver when authorized, and run it without waiting for a
+second prompt.
+
+When the host provides a durable goal or continuation mechanism, create or use
+it automatically for the study objective and stopping condition. Do not ask the
+user to issue a separate goal command. Keep advancing across ordinary turn
+boundaries, candidate failures, and successful iterations while the saved
+budgets allow useful work. Stop only at a recorded acceptance or budget boundary,
+an explicit stop request, or a material blocker that requires new information or
+authority.
+
+Infer reversible setup details from project instructions, existing study state,
+and checked configuration when one reasonable choice is available. A missing
+detail is not a reason to pause if work within the current authority can resolve
+it. Durable continuation does not expand authority for compute, retries,
+deployment, publication, or destructive actions.
+
 ## Enter the managed workflow
 
 Use `waterology init` for an uninitialized Git project. It creates a small
