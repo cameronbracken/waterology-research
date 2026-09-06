@@ -116,7 +116,7 @@ def test_cache_buster_restores_manifests_after_failure(tmp_path: Path) -> None:
     for relative in (".codex-plugin/plugin.json", ".claude-plugin/plugin.json"):
         path = tmp_path / relative
         path.parent.mkdir()
-        path.write_text(json.dumps({"name": "waterology", "version": "0.5.2"}) + "\n")
+        path.write_text(json.dumps({"name": "waterology", "version": "0.5.3"}) + "\n")
         paths.append(path)
     originals = [(path.read_bytes(), path.stat().st_mode) for path in paths]
 
@@ -124,7 +124,7 @@ def test_cache_buster_restores_manifests_after_failure(tmp_path: Path) -> None:
         pytest.raises(RuntimeError, match="stop"),
         reinstall_plugins.cache_busted_manifests(tmp_path) as version,
     ):
-        assert version.startswith("0.5.2+dev.")
+        assert version.startswith("0.5.3+dev.")
         assert all(json.loads(path.read_text())["version"] == version for path in paths)
         raise RuntimeError("stop")
 
