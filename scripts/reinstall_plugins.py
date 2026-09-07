@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reinstall local Waterology plugins during development."""
+"""Reinstall the local Waterology MCP server and plugins during development."""
 
 from __future__ import annotations
 
@@ -66,6 +66,19 @@ def select_runtimes(requested: str, installs: dict[str, Installation | None]) ->
     if requested == "all":
         return RUNTIMES
     return (requested,)
+
+
+def build_mcp_plan(project_root: Path) -> tuple[tuple[str, ...], ...]:
+    return (
+        (
+            "uv",
+            "tool",
+            "install",
+            "--editable",
+            f"{project_root.resolve()}[mcp]",
+            "--force",
+        ),
+    )
 
 
 def marketplace_status(runtime: str, payload: object, project_root: Path) -> tuple[bool, bool]:
@@ -195,7 +208,7 @@ def _execute(command: Sequence[str], *, cwd: Path) -> None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Reinstall Waterology in previously configured agent runtimes."
+        description="Reinstall the Waterology MCP server and configured agent plugins."
     )
     parser.add_argument(
         "--runtime",
@@ -246,7 +259,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     unavailable = [runtime for runtime in selected if runtime in missing]
     if unavailable:
         raise ReinstallError(f"Required runtime command not found: {', '.join(unavailable)}")
+    if shutil.which("uv") is None:
+        raise ReinstallError("Required command not found: uv")
 
+    mcp_plan = build_mcp_plan(project_root)
     plans: dict[str, tuple[tuple[str, ...], ...]] = {}
     for runtime in selected:
         present, matches = marketplace_status(runtime, marketplace_payloads[runtime], project_root)
@@ -262,10 +278,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"{runtime}: {status}")
 
     if args.dry_run:
+        for command in mcp_plan:
+            print(f"Would run: {' '.join(command)}")
         for runtime in selected:
             for command in plans[runtime]:
                 print(f"Would run: {' '.join(command)}")
         return 0
+
+    for command in mcp_plan:
+        _execute(command, cwd=project_root)
 
     context = (
         nullcontext("unchanged") if args.no_cache_bust else cache_busted_manifests(project_root)

@@ -42,6 +42,44 @@ def test_default_selection_reinstalls_only_previous_installs() -> None:
         reinstall_plugins.select_runtimes("auto", {"codex": None, "claude": None})
 
 
+def test_mcp_reinstall_uses_editable_source_with_mcp_extra(tmp_path: Path) -> None:
+    assert reinstall_plugins.build_mcp_plan(tmp_path) == (
+        (
+            "uv",
+            "tool",
+            "install",
+            "--editable",
+            f"{tmp_path.resolve()}[mcp]",
+            "--force",
+        ),
+    )
+
+
+def test_dry_run_includes_mcp_reinstall(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    project_root = SCRIPT.parents[1].resolve()
+
+    def fake_run_json(command: tuple[str, ...], *, cwd: Path) -> object:
+        assert cwd == project_root
+        if command[2] == "list":
+            return {"installed": [{"pluginId": "waterology@waterology", "enabled": True}]}
+        return {
+            "marketplaces": [
+                {"name": "waterology", "root": str(project_root)},
+            ]
+        }
+
+    monkeypatch.setattr(reinstall_plugins.shutil, "which", lambda command: f"/bin/{command}")
+    monkeypatch.setattr(reinstall_plugins, "_run_json", fake_run_json)
+
+    assert reinstall_plugins.main(["--runtime", "codex", "--dry-run"]) == 0
+    assert (
+        f"Would run: uv tool install --editable {project_root}[mcp] --force"
+        in capsys.readouterr().out
+    )
+
+
 def test_plan_preserves_claude_scope_data_and_disabled_state(tmp_path: Path) -> None:
     install = reinstall_plugins.Installation("claude", "project", False)
 
@@ -116,7 +154,7 @@ def test_cache_buster_restores_manifests_after_failure(tmp_path: Path) -> None:
     for relative in (".codex-plugin/plugin.json", ".claude-plugin/plugin.json"):
         path = tmp_path / relative
         path.parent.mkdir()
-        path.write_text(json.dumps({"name": "waterology", "version": "0.5.5"}) + "\n")
+        path.write_text(json.dumps({"name": "waterology", "version": "0.5.6"}) + "\n")
         paths.append(path)
     originals = [(path.read_bytes(), path.stat().st_mode) for path in paths]
 
@@ -124,7 +162,7 @@ def test_cache_buster_restores_manifests_after_failure(tmp_path: Path) -> None:
         pytest.raises(RuntimeError, match="stop"),
         reinstall_plugins.cache_busted_manifests(tmp_path) as version,
     ):
-        assert version.startswith("0.5.5+dev.")
+        assert version.startswith("0.5.6+dev.")
         assert all(json.loads(path.read_text())["version"] == version for path in paths)
         raise RuntimeError("stop")
 
