@@ -772,6 +772,33 @@ def test_recover_rejected_submission_preserves_attempt(study_project, monkeypatc
         studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
     assert gateway.launches == 1
 
+    # A recovered submission must complete the ordinary collection path while
+    # preserving the original rejection and recovery evidence in its archive.
+    from waterology import services
+    from waterology.core.archive import verify_archive
+    from waterology.torc.runs import inspect_torc_run
+
+    evidence = (staging / "submission-recovery.json").read_bytes()
+    _, worktree, machine, _ = study_project
+    (worktree / "results").mkdir(exist_ok=True)
+    (worktree / "results/metrics.json").write_text('{"error":0.5}')
+    monkeypatch.setattr(
+        services,
+        "run_status",
+        lambda p, r: inspect_torc_run(
+            p, r, machine_config_file=machine, gateway=gateway
+        ).model_dump(mode="json"),
+    )
+    completed = studies.advance_study(root, blocked.id)
+    assert completed.state == "complete", completed.reason
+    assert completed.best_run == attempt.run_id
+    assert gateway.launches == 1
+    archive = root / ".waterology/runs" / attempt.run_id
+    assert (archive / "submission-recovery.json").read_bytes() == evidence
+    assert verify_archive(archive).valid
+    (archive / "submission-recovery.json").write_text("tampered")
+    assert "submission-recovery.json" in verify_archive(archive).changed
+
 
 @pytest.mark.parametrize("reason", ["found", "ambiguous", "inventory_error", "interrupted"])
 def test_recovery_refuses_uncertain_submission(study_project, monkeypatch, reason):

@@ -36,6 +36,7 @@ _STAGING_PAYLOADS = {
     "manifest.json",
     "metrics.json",
     "study.json",
+    "submission-recovery.json",
     "job-logs.json",
     "execution-config.json",
     "result.md",
@@ -467,6 +468,7 @@ def _prepare_staging(staging: Path) -> None:
             in {
                 "execution.json",
                 "study.json",
+                "submission-recovery.json",
                 "job-logs.json",
                 "execution-config.json",
                 "stdout.log",
