@@ -12,9 +12,6 @@ metadata:
 
 # Paper / Code Audit
 
-<!-- Adapted from companion-inc/feynman, skills/paper-code-audit/SKILL.md at
-commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the audit report and claim comparisons.
 
 Derive a short slug from the paper or repository. Use lowercase words separated
@@ -40,6 +37,3 @@ section containing direct paper and repository URLs.
 
 Agents used: `researcher`, `verifier` (for non-trivial audits).
 Output: `docs/<slug>-audit.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

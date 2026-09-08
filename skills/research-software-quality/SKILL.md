@@ -5,8 +5,6 @@ description: Use when changing research software or agent behavior, diagnosing f
 
 # Research Software Quality
 
-<!-- Adapted from Superpowers 6.3.0 (obra/superpowers, MIT). See ATTRIBUTION.md. -->
-
 Match the workflow to the change's risk, size, and isolation needs. Preserve
 evidence, reproducibility, and user intent without imposing a fixed ceremony.
 

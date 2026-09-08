@@ -11,12 +11,6 @@ metadata:
 
 # Simulation Study
 
-<!-- Adapted from pedrohcgs/claude-code-my-workflow,
-.claude/skills/simulation-study/SKILL.md at commit
-9d371f0bf8a8bc99569feca3210ef5133af28d33 (MIT, Copyright 2026 Pedro H. C.
-Sant'Anna). DiD examples and Claude specific control flow were removed. See
-ATTRIBUTION.md. -->
-
 Read [the bundled simulation conventions](references/simulation-conventions.md)
 and the project R conventions before writing code. Use an isolated worktree for
 the study. Do not start a long run until the user authorizes its compute and

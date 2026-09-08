@@ -6,11 +6,6 @@ argument-hint: <document paths> <bib path> [--verify-doi] [--fix]
 ---
 
 <!-- Generated from skills/bib-validate/SKILL.md. Do not edit. -->
-<!-- Adapted from flonat/claude-research at commit
-e7007d0b1e465ef96de7338599ca04079e83a972 (MIT, Copyright 2026 Florian
-Burnat), especially rules/doi-verification.md and the bibliography skills.
-The portable validator and free OpenAlex plus Crossref path are Waterology
-adaptations. See ATTRIBUTION.md. -->
 
 Use the `bib-validate` skill to complete this request.
 

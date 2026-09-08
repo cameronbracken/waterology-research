@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import yaml
@@ -35,29 +34,11 @@ def test_passport_template_carries_the_provenance_and_status_contract() -> None:
     }
 
 
-def test_claude_plugin_registers_the_fail_open_reconciliation_hook() -> None:
-    config = json.loads((ROOT / "hooks/hooks.json").read_text(encoding="utf-8"))
-    registrations = config["hooks"]["PostToolUse"]
-
-    assert registrations == [
-        {
-            "matcher": "Write|Edit",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": ('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claim-reconcile.py"'),
-                    "timeout": 10,
-                }
-            ],
-        }
-    ]
-
-
 def test_passport_workflow_is_documented_and_recorded_complete() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     roadmap = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
 
     assert "/audit-reproducibility" in readme
-    assert "Claude plugin hook" in readme
+    assert "Claude plugin hook" not in readme
     assert "Reproducibility passport (done 2026-08-25)" in roadmap
     assert "flag affected claims\n  STALE" not in roadmap

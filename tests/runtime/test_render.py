@@ -85,10 +85,10 @@ def test_claude_command_renderer_delegates_to_canonical_skill(tmp_path: Path) ->
         "argument-hint": "(none)",
     }
     assert "Generated from skills/session-log/SKILL.md" in body
-    assert "example/upstream" in body
-    assert "prompts/log.md" in body
-    assert "0123456789abcdef" in body
-    assert "MIT" in body
+    assert "example/upstream" not in body
+    assert "prompts/log.md" not in body
+    assert "0123456789abcdef" not in body
+    assert "MIT" not in body
     assert "`session-log` skill" in body
     assert "$ARGUMENTS" in body
     assert "Write the log to" not in body

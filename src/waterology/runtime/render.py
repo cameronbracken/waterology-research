@@ -1,5 +1,4 @@
 import json
-import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,9 +19,6 @@ CLAUDE_TOOLS = {
         "mcp__kagi__kagi_extract",
     ),
 }
-SOURCE_ATTRIBUTION = re.compile(r"<!--\s*Adapted from.*?-->", re.DOTALL)
-
-
 def render_claude(agent: AgentDefinition) -> str:
     tools = tuple(tool for capability in agent.capabilities for tool in CLAUDE_TOOLS[capability])
     frontmatter = yaml.safe_dump(
@@ -60,14 +56,8 @@ def render_claude_command(skill: SkillDefinition) -> str:
         sort_keys=False,
     ).rstrip()
     marker = f"<!-- Generated from skills/{skill.name}/SKILL.md. Do not edit. -->"
-    match = SOURCE_ATTRIBUTION.search(skill.body)
-    attribution = (
-        match.group(0)
-        if match is not None
-        else "<!-- Attribution is recorded in the canonical skill and ATTRIBUTION.md. -->"
-    )
     body = f"Use the `{skill.name}` skill to complete this request.\n\nArguments: $ARGUMENTS\n"
-    return f"---\n{frontmatter}\n---\n\n{marker}\n{attribution}\n\n{body}"
+    return f"---\n{frontmatter}\n---\n\n{marker}\n\n{body}"
 
 
 Renderer = Callable[[AgentDefinition], str]

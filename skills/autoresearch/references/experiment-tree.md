@@ -1,10 +1,5 @@
 # Experiment tree discipline
 
-<!-- Adapted from alphaXiv/openresearch-cli,
-agent-skills/orx-experiment-tree/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 For multi-round experiment studies, use a tree of Git branches. The root
 baseline holds the starting code and run command. Every other node branches
 from a parent and tests one change against it. The `autoresearch` skill's

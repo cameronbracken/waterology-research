@@ -12,12 +12,6 @@ metadata:
 
 # Capture Environment
 
-<!-- Adapted from pedrohcgs/claude-code-my-workflow,
-.claude/skills/capture-environment/SKILL.md at commit
-9d371f0bf8a8bc99569feca3210ef5133af28d33 (MIT, Copyright 2026 Pedro H. C.
-Sant'Anna). Fortran and Pixi paths are original Waterology additions. Stata and
-Docker specific paths were removed. See ATTRIBUTION.md. -->
-
 Record the environment that produced a result without changing dependencies.
 Use `project-conventions` to select the existing package manager. Never replace
 Pixi with pip, add renv to a project that uses another declared R workflow, or

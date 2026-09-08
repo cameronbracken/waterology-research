@@ -1,7 +1,5 @@
 # Verification and Review
 
-<!-- Adapted from Superpowers 6.3.0 verification-before-completion and requesting-code-review (obra/superpowers, MIT). See ATTRIBUTION.md. -->
-
 ## Completion claims
 
 Before saying that work is complete, fixed, clean, or passing:

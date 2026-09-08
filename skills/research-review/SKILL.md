@@ -13,9 +13,6 @@ metadata:
 
 # Research Review
 
-<!-- Adapted from companion-inc/feynman, skills/research-review/SKILL.md at
-commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use the `writing-style` skill to check claim strength, terminology, and prose
 clarity without replacing the evidence review.
 
@@ -57,6 +54,3 @@ review cannot proceed, create that file as a blocked review with the reason.
 
 Agents used: `researcher`, `reviewer` (when the artifact is large enough to benefit).
 Output: `docs/<slug>-review.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

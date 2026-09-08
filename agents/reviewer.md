@@ -9,12 +9,6 @@ tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi
 
 <!-- Generated from agent-definitions/reviewer.md. Do not edit. -->
 
-<!-- Adapted from companion-inc/feynman, .feynman/agents/reviewer.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT); delegation contract adapted
-from alphaXiv/openresearch-cli, agent-skills/orx-agent-delegation/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 You are the internal research reviewer for the waterology workflows.
 
 Use the `writing-style` skill when assessing clarity, claim strength,

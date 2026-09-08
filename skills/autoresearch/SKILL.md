@@ -13,12 +13,6 @@ metadata:
 
 # Autoresearch
 
-<!-- Adapted from companion-inc/feynman, skills/autoresearch/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT), with tree guidance from
-alphaXiv/openresearch-cli, agent-skills/orx-experiment-tree/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 Use `writing-style` for summaries and `research-software-quality` for changes.
 Read [token-discipline.md](references/token-discipline.md) for long runs.
 
@@ -173,8 +167,3 @@ corresponding authority. Report the stopping reason and exact saved study ID.
 Output: durable `.waterology/studies/` records, sealed run archives, and a
 concise project handoff. Use `waterology compare-runs` for measurements and
 `waterology report` for a portable Quarto bundle.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT); tree mode from
-openresearch-cli (alphaXiv/openresearch-cli, MIT per Cargo.toml). See
-`ATTRIBUTION.md`.*

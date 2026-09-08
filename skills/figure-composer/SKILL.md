@@ -8,9 +8,6 @@ description: >
 
 # Figure Composer
 
-<!-- Adapted from companion-inc/feynman, skills/figure-composer/SKILL.md at
-commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for panel text, captions, and figure notes.
 
 For multi-panel scientific figures — the composite that carries one argument.
@@ -32,6 +29,3 @@ Stack defaults: assemble panels with **patchwork** or **cowplot** over ggplot2;
 keep a shared legend where panels share an encoding; export vector (PDF/SVG) for
 print. In Quarto, build the composite in one code chunk with a figure caption
 and cross-reference. See `rules/r-conventions.md` and `rules/quarto-conventions.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

@@ -10,11 +10,6 @@ paths:
 
 # Monte Carlo simulation conventions
 
-<!-- Adapted from pedrohcgs/claude-code-my-workflow,
-.claude/rules/simulation-conventions.md at commit
-9d371f0bf8a8bc99569feca3210ef5133af28d33 (MIT, Copyright 2026 Pedro H. C.
-Sant'Anna). See ATTRIBUTION.md. -->
-
 A simulation is an experiment. State its DGP, truth, estimand, assumptions,
 regime, replication budget, and outputs before interpreting a result.
 

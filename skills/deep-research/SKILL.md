@@ -13,9 +13,6 @@ metadata:
 
 # Deep Research
 
-<!-- Adapted from companion-inc/feynman, skills/deep-research/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the research brief and synthesis.
 
 At entry, run `waterology research-access` or MCP `research_access`. Use
@@ -43,6 +40,3 @@ a different library or upload private source files outside the authorized scope.
 
 Agents used: `researcher`, `verifier`, `reviewer`.
 Output: a cited brief in `docs/` (or `papers/`) with a `.provenance.md` sidecar.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

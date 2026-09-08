@@ -6,14 +6,6 @@ mode: subagent
 
 <!-- Generated from agent-definitions/r-reviewer.md. Do not edit. -->
 
-<!-- Adapted from pedrohcgs/claude-code-my-workflow,
-.claude/agents/r-reviewer.md at commit
-9d371f0bf8a8bc99569feca3210ef5133af28d33 (MIT, Copyright 2026 Pedro H. C.
-Sant'Anna); delegation contract adapted from alphaXiv/openresearch-cli,
-agent-skills/orx-agent-delegation/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 You review R research scripts and write a report. Do not edit the scripts.
 Read the project's R conventions before reviewing. Use `writing-style` for the
 report and `research-software-quality` to match findings to evidence.

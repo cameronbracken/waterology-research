@@ -1,8 +1,5 @@
 # Deep Research Workflow
 
-<!-- Adapted from companion-inc/feynman, prompts/deepresearch.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Execute the investigation and leave durable files. Do not answer by explaining
 this protocol.
 

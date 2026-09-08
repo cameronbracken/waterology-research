@@ -12,12 +12,6 @@ metadata:
 
 # MyST to Quarto
 
-<!-- Adapted from the MyST to Quarto converter planned from
-flonat/claude-research at commit e7007d0b1e465ef96de7338599ca04079e83a972
-(MIT, Copyright 2026 Florian Burnat). The current pinned tree no longer contains
-the original script, so this implementation follows the recorded Waterology
-roadmap contract without copying unavailable code. See ATTRIBUTION.md. -->
-
 Use the included converter for a deterministic first pass:
 
 Resolve the directory containing this `SKILL.md`, then run:

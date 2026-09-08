@@ -13,12 +13,6 @@ metadata:
 
 # Replication
 
-<!-- Adapted from companion-inc/feynman, skills/replication/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT), with claim-ledger guidance
-from alphaXiv/openresearch-cli, src/local/skills.rs at commit
-5412465c112b4f81033420db7ff7267ec88106c6 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 Use `writing-style` for the plan, evidence ledger, and report.
 
 For an existing Waterology deliverable, use the CLI reproduction workflow after
@@ -98,8 +92,3 @@ documentation, and repository URLs.
 
 Agents used: `researcher`.
 Output: replication plan, scripts, raw outputs, and a `CHANGELOG.md` trail.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT); claim ledger from
-openresearch-cli (alphaXiv/openresearch-cli, MIT per Cargo.toml). See
-`ATTRIBUTION.md`.*

@@ -12,9 +12,6 @@ metadata:
 
 # Source Comparison
 
-<!-- Adapted from companion-inc/feynman, skills/source-comparison/SKILL.md at
-commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the matrix notes and grounded comparison.
 
 Derive a short slug from the comparison topic. Use lowercase words separated by
@@ -43,6 +40,3 @@ Save exactly one comparison to `docs/<slug>-comparison.md`. End it with a
 
 Agents used: `researcher`, `verifier`.
 Output: `docs/<slug>-comparison.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

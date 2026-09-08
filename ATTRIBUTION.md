@@ -62,15 +62,14 @@ source carry a one-line credit at the top; this page is the canonical list.
   (passport), `9d371f0bf8a8bc99569feca3210ef5133af28d33` (review and build tools)
 - **License:** MIT — © 2026 Pedro H. C. Sant'Anna
 - **Original paths:** `.claude/skills/audit-reproducibility/SKILL.md`,
-  `.claude/hooks/claim-reconcile.py`, `templates/passport-template.yaml`,
+  `templates/passport-template.yaml`,
   `.claude/agents/{r-reviewer,sim-reviewer}.md`,
   `.claude/rules/simulation-conventions.md`, and
   `.claude/skills/{simulation-study,capture-environment,compile-latex}/SKILL.md`.
 - **What we adapt:** the reproducibility **passport**
-  (`audit-reproducibility` skill, `passport.yaml` schema, and the
-  `claim-reconcile.py` STALE detection hook). The portable version adds
-  Fortran and fixed-width outputs, removes Stata specific material, and keeps
-  the hook specific to the Claude plugin. The Monte Carlo trio
+  (`audit-reproducibility` skill and `passport.yaml` schema). The portable
+  version adds Fortran and fixed-width outputs and removes Stata specific
+  material. The Monte Carlo trio
   (`simulation-study`, `sim-reviewer`, and simulation conventions), the
   `r-reviewer`, environment capture, and LaTeX compile workflow are also
   adapted. Stata, economic estimator examples, and product specific control

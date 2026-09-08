@@ -13,9 +13,6 @@ metadata:
 
 # ML Training Recipe
 
-<!-- Adapted from companion-inc/feynman, skills/ml-training-recipe/SKILL.md at
-commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the recipe, comparisons, and recommendation.
 
 Derive a short slug from the task. Create these artifacts:
@@ -62,6 +59,3 @@ the provenance file.
 
 Agents used: `researcher`.
 Output: `docs/<slug>-recipe.md` with `docs/<slug>-recipe.provenance.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

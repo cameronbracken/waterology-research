@@ -1,5 +1,3 @@
-# Adapted from Superpowers 6.3.0 using-git-worktrees (obra/superpowers, MIT),
-# with Waterology-specific isolation rules. See ATTRIBUTION.md.
 cases:
   - id: clean-documentation
     situation: One writer, clean checkout, documentation only, no behavior change.

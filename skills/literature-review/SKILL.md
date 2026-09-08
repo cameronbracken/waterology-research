@@ -13,12 +13,6 @@ metadata:
 
 # Literature Review
 
-<!-- Adapted from companion-inc/feynman, skills/literature-review/SKILL.md at
-commit 8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT), with multi-hop search from
-alphaXiv/openresearch-cli, agent-skills/orx-lit-review/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 Use `writing-style` for the review and source synthesis.
 
 At entry, run `waterology research-access` or MCP `research_access`. Use
@@ -85,8 +79,3 @@ files exist before reporting completion.
 
 Agents used: `researcher`, `verifier`, `reviewer`.
 Output: `docs/<slug>.md` with `docs/<slug>.provenance.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT); multi-hop search from
-openresearch-cli (alphaXiv/openresearch-cli, MIT per Cargo.toml). See
-`ATTRIBUTION.md`.*

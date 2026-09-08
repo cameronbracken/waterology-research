@@ -26,7 +26,6 @@ commands/           Claude Code compatibility commands
 rules/              path scoped conventions
 constraints/        paired checks run by check-all.py
 templates/          reproducibility record templates
-hooks/              Claude Code plugin event hooks
 .mcp.json           Claude Code and Codex plugin MCP registration
 .codex/config.toml  Codex project MCP registration
 opencode.json       OpenCode project MCP registration
@@ -350,9 +349,7 @@ source text on disk and reads it in bounded windows.
 
 The `audit-reproducibility` skill compares numeric manuscript claims with R,
 Python, Fortran, and text outputs. It records provenance and tolerance results
-in `quality_reports/passports/`. The Claude plugin hook marks affected claims
-`STALE` after a tracked source or output edit. Codex and OpenCode use the same
-skill and passport, but do not install the Claude specific hook.
+in `quality_reports/passports/`.
 
 The completed research feature set adds Monte Carlo design and review,
 environment capture, bibliography validation, pipeline manifests with Fortran

@@ -12,13 +12,6 @@ metadata:
 
 # Session Log
 
-<!-- Adapted from companion-inc/feynman, skills/session-log/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
-<!-- Checkpoint guidance adapted from ECC skills/strategic-compact/SKILL.md at
-commit e04ea0b9cc8248686edf5ac751cadff550e162b8, MIT, copyright 2026 Affaan Mustafa.
-See ATTRIBUTION.md. -->
-
 Use `writing-style` for the durable log.
 
 Write a session log for the current work. Capture completed work, the strongest
@@ -37,6 +30,3 @@ and ordered restart steps before context is discarded. Link verified artifacts
 instead of copying complete logs. Use `project-learning` to extract supported
 reusable lessons from the handoff. The narrative log and the lesson evidence
 serve different purposes; neither replaces the other.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

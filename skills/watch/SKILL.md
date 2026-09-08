@@ -12,9 +12,6 @@ metadata:
 
 # Watch
 
-<!-- Adapted from companion-inc/feynman, skills/watch/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the baseline, update summaries, and alerts.
 
 Derive a short slug from the watch topic. Use lowercase words separated by
@@ -36,6 +33,3 @@ local cron or task scheduler recipe and keep `Scheduling: manual`. Do not claim
 that monitoring is active until the schedule exists and its next run is known.
 
 Output: `docs/<slug>-baseline.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

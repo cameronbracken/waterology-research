@@ -8,11 +8,6 @@ paths:
 
 # Import computed results
 
-<!-- Adapted from flonat/claude-research, rules/no-hardcoded-results.md at
-commit e7007d0b1e465ef96de7338599ca04079e83a972 (MIT, Copyright 2026 Florian
-Burnat). Quarto support is an original Waterology addition. See
-ATTRIBUTION.md. -->
-
 Computed coefficients, uncertainty, p-values, counts, percentages, and table
 cells must come from the analysis outputs. Do not copy them into prose or a
 handwritten table.

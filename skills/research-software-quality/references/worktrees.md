@@ -1,7 +1,5 @@
 # Git Worktree Cutoff
 
-<!-- Adapted from Superpowers 6.3.0 using-git-worktrees (obra/superpowers, MIT), with Waterology-specific isolation rules. See ATTRIBUTION.md. -->
-
 Before editing, inspect the branch, status, worktree inventory, Git directory,
 and common Git directory. If already in a linked worktree, use it. Do not create
 a nested worktree.

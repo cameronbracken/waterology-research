@@ -1,7 +1,5 @@
 # Testing and Debugging
 
-<!-- Adapted from Superpowers 6.3.0 test-driven-development and systematic-debugging (obra/superpowers, MIT). See ATTRIBUTION.md. -->
-
 ## Behavior changes
 
 - Define the observable behavior before implementation.

@@ -12,16 +12,9 @@ metadata:
 
 # Source Summarization
 
-<!-- Adapted from companion-inc/feynman, prompts/summarize.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the summary.
 
 Read [workflow.md](references/workflow.md) and follow its bounded read,
 checkpoint, coverage, and single source citation rules.
 
 Output: `docs/<slug>-summary.md`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See
-`ATTRIBUTION.md`.*

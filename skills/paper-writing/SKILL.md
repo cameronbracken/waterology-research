@@ -13,11 +13,6 @@ metadata:
 
 # Paper and Report Writing
 
-<!-- Adapted from companion-inc/feynman, skills/paper-writing/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-<!-- Dark palette guidance adapts the published VIDA-Lab/Chameleon method.
-See ATTRIBUTION.md. -->
-
 Use `writing-style` and its scientific prose layer for the draft and final
 edit. Use `project-conventions` for Quarto settings and local research
 preferences. Apply `figure-style` to every plot.
@@ -163,6 +158,3 @@ claim review rules as report mode. Interactive graphics are optional for a
 paper and do not replace publication figures.
 
 Agents used when available and authorized: `writer`, `verifier`, and `reviewer`.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

@@ -8,11 +8,6 @@ description: >
 
 # Agent Delegation
 
-<!-- Adapted from alphaXiv/openresearch-cli,
-agent-skills/orx-agent-delegation/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 Delegate only work with a clean independent boundary, such as surveying an
 unfamiliar code area, gathering a distinct evidence set, or writing from
 completed results. Keep dependent decisions, central synthesis, and an active
@@ -50,7 +45,3 @@ Require the agent to save its artifact to the assigned output path and return a
 short status with that path, checks performed, evidence produced, and blockers.
 Inspect the artifact rather than treating the closing message as evidence.
 Integrate edits only after checking ownership, diff, and verification results.
-
----
-*Adapted from openresearch-cli (alphaXiv/openresearch-cli, MIT per
-Cargo.toml). See `ATTRIBUTION.md`.*

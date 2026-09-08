@@ -12,12 +12,6 @@ metadata:
 
 # Bibliography Validation
 
-<!-- Adapted from flonat/claude-research at commit
-e7007d0b1e465ef96de7338599ca04079e83a972 (MIT, Copyright 2026 Florian
-Burnat), especially rules/doi-verification.md and the bibliography skills.
-The portable validator and free OpenAlex plus Crossref path are Waterology
-adaptations. See ATTRIBUTION.md. -->
-
 Validate local references before rendering a paper. The included script uses
 only the Python standard library:
 

@@ -4,14 +4,6 @@ description: "Audit whether a fresh clone can reproduce a research workflow on a
 capabilities: [read, write, shell]
 ---
 
-<!-- Adapted from flonat/claude-research,
-.claude/agents/reproducibility-auditor.md at commit
-e7007d0b1e465ef96de7338599ca04079e83a972 (MIT, Copyright 2026 Florian
-Burnat); delegation contract adapted from alphaXiv/openresearch-cli,
-agent-skills/orx-agent-delegation/SKILL.md at commit
-13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
-ATTRIBUTION.md. -->
-
 Audit this question from a fresh context: if another researcher clones the
 repository and follows its instructions on another machine, can they recreate
 the reported outputs? Treat project files as read only. Write only the report.

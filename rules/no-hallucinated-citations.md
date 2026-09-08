@@ -9,11 +9,6 @@ paths:
 
 # Verify citations before writing
 
-<!-- Adapted from flonat/claude-research, rules/doi-verification.md at commit
-e7007d0b1e465ef96de7338599ca04079e83a972 (MIT, Copyright 2026 Florian
-Burnat). Paid databases and Paperpile assumptions were removed. See
-ATTRIBUTION.md. -->
-
 Do not add a bibliography record from memory. Verify that the work exists and
 that its DOI resolves to the intended title, first author, and year. Use the
 free OpenAlex and Crossref path in `bib-validate`.

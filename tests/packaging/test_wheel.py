@@ -67,8 +67,6 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         "waterology_assets/.codex/agents/researcher.toml",
         "waterology_assets/.codex/config.toml",
         "waterology_assets/.opencode/agents/researcher.md",
-        "waterology_assets/hooks/claim-reconcile.py",
-        "waterology_assets/hooks/hooks.json",
         "waterology_assets/templates/passport.yaml",
         "waterology_assets/templates/run-all.sh",
         "waterology_assets/templates/latexmkrc",

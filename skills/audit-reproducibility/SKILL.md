@@ -12,12 +12,6 @@ metadata:
 
 # Audit Reproducibility
 
-<!-- Adapted from pedrohcgs/claude-code-my-workflow,
-.claude/skills/audit-reproducibility/SKILL.md at commit
-cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6 (MIT, Copyright 2026 Pedro H. C.
-Sant'Anna). The Material Passport concept is credited upstream to
-Imbad0202/academic-research-skills. See ATTRIBUTION.md. -->
-
 Use `writing-style` for the audit report. Read
 [references/passport-schema.md](references/passport-schema.md) before creating
 or updating a passport.
@@ -136,8 +130,3 @@ evidence and do not describe the manuscript as fully verified while any remain.
 
 Output: claim extraction, updated passport when present, and reproducibility
 audit report.
-
----
-*Adapted from pedrohcgs/claude-code-my-workflow (MIT, Copyright 2026 Pedro H.
-C. Sant'Anna). Material Passport concept credited to
-Imbad0202/academic-research-skills. See `ATTRIBUTION.md`.*

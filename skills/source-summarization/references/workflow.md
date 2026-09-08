@@ -1,8 +1,5 @@
 # Source Summarization Workflow
 
-<!-- Adapted from companion-inc/feynman, prompts/summarize.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Keep long source text on disk and read bounded windows. Derive a lowercase,
 hyphenated slug from the source name or URL domain with at most five words.
 

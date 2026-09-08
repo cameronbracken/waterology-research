@@ -9,9 +9,6 @@ description: >
 
 # ELI5
 
-<!-- Adapted from companion-inc/feynman, skills/eli5/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for the explanation.
 
 Explain a paper or idea simply, without dumbing down what it actually shows.
@@ -36,6 +33,3 @@ Guidelines:
 - One good analogy beats several weak ones.
 - Keep what the paper actually shows separate from interpretation or speculation.
 - Keep it inline unless the user asks to save it as an artifact.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*

@@ -1,11 +1,5 @@
 # Reproducibility Passport Schema
 
-<!-- Adapted from pedrohcgs/claude-code-my-workflow,
-templates/passport-template.yaml at commit
-cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6 (MIT, Copyright 2026 Pedro H. C.
-Sant'Anna). The Material Passport concept is credited upstream to
-Imbad0202/academic-research-skills. See ATTRIBUTION.md. -->
-
 A passport is a YAML record at
 `quality_reports/passports/<paper-slug>.yaml`. Copy
 `templates/passport.yaml` when the Waterology source assets are available, or

@@ -12,10 +12,6 @@ metadata:
 
 # Project Learning
 
-<!-- Adapted from ECC skills/continuous-learning-v2/SKILL.md at commit
-e04ea0b9cc8248686edf5ac751cadff550e162b8, MIT, copyright 2026 Affaan Mustafa.
-See ATTRIBUTION.md. -->
-
 Use the existing research-software-quality workflow for plan, test, implement,
 review and verify. Add remember and improve at meaningful checkpoints.
 This skill owns reusable lessons. Session-log continues to own narrative handoffs.

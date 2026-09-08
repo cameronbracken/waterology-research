@@ -8,9 +8,6 @@ description: >
 
 # PDF Explore
 
-<!-- Adapted from companion-inc/feynman, skills/pdf-explore/SKILL.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
-
 Use `writing-style` for extracted notes, comparisons, and summaries.
 
 Use when a PDF answer depends on more than one page or section.
@@ -29,6 +26,3 @@ Use when a PDF answer depends on more than one page or section.
 Do not answer from a single visible page when the question spans methods,
 figures, or supplements. For a whole-document summary of a long PDF, use
 `source-summarization`, which keeps the text on disk and reads bounded windows.
-
----
-*Adapted from Feynman (companion-inc/feynman, MIT). See `ATTRIBUTION.md`.*
