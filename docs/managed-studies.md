@@ -343,3 +343,30 @@ See the [implementation validation record](validation/2026-09-05-managed-workflo
 for completed checks and the remaining limits.
 The [learning/Zotero validation record](validation/2026-09-05-ecc-zotero.md)
 covers this extension and separates offline verification from live account access.
+
+### Recover a rejected submission
+
+A study with a saved submitting attempt and no TORC workflow ID remains blocked.
+After correcting authentication, an operator can retry a definitive TORC create
+401 or 403 rejection:
+
+```sh
+waterology study retry-submission STUDY_ID RUN_ID --path PROJECT
+```
+
+This command requires `TORC_PASSWORD` or `TORC_COOKIE_HEADER` in the process
+environment. It queries all accessible workflows, including archived workflows,
+and refuses recovery if exact Waterology run metadata or its generated workflow
+name is present. An unavailable or unfamiliar inventory response blocks recovery.
+The saved error must match TORC's explicit create authorization rejection.
+Timeouts and other ambiguous failures cannot use this command.
+
+The controller holds the project lock, checks the study deadline and stop state,
+and verifies the candidate, input files, profile, saved workflow, and original
+output signatures. It launches the same saved run ID and execution snapshot.
+The attempt count and model retry budget stay unchanged. Original rejection
+metadata and the inventory are retained in `submission-recovery.json`, alongside
+an event audit. A durable marker allows only one recovery attempt, so a crash or
+another launch failure requires reconciliation before any further action.
+Recovery currently supports local and remote profiles. It does not support
+Slurm submissions or change a stopped or expired study's authorization.

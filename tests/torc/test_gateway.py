@@ -28,6 +28,7 @@ def test_cli_gateway_creates_workflow_with_json_contract(
             stderr="",
         )
 
+    monkeypatch.setenv("TORC_API_URL", "http://wrong-server:8080")
     monkeypatch.setattr(subprocess, "run", fake_run)
     workflow = tmp_path / "workflow.yaml"
     workflow.write_text("name: test\n", encoding="utf-8")
@@ -40,6 +41,7 @@ def test_cli_gateway_creates_workflow_with_json_contract(
     assert calls[0][0] == ["torc", "--format", "json", "create", str(workflow)]
     assert calls[0][1] == tmp_path
     assert calls[0][2]["TORC_CLIENT__API_URL"] == "http://localhost:8080/torc-service/v1"
+    assert calls[0][2]["TORC_API_URL"] == "http://localhost:8080/torc-service/v1"
 
 
 def test_cli_gateway_reports_missing_binary(
@@ -378,3 +380,29 @@ def test_cli_gateway_launches_each_supported_mode(
 def test_graph_terminal_states(counts, expected):
     from waterology.torc.gateway import _state_from_status_counts
     assert _state_from_status_counts(counts) == expected
+
+
+def test_recovery_inventory_requires_credentials(monkeypatch, tmp_path):
+    monkeypatch.delenv("TORC_PASSWORD", raising=False)
+    monkeypatch.delenv("TORC_COOKIE_HEADER", raising=False)
+    with pytest.raises(TorcCommandError, match="authentication"):
+        TorcCliGateway("http://localhost:8080").workflow_inventory(cwd=tmp_path)
+
+
+@pytest.mark.parametrize("payload", [{"items": []}, {"items": [], "next": "page2"}])
+def test_recovery_inventory_requests_all_accessible_workflows(monkeypatch, tmp_path, payload):
+    calls = []
+    monkeypatch.setenv("TORC_PASSWORD", "test-password")
+
+    def run(arguments, **kwargs):
+        calls.append(arguments)
+        return subprocess.CompletedProcess(arguments, 0, stdout=json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    gateway = TorcCliGateway("http://localhost:8080")
+    if "next" in payload:
+        with pytest.raises(TorcCommandError, match="incomplete"):
+            gateway.workflow_inventory(cwd=tmp_path)
+    else:
+        assert gateway.workflow_inventory(cwd=tmp_path) == payload
+    assert calls == [["torc", "--format", "json", "workflows", "list", "--all-users", "--include-archived"]]

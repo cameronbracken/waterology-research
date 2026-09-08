@@ -718,3 +718,219 @@ def test_legacy_claim_assessment_requires_fresh_review(sealed_run):
     path = root / ".waterology/claims" / f"{assessment['id']}.json"
     path.write_text(json.dumps(assessment))
     assert verify_claim(root, claim)["status"] == "STALE"
+
+
+class RejectedGateway(Gateway):
+    def launch(self, *args, **kwargs):
+        from waterology.torc.gateway import TorcCommandError
+        raise TorcCommandError(
+            'Error creating workflow from spec: Failed to create workflow: '
+            'ResponseError(ResponseContent { status: 401, content: "Unauthorized", entity: None })'
+        )
+
+
+def blocked_submission(study_project, monkeypatch):
+    root, _, _, spec = study_project
+    monkeypatch.setattr(
+        studies, "start_torc_run",
+        lambda *a, **kw: start_torc_run(*a, **kw, gateway=RejectedGateway()),
+    )
+    record = studies.create_study(root, spec, authorized_by="user: bounded test")
+    return studies.advance_study(root, record.id)
+
+
+class RecoveryGateway(Gateway):
+    def __init__(self, items=()):
+        self.items = items
+        self.launches = 0
+
+    def workflow_inventory(self, *, cwd):
+        return {"items": list(self.items)}
+
+    def launch(self, *args, **kwargs):
+        self.launches += 1
+        return super().launch(*args, **kwargs)
+
+
+def test_recover_rejected_submission_preserves_attempt(study_project, monkeypatch):
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    attempt = blocked.attempts[0]
+    staging = root / ".waterology/staging" / attempt.run_id
+    originals = {name: (staging / name).read_bytes() for name in ("execution-config.json", "torc-workflow.yaml", "study.json")}
+    gateway = RecoveryGateway()
+    recovered = studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
+    assert all((staging / name).read_bytes() == content for name, content in originals.items())
+    assert (staging / "submission-recovery.json").is_file()
+    assert recovered.state == "running"
+    assert len(recovered.attempts) == 1
+    assert recovered.attempts[0].run_id == attempt.run_id
+    assert recovered.attempts[0].retry == 0
+    assert recovered.attempts[0].commit_sha == attempt.commit_sha
+    assert gateway.launches == 1
+    with pytest.raises(studies.StudyError):
+        studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
+    assert gateway.launches == 1
+
+
+@pytest.mark.parametrize("reason", ["found", "ambiguous", "inventory_error", "interrupted"])
+def test_recovery_refuses_uncertain_submission(study_project, monkeypatch, reason):
+    import json
+
+    from waterology.torc.gateway import TorcUnavailableError
+
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    attempt = blocked.attempts[0]
+    staging = root / ".waterology/staging" / attempt.run_id
+    gateway = RecoveryGateway()
+    if reason == "found":
+        gateway.items = ({"id": 42, "metadata": {"waterology_run_id": attempt.run_id}},)
+    elif reason == "ambiguous":
+        path = staging / "torc.json"
+        payload = json.loads(path.read_text())
+        payload["error"] = "connection timed out after 401 retries"
+        path.write_text(json.dumps(payload))
+    elif reason == "inventory_error":
+        def unavailable(**kwargs):
+            raise TorcUnavailableError("401 unauthorized")
+        gateway.workflow_inventory = unavailable
+    else:
+        (staging / "submission-recovery.json").write_text('{"state":"launching"}')
+    with pytest.raises((studies.StudyError, TorcUnavailableError)):
+        studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
+    assert gateway.launches == 0
+
+
+@pytest.mark.parametrize("change", ["commit", "profile", "workflow", "outputs", "stop"])
+def test_recovery_keeps_execution_contract(study_project, monkeypatch, change):
+    root, worktree, machine, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    attempt = blocked.attempts[0]
+    staging = root / ".waterology/staging" / attempt.run_id
+    if change == "commit":
+        (worktree / "model.py").write_text("print(3)\n")
+        git(worktree, "add", "model.py")
+        git(worktree, "-c", "commit.gpgsign=false", "commit", "-qm", "changed")
+    elif change == "profile":
+        machine.write_text('[profiles.local]\nmode="local"\napi_url="http://other:8080"\n')
+    elif change == "workflow":
+        with (staging / "torc-workflow.yaml").open("a") as stream:
+            stream.write("# changed\n")
+    elif change == "outputs":
+        (worktree / "results").mkdir()
+        (worktree / "results/metrics.json").write_text('{"error":0.5}')
+    else:
+        studies._stop_path(root, blocked.id).write_text("{}")
+    gateway = RecoveryGateway()
+    with pytest.raises(studies.StudyError):
+        studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
+    assert gateway.launches == 0
+
+
+def test_failed_recovery_cannot_replay(study_project, monkeypatch):
+    from waterology.torc.gateway import TorcUnavailableError
+
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    attempt = blocked.attempts[0]
+
+    class TimeoutGateway(RecoveryGateway):
+        def launch(self, *args, **kwargs):
+            self.launches += 1
+            raise TorcUnavailableError("timed out")
+
+    gateway = TimeoutGateway()
+    for _ in range(2):
+        with pytest.raises(studies.StudyError):
+            studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
+    assert gateway.launches == 1
+
+
+def test_concurrent_submission_recovery_launches_once(study_project, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    attempt = blocked.attempts[0]
+    gateway = RecoveryGateway()
+    barrier = Barrier(2)
+
+    def retry():
+        barrier.wait(timeout=10)
+        try:
+            return studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway).state
+        except studies.StudyError:
+            return "refused"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: retry(), range(2)))
+    assert sorted(results) == ["refused", "running"]
+    assert gateway.launches == 1
+
+
+def test_recovery_cli_does_not_print_credentials(study_project, monkeypatch):
+    from typer.testing import CliRunner
+
+    from waterology.cli import app
+    from waterology.torc import submission_recovery
+
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    gateway = RecoveryGateway()
+    monkeypatch.setenv("TORC_PASSWORD", "private-test-password")
+    monkeypatch.setattr(submission_recovery, "TorcCliGateway", lambda url: gateway)
+    result = CliRunner().invoke(app, [
+        "study", "retry-submission", blocked.id, blocked.attempts[0].run_id,
+        "--path", str(root),
+    ])
+    assert result.exit_code == 0, result.output
+    assert "private-test-password" not in result.output
+    assert gateway.launches == 1
+
+
+def test_stop_during_inventory_prevents_recovery(study_project, monkeypatch):
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    gateway = RecoveryGateway()
+
+    def inventory(**kwargs):
+        studies._stop_path(root, blocked.id).write_text("{}")
+        return {"items": []}
+
+    gateway.workflow_inventory = inventory
+    with pytest.raises(studies.StudyError, match="stopped"):
+        studies.retry_submission(root, blocked.id, blocked.attempts[0].run_id, gateway=gateway)
+    assert gateway.launches == 0
+
+
+def test_recovery_accepts_explicit_forbidden_create(study_project, monkeypatch):
+    import json
+
+    root, _, _, _ = study_project
+    blocked = blocked_submission(study_project, monkeypatch)
+    attempt = blocked.attempts[0]
+    metadata = root / ".waterology/staging" / attempt.run_id / "torc.json"
+    payload = json.loads(metadata.read_text())
+    payload["error"] = payload["error"].replace("401", "403").replace("Unauthorized", "Forbidden")
+    metadata.write_text(json.dumps(payload))
+    gateway = RecoveryGateway()
+    assert studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway).state == "running"
+    assert gateway.launches == 1
+
+
+def test_recovery_rechecks_pinned_input_bytes(study_project, monkeypatch):
+    import hashlib
+
+    root, worktree, machine, spec = study_project
+    (worktree / "results").mkdir()
+    source = worktree / "results/input.txt"
+    source.write_text("original input")
+    spec = spec.model_copy(update={"input_files": {"results/input.txt": hashlib.sha256(source.read_bytes()).hexdigest()}})
+    blocked = blocked_submission((root, worktree, machine, spec), monkeypatch)
+    source.write_text("changed input")
+    gateway = RecoveryGateway()
+    with pytest.raises(studies.StudyError, match="Input identity mismatch"):
+        studies.retry_submission(root, blocked.id, blocked.attempts[0].run_id, gateway=gateway)
+    assert gateway.launches == 0

@@ -63,6 +63,8 @@ class TorcGateway(Protocol):
 
     def version(self, *, cwd: Path) -> str: ...
 
+    def workflow_inventory(self, *, cwd: Path) -> dict[str, object]: ...
+
     def collect_logs(self, workflow_id: str, destination: Path, *, cwd: Path) -> None: ...
 
     def results(self, workflow_id: str, *, cwd: Path) -> object: ...
@@ -224,6 +226,17 @@ class TorcCliGateway:
     def results(self, workflow_id: str, *, cwd: Path) -> object:
         return self._json(["results", "list", workflow_id], cwd=cwd)
 
+    def workflow_inventory(self, *, cwd: Path) -> dict[str, object]:
+        """Read every accessible workflow, including archived and other owners."""
+        if not (os.environ.get("TORC_PASSWORD") or os.environ.get("TORC_COOKIE_HEADER")):
+            raise TorcCommandError("Recovery inventory requires explicit TORC authentication")
+        payload = self._json(
+            ["workflows", "list", "--all-users", "--include-archived"], cwd=cwd
+        )
+        if set(payload) != {"items"} or not isinstance(payload["items"], list):
+            raise TorcCommandError("Recovery inventory has an unknown or incomplete response schema")
+        return payload
+
     def health(self, *, cwd: Path) -> dict[str, object]:
         return self._json(["workflows", "list", "--limit", "1"], cwd=cwd)
 
@@ -250,6 +263,7 @@ class TorcCliGateway:
         command.extend(arguments)
         environment = os.environ.copy()
         environment["TORC_CLIENT__API_URL"] = self.api_url
+        environment["TORC_API_URL"] = self.api_url
         try:
             completed = subprocess.run(
                 command,
@@ -300,6 +314,7 @@ class TorcCliGateway:
         command = [self.executable, *arguments]
         environment = os.environ.copy()
         environment["TORC_CLIENT__API_URL"] = self.api_url
+        environment["TORC_API_URL"] = self.api_url
         try:
             with stdout_path.open("ab") as stdout, stderr_path.open("ab") as stderr:
                 process = subprocess.Popen(

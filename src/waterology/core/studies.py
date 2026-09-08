@@ -519,6 +519,32 @@ def _advance_study(start: Path, identifier: str) -> StudyRecord:
             return _save(start, record.model_copy(update={"state": "blocked", "reason": reason}))
 
 
+def retry_submission(start: Path, identifier: str, run_id: str, *, gateway=None) -> StudyRecord:
+    """Retry one definitive authorization rejection without spending an evaluation."""
+    from waterology.torc.submission_recovery import retry_rejected_submission
+
+    with project_state_lock(start):
+        record = load_study(start, identifier)
+        if (
+            record.stop_requested or record.state in {"complete", "stopped", "exhausted", "stopping"}
+            or _stop_path(start, identifier).exists()
+            or (datetime.now(UTC) - datetime.fromisoformat(record.authorized_at)).total_seconds()
+            >= record.contract.max_seconds
+        ):
+            raise StudyError("Study is stopped or its authorization has expired")
+        attempt = next((a for a in record.attempts if a.run_id == run_id), None)
+        if attempt is None or attempt.state != "submitting":
+            raise StudyError("Recovery requires a saved submitting study attempt")
+        if _validate_candidate(start, record, attempt.experiment_id) != attempt.commit_sha:
+            raise StudyError("Candidate commit changed before submission recovery")
+        reference = retry_rejected_submission(start, record, attempt, gateway=gateway)
+        updated = attempt.model_copy(update={"state": "running", "result": {"reference": reference.model_dump(mode="json")}})
+        return _save(start, record.model_copy(update={
+            "state": "running", "reason": None,
+            "attempts": tuple(updated if a.run_id == run_id else a for a in record.attempts),
+        }))
+
+
 def _stop_path(start: Path, identifier: str) -> Path:
     return _path(start, identifier).with_suffix(".stop")
 

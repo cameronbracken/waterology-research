@@ -67,6 +67,14 @@ def advance(identifier: str, path: Path = _PATH_OPTION):
     emit(advance_study(path, identifier))
 
 
+@study_app.command("retry-submission")
+def retry_submission(identifier: str, run_id: str, path: Path = _PATH_OPTION):
+    """Recover a definitive create authorization rejection using live TORC inventory."""
+    from waterology.core.studies import retry_submission as recover
+
+    emit(recover(path, identifier, run_id))
+
+
 @study_app.command("stop")
 def stop(identifier: str, path: Path = _PATH_OPTION):
     emit(stop_study(path, identifier))
