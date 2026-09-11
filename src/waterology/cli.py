@@ -60,6 +60,7 @@ from waterology.runtime.mcp import registration_command, runtime_mcp_config
 from waterology.runtime.render import GeneratedAssetsStaleError, render_assets
 from waterology.runtime.validate import ValidationIssue, validate_assets
 from waterology.torc.runs import cancel_torc_run, inspect_torc_run
+from waterology.user_config_cli import register_user_config_commands
 from waterology.workflow_cli import register_workflow_commands
 
 app = typer.Typer(
@@ -84,9 +85,10 @@ app.add_typer(mcp_app, name="mcp")
 app.add_typer(compute_app, name="compute")
 compute_app.add_typer(profile_app, name="profile")
 register_workflow_commands(app)
-from waterology.execution_cli import register_execution_commands
+from waterology.execution_cli import config_app, register_execution_commands
 
 register_execution_commands(app)
+register_user_config_commands(config_app)
 
 _INSTALL_SCOPE_OPTION = typer.Option(InstallScope.PROJECT, "--scope")
 _INSTALL_TARGET_OPTION = typer.Option(Path("."), "--target")
@@ -107,7 +109,9 @@ def _version(value: bool) -> None:
 @app.callback()
 def main(
     ctx: typer.Context,
-    output_format: str = typer.Option("nestedtext", "--output-format", help="Managed workflow output: nestedtext or json."),
+    output_format: str = typer.Option(
+        "nestedtext", "--output-format", help="Managed workflow output: nestedtext or json."
+    ),
     version: bool = typer.Option(
         False,
         "--version",
@@ -673,10 +677,15 @@ def run_start_command(
         if not json_output:
             _console().print(f"Starting {provider_name} run for {experiment_id}...")
         payload = services.start_run(
-            path, experiment_id, profile=profile, run_id=run_id,
+            path,
+            experiment_id,
+            profile=profile,
+            run_id=run_id,
             confirm_remote=confirm_remote,
         )
-        run = (RunManifest if provider_name == "direct" else ManagedRunRecord).model_validate(payload)
+        run = (RunManifest if provider_name == "direct" else ManagedRunRecord).model_validate(
+            payload
+        )
     except Exception as error:
         _show_core_failure(error, json_output=json_output, title="Run failed")
         raise typer.Exit(1) from error

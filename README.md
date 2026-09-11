@@ -14,6 +14,14 @@ commands are generated compatibility shims that invoke the canonical skills.
 The installed `wgy` command is an alias for `waterology` and accepts the same
 subcommands and options, for example `wgy workflow list`.
 
+## Personal settings
+
+Installations contain no personal identity, machine inventory, or writing corpus.
+Use `waterology config init` to create optional private user settings. Existing
+machine profiles remain in the same global file. See
+[Personal configuration](docs/local-configuration.md) for preferences, writing
+examples, local guidance, and the configurable dashboard launcher.
+
 ## What's here
 
 ```

@@ -4,7 +4,6 @@
   "description": "Reproducible computational research workflows for Claude Code, Codex, and OpenCode.",
   "author": {
     "name": "Cameron Bracken",
-    "email": "researcher@example.org",
     "url": "https://codeberg.org/waterology"
   },
   "homepage": "https://codeberg.org/waterology/waterology-research",

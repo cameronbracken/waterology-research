@@ -8,11 +8,17 @@ description: >
 
 # Figure Style
 
-Use `writing-style` for labels, annotations, and captions.
+Use `writing-style` for labels, annotations, and captions. Run
+`waterology config context figure-style` for optional local design guidance.
+Project and local choices take precedence over the example stack below.
 
 Apply before producing or revising any single plot. This is the research-figure
 layer; for general chart-design method (palette construction, mark specs), also
 see the `dataviz` skill.
+
+If the CLI is unavailable, use the shared
+[local preferences resolver](../project-conventions/references/local-preferences.md)
+with this skill name, including common preferences and matching local guidance.
 
 Checklist:
 
@@ -23,8 +29,7 @@ Checklist:
    anomaly), and show uncertainty or replicate structure when it exists
    (ribbons, error bars, or the raw ensemble behind a mean).
 3. **Color carries meaning only.** Use it for real grouping, keep palettes
-   colorblind-safe (Okabe-Ito for categories, viridis for sequential), lean on
-   earth tones, and keep the mapping consistent across panels.
+   colorblind-safe (Okabe-Ito for categories, viridis for sequential), and keep the mapping consistent across panels.
 4. **Separate figures with whitespace, not container chrome.** Do not add a
    border, rounded box, background card, or shadow around a plot unless the
    boundary encodes information. For report HTML, use the bundled

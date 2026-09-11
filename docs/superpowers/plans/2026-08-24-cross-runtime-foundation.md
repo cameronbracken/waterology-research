@@ -25,7 +25,7 @@
 - Keep the implementation portable across Linux, macOS, and Windows.
 - Format and lint Python with Ruff.
 - Run implementation work through test driven development.
-- Sign every commit as `cameronbracken <researcher@example.org>` and never add a coauthor trailer.
+- Sign every commit as `researcher <researcher@example.org>` and never add a coauthor trailer.
 - Do not push.
 
 ## Planned file map
@@ -236,7 +236,7 @@ Expected: exit 0.
 
 ```bash
 git add pyproject.toml pixi.toml src tests/test_cli.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: add waterology command package"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: add waterology command package"
 ```
 
 ### Task 2: Asset discovery in checkouts and wheels
@@ -359,7 +359,7 @@ Expected: 2 passed.
 
 ```bash
 git add pyproject.toml src/waterology/runtime/assets.py tests/runtime/test_assets.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: discover packaged waterology assets"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: discover packaged waterology assets"
 ```
 
 ### Task 3: Canonical agent definitions
@@ -506,7 +506,7 @@ Expected: exit 0.
 
 ```bash
 git add agent-definitions src/waterology/runtime/agents.py tests/runtime/test_agents.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "refactor: define runtime-neutral research agents"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "refactor: define runtime-neutral research agents"
 ```
 
 ### Task 4: Native agent renderers
@@ -713,7 +713,7 @@ Expected: exit 0 with no changed files.
 
 ```bash
 git add .gitignore agent-definitions agents .codex/agents .opencode/agents src/waterology/runtime/render.py tests/runtime/test_render.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: render agents for three runtimes"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: render agents for three runtimes"
 ```
 
 ### Task 5: Runtime manifests and asset validation
@@ -930,7 +930,7 @@ Expected: valid plugin, complete fields, and no missing asset paths.
 
 ```bash
 git add .claude-plugin .codex-plugin src/waterology/runtime/validate.py tests/runtime/test_validate.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: add codex plugin manifest"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: add codex plugin manifest"
 ```
 
 ### Task 6: Safe install planning
@@ -1078,7 +1078,7 @@ Expected: 3 passed.
 
 ```bash
 git add src/waterology/runtime/install.py tests/runtime/test_install_plan.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: plan runtime asset installs"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: plan runtime asset installs"
 ```
 
 ### Task 7: Collision safe copy and link installation
@@ -1275,7 +1275,7 @@ Expected: exit 0.
 
 ```bash
 git add src/waterology/runtime/install.py tests/runtime/test_install_apply.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: install runtime assets safely"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: install runtime assets safely"
 ```
 
 ### Task 8: Install, render, and doctor commands
@@ -1428,7 +1428,7 @@ Expected: all tests pass.
 
 ```bash
 git add src/waterology/cli.py src/waterology/runtime/doctor.py tests/test_install_cli.py tests/runtime/test_doctor.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "feat: add runtime install and doctor commands"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "feat: add runtime install and doctor commands"
 ```
 
 ### Task 9: Canonical guidance and three-runtime documentation
@@ -1550,7 +1550,7 @@ Expected: all repository constraints pass.
 
 ```bash
 git add .gitignore AGENTS.md CLAUDE.md README.md ROADMAP.md tests/packaging/test_docs.py
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "docs: describe three-runtime waterology package"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "docs: describe three-runtime waterology package"
 ```
 
 ### Task 10: Wheel, install, and repository acceptance
@@ -1693,7 +1693,7 @@ MCP, and dashboard slices open.
 
 ```bash
 git add ROADMAP.md tests/packaging/test_wheel.py pyproject.toml
-git -c user.name=cameronbracken -c user.email=researcher@example.org commit -S -m "test: verify cross-runtime package"
+git -c user.name=researcher -c user.email=researcher@example.org commit -S -m "test: verify cross-runtime package"
 ```
 
 ## Slice 1 acceptance

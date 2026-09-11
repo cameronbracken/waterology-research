@@ -1,6 +1,8 @@
 # Configuration
 
 Waterology separates portable project settings from machine settings and credentials.
+The global machine file also supports optional identity, preferences, writing
+examples, and local service settings. See [Personal configuration](local-configuration.md).
 
 | File or environment | Scope | Commit it? |
 | --- | --- | --- |

@@ -13,6 +13,11 @@ metadata:
 
 # Paper and Report Writing
 
+Run `waterology config context paper-writing` for optional local report guidance.
+Project and local themes, palettes, and layout preferences take precedence over
+the examples below. Use `writing-style` for optional writing corpus guidance.
+
+
 Use `writing-style` and its scientific prose layer for the draft and final
 edit. Use `project-conventions` for Quarto settings and local research
 preferences. Apply `figure-style` to every plot.
@@ -46,6 +51,10 @@ analysis instead of claiming a result.
 Every result, citation, figure, table, and quantitative comparison needs
 provenance. Never invent sources, data, or graphics. Before delivery, weaken or
 remove claims that exceed their support and remove unsupported numerics.
+
+If the CLI is unavailable, use the shared
+[local preferences resolver](../project-conventions/references/local-preferences.md)
+with this skill name, including common preferences and matching local guidance.
 
 ## Report mode
 
@@ -114,7 +123,7 @@ unverified, not as a pass.
 
 Include interactive graphics when supported data can clarify a result. Use
 Plotly for ordinary interaction and Bokeh only when richer linked interaction
-materially helps. Keep the light design clean, use earth tones and colorblind
+materially helps. Keep the light design clean, use accessible colors and colorblind
 friendly palettes, and retain units, uncertainty, captions, and source links.
 Save the data and code needed to regenerate each graphic. Provide a useful
 static or tabular fallback when the report may be printed. Do not add a graphic

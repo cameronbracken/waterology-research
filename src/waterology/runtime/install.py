@@ -1,3 +1,4 @@
+import fnmatch
 import hashlib
 import json
 import os
@@ -12,6 +13,7 @@ from waterology import __version__
 from waterology.runtime.assets import AssetCatalog
 
 _INSTALL_LOCK_NAME = ".waterology-install.lock"
+_LOCAL_ASSET_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".DS_Store")
 
 
 class Runtime(StrEnum):
@@ -442,7 +444,9 @@ def _matches_planned_source(action: InstallAction) -> bool:
     if destination.is_symlink():
         return False
     if action.source.is_dir():
-        return destination.is_dir() and _fingerprint(destination) == _fingerprint(action.source)
+        return destination.is_dir() and _fingerprint(destination) == _fingerprint(
+            action.source, source_assets=True
+        )
     return destination.is_file() and _fingerprint(destination) == _fingerprint(action.source)
 
 
@@ -457,7 +461,9 @@ def _stage_action(
         if action.operation == InstallMode.COPY.value:
             if action.source.is_dir():
                 staged.unlink()
-                shutil.copytree(action.source, staged)
+                shutil.copytree(
+                    action.source, staged, ignore=shutil.ignore_patterns(*_LOCAL_ASSET_PATTERNS)
+                )
             else:
                 shutil.copy2(action.source, staged)
         elif action.operation == InstallMode.LINK.value:
@@ -639,13 +645,20 @@ def _cleanup_created_parents(created_parents: list[Path]) -> None:
             pass
 
 
-def _fingerprint(path: Path) -> str:
+def _fingerprint(path: Path, *, source_assets: bool = False) -> str:
     digest = hashlib.sha256()
     if path.is_symlink():
         digest.update(str(path.resolve()).encode())
     elif path.is_dir():
         for child in sorted(candidate for candidate in path.rglob("*") if candidate.is_file()):
-            digest.update(child.relative_to(path).as_posix().encode())
+            relative = child.relative_to(path)
+            if source_assets and any(
+                fnmatch.fnmatch(part, pattern)
+                for part in relative.parts
+                for pattern in _LOCAL_ASSET_PATTERNS
+            ):
+                continue
+            digest.update(relative.as_posix().encode())
             digest.update(b"\0")
             digest.update(child.read_bytes())
     else:

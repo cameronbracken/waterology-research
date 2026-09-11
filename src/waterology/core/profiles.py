@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from waterology.core.errors import WaterologyError
+from waterology.core.user_settings import UserSettings
 
 _PROFILE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
@@ -64,7 +65,7 @@ class ComputeProfile(BaseModel):
         return self
 
 
-class MachineConfig(BaseModel):
+class MachineConfig(UserSettings):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     trusted_profiles: tuple[str, ...] = ()
@@ -121,7 +122,7 @@ def load_machine_config(path: Path | None = None) -> MachineConfig:
     except (OSError, tomllib.TOMLDecodeError, ValueError) as error:
         if isinstance(error, MachineConfigError):
             raise
-        raise MachineConfigError(f"Invalid machine configuration: {source}: {error}") from error
+        raise MachineConfigError(f"Invalid machine configuration: {source}") from error
 
 
 def trust_profile(path: Path, name: str) -> MachineConfig:
@@ -158,7 +159,14 @@ def machine_config_toml(config: MachineConfig) -> str:
         ):
             if value := getattr(profile, field):
                 lines.append(f"{field} = {json.dumps(value)}")
-    return "\n".join(lines) + "\n"
+    import tomlkit
+
+    document = tomlkit.parse("\n".join(lines) + "\n")
+    for name in UserSettings.model_fields:
+        value = config.model_dump(mode="json")[name]
+        if value != UserSettings().model_dump(mode="json")[name]:
+            document[name] = value
+    return tomlkit.dumps(document)
 
 
 def _toml_array(values: tuple[str, ...]) -> str:

@@ -36,7 +36,7 @@ SOFTWARE.
 `waterology` is original work by Cameron Bracken, but its methodology and
 several components are adapted from open-source Claude Code projects. This
 ledger records what was borrowed and from whom. Files that derive from a
-source carry a one-line credit at the top; this page is the canonical list.
+source are credited here; this page is the canonical list.
 
 ## Sources
 
@@ -208,7 +208,9 @@ source carry a one-line credit at the top; this page is the canonical list.
   <https://doi.org/10.1038/s41597-025-05097-3>
 - **What we adapt:** an original analysis of recurring structure, claim
   calibration, quantitative scope, limitations, and reproducibility details in
-  four first-author papers. No paper passages are copied. Collaborative and
+  four first-author papers. This records historical source credit, not a default
+  style corpus. Users configure their own examples in local writing settings.
+  No paper passages are copied. Collaborative and
   publisher editing limits any inference about sole-author style.
 - **Credit string:** *Scientific prose guidance informed by an original
   analysis of Cameron Bracken's published work.*
