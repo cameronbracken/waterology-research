@@ -31,7 +31,10 @@ def sample_agent(tmp_path: Path) -> AgentDefinition:
 def sample_skill(tmp_path: Path) -> SkillDefinition:
     return SkillDefinition(
         name="session-log",
-        description="Write a durable session log.",
+        description=(
+            "Write a durable session log. Use when the user asks to log progress, "
+            "save session notes, or write up what was done."
+        ),
         body=(
             "<!-- Adapted from example/upstream, prompts/log.md at commit "
             "0123456789abcdef (MIT). -->\n\n"
@@ -81,7 +84,7 @@ def test_claude_command_renderer_delegates_to_canonical_skill(tmp_path: Path) ->
     metadata, body = split_markdown_frontmatter(render_claude_command(sample_skill(tmp_path)))
 
     assert metadata == {
-        "description": "Write a durable session log.",
+        "description": "Alias for the `session-log` skill: Write a durable session log.",
         "argument-hint": "(none)",
     }
     assert "Generated from skills/session-log/SKILL.md" in body
@@ -92,6 +95,39 @@ def test_claude_command_renderer_delegates_to_canonical_skill(tmp_path: Path) ->
     assert "`session-log` skill" in body
     assert "$ARGUMENTS" in body
     assert "Write the log to" not in body
+
+
+def test_claude_command_description_drops_the_skill_trigger_clause(tmp_path: Path) -> None:
+    skill = sample_skill(tmp_path)
+    metadata, _ = split_markdown_frontmatter(render_claude_command(skill))
+    description = metadata["description"]
+
+    assert "Use when the user asks" not in description
+    assert description != skill.description
+    assert skill.name in description
+
+
+def test_claude_command_description_keeps_a_trigger_free_summary(tmp_path: Path) -> None:
+    skill = SkillDefinition(
+        name="watch",
+        description="Create a research watch baseline.",
+        body="Record the baseline.\n",
+        source_path=tmp_path / "skills/watch/SKILL.md",
+        claude_command=ClaudeCommand(name="watch", argument_hint="<topic>"),
+    )
+
+    metadata, _ = split_markdown_frontmatter(render_claude_command(skill))
+
+    assert metadata["description"] == (
+        "Alias for the `watch` skill: Create a research watch baseline."
+    )
+
+
+def test_claude_command_body_requires_loading_the_skill(tmp_path: Path) -> None:
+    _, body = split_markdown_frontmatter(render_claude_command(sample_skill(tmp_path)))
+
+    assert "Skill tool" in body
+    assert "routing shim" in body
 
 
 def test_render_agents_writes_checks_and_detects_stale_outputs(tmp_path: Path) -> None:

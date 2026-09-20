@@ -3,8 +3,9 @@ name: autoresearch
 description: >
   Bounded autonomous research and engineering loop through TORC that evaluates
   committed candidates against a saved objective and constraints. Use when the user asks to
-  optimize a research metric, run an experiment loop, or iteratively improve
-  model, retrieval, or forecast performance.
+  optimize a research metric, run an experiment loop, drive or resume a managed
+  Waterology study, calibrate or tune a model against a benchmark, or iteratively
+  improve model, retrieval, or forecast performance.
 metadata:
   claude-command:
     name: autoresearch
@@ -15,6 +16,28 @@ metadata:
 
 Use `writing-style` for summaries and `research-software-quality` for changes.
 Read [token-discipline.md](references/token-discipline.md) for long runs.
+
+## One process for every entry
+
+The path below is the same whether this skill was reached through its command
+alias, by name, or by an ordinary request to optimize, calibrate, tune, sweep,
+iterate or run a study. Phrasing selects the skill; it never selects a shorter
+process. Work the gates in order and name the one you are on:
+
+1. __Managed project.__ `waterology init` when the project is uninitialized.
+2. __Registered workflow.__ `waterology workflow register NAME` so the evaluation
+   command, outputs and metrics are committed rather than improvised per run.
+3. __Saved contract.__ A NestedText contract with objective, mode, acceptance
+   rule, budgets and `workflow: NAME`, then `waterology study create`.
+4. __Managed evaluation.__ `study enqueue` and `study advance` against the study's
+   pinned TORC profile, for local compute too.
+5. __Durable evidence.__ Archived runs and assessments, failures retained.
+6. __Verified deliverable.__ `deliverable register` then `reproduce`.
+
+Skipping a gate is a reportable blocker, not a shortcut. If a gate cannot be
+satisfied, say which one and why, and stop there. Never substitute a shell loop,
+a direct invocation, or a hand-kept metric log for gates 2 through 5. A request
+that sounds small does not lower the path; it only makes the contract smaller.
 
 ## Start and continue by default
 

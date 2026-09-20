@@ -1,13 +1,13 @@
 ---
-description: 'Run a tough but constructive internal critique of a research artifact:
-  paper, draft, analysis, or simulation study. Use when the user asks for a review,
-  critique, or feedback on a paper or draft, or wants weaknesses identified before
-  submission.'
+description: 'Alias for the `research-review` skill: Run a tough but constructive
+  internal critique of a research artifact: paper, draft, analysis, or simulation
+  study.'
 argument-hint: <artifact>
 ---
 
 <!-- Generated from skills/research-review/SKILL.md. Do not edit. -->
 
-Use the `research-review` skill to complete this request.
+Load the `research-review` skill with the Skill tool before any other work, then
+follow it exactly. This file is a routing shim and holds no process of its own.
 
 Arguments: $ARGUMENTS

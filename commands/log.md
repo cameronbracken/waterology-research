@@ -1,12 +1,12 @@
 ---
-description: Write a durable session log capturing completed work, findings, open
-  questions, and next steps. Use when the user asks to log progress, save session
-  notes, write up what was done, or create a research diary entry.
+description: 'Alias for the `session-log` skill: Write a durable session log capturing
+  completed work, findings, open questions, and next steps.'
 argument-hint: (none)
 ---
 
 <!-- Generated from skills/session-log/SKILL.md. Do not edit. -->
 
-Use the `session-log` skill to complete this request.
+Load the `session-log` skill with the Skill tool before any other work, then
+follow it exactly. This file is a routing shim and holds no process of its own.
 
 Arguments: $ARGUMENTS

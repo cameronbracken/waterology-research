@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -47,16 +48,36 @@ def render_opencode(agent: AgentDefinition) -> str:
     return f"---\n{frontmatter}\n---\n\n{marker}\n\n{agent.body}"
 
 
+TRIGGER_CLAUSE = re.compile(r"(?<=\.)\s+Use\b")
+
+
+# A shim and its skill are both offered to the model as callable units. Copying the
+# skill description verbatim gives two entries with the same trigger text, so routing
+# between them is arbitrary and the process varies by entry path. Dropping the
+# "Use when ..." clause leaves the shim reachable by name while the skill keeps sole
+# ownership of intent matching.
+def command_description(skill: SkillDefinition) -> str:
+    summary = " ".join(skill.description.split())
+    trigger = TRIGGER_CLAUSE.search(summary)
+    if trigger is not None:
+        summary = summary[: trigger.start()]
+    return f"Alias for the `{skill.name}` skill: {summary}"
+
+
 def render_claude_command(skill: SkillDefinition) -> str:
     command = skill.claude_command
     if command is None:
         raise ValueError(f"Skill has no Claude command metadata: {skill.name}")
     frontmatter = yaml.safe_dump(
-        {"description": skill.description, "argument-hint": command.argument_hint},
+        {"description": command_description(skill), "argument-hint": command.argument_hint},
         sort_keys=False,
     ).rstrip()
     marker = f"<!-- Generated from skills/{skill.name}/SKILL.md. Do not edit. -->"
-    body = f"Use the `{skill.name}` skill to complete this request.\n\nArguments: $ARGUMENTS\n"
+    body = (
+        f"Load the `{skill.name}` skill with the Skill tool before any other work, then\n"
+        f"follow it exactly. This file is a routing shim and holds no process of its own.\n"
+        f"\nArguments: $ARGUMENTS\n"
+    )
     return f"---\n{frontmatter}\n---\n\n{marker}\n\n{body}"
 
 

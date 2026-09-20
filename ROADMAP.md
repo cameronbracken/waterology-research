@@ -107,6 +107,61 @@ what to port, and what to omit. Adapted work needs a file header and an
   See the [validation record](docs/validation/2026-09-05-ecc-zotero.md) and
   [Pyzotero documentation](https://pyzotero.readthedocs.io/en/latest/).
 
+### TODO: graded reproducibility conformance and claim anchors
+
+Investigated 2026-09-20. Two candidate artifact formats were compared: the ARA
+protocol from [XScientist](https://github.com/smileformylove/XScientist)
+(arXiv [2607.12301](https://arxiv.org/abs/2607.12301), Apache-2.0) and
+[RO-Crate](https://www.researchobject.org/ro-crate/) with its
+[Workflow Run](https://www.researchobject.org/workflow-run-crate/) profiles.
+
+Decision: do not adopt ARA as a storage format. It has one producer, one
+author, and no independent consumers, and its agent layer is a modified fork of
+AI-Scientist-v2 that we do not want. Adopt its design ideas internally and keep
+RO-Crate as the export target, where the community, the validator, and the
+archive integrations already exist. The two are complementary: RO-Crate
+describes and packages, ARA grades and binds. Waterology already holds the
+fixity layer that RO-Crate leaves to BagIt.
+
+- [ ] __Conformance ladder.__ Give `archive verify` and the passport a named
+  level instead of a single checksum verdict: `index` (records are present and
+  schema valid), `trace` (every claim resolves to recorded evidence), `replay`
+  (code, data, environment, seed and command suffice to rerun), `verify` (an
+  independent check passed). Levels are one way and higher levels inherit lower
+  blockers. A blocked level is a scientific gap to report, not a failure to
+  retry. Extend `templates/passport.yaml` and `audit-reproducibility`.
+- [ ] __Manuscript claim anchors.__ `ClaimRecord` already binds run, archive
+  member, JSON pointer, member hash and value, which is stronger evidence
+  binding than ARA carries. What is missing is the manuscript side: a no-op
+  LaTeX macro and a Quarto shortcode that mark where a claim is asserted, so the
+  passport reports coverage rather than inferring it. Write unresolved anchors
+  with a resolved flag so intent stays visible. This turns `no-hardcoded-results`
+  from a scanner into a binding.
+- [ ] __Stdout metric marker.__ Accept a `WATEROLOGY_METRIC={...}` line, last
+  match wins, alongside the declared `[[metrics]]` extractors. Extractors need
+  per-project configuration and a parseable output file. A stdout marker works
+  unchanged from R, Fortran and Python, which matters for mixed pipelines.
+- [ ] __Seal state.__ Archives seal with `checksums.sha256`, which detects drift
+  but cannot separate a later legitimate annotation from tampering. Record the
+  seal hash and append post-seal edits, then report `clean`, `revised`,
+  `tampered` or `unlocked` with distinct exit codes.
+- [ ] __Typed run diff.__ `compare_archived_runs` reports metric deltas. Add the
+  cause: which of code, environment, data or seed actually moved.
+- [ ] __RO-Crate export.__ Emit a Workflow Run RO-Crate from a sealed archive so
+  results are readable by Galaxy, Nextflow, WorkflowHub and Zenodo without
+  Waterology. Validate with [rocrate-validator](https://github.com/crs4/rocrate-validator).
+  [rocrateR](https://cran.r-project.org/package=rocrateR) covers the R side.
+
+Not adopted from XScientist: the tree search over Python code nodes, the
+LLM-authored manuscript pipeline, and the self-evolution and signed-promotion
+stack. All assume one node equals one Python script and one metric equals one
+scalar to maximize, which does not fit R, Fortran and Quarto work. Its
+Docker-only executor boundary also conflicts with TORC and Slurm.
+
+Worth keeping from its framing: ARA explicitly declines bit-for-bit
+reproducibility and targets same claim, same code, comparable metric. That is
+the honest standard for HPC output and a better promise for the passport.
+
 ## ✅ Slice 1 — Foundation + conventions (done 2026-06-29)
 
 Manifests, LICENSE, ATTRIBUTION, README, CLAUDE.md, `check-all.py` runner,
