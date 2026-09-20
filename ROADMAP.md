@@ -162,6 +162,51 @@ Worth keeping from its framing: ARA explicitly declines bit-for-bit
 reproducibility and targets same claim, same code, comparable metric. That is
 the honest standard for HPC output and a better promise for the passport.
 
+### TODO: evaluate Workflow Run RO-Crate as the run provenance model
+
+- [ ] Study the [Workflow Run RO-Crate](https://www.researchobject.org/workflow-run-crate/)
+  working group output and decide which of its three profiles a sealed
+  Waterology run should conform to. The
+  [profile collection](https://www.researchobject.org/profiles) defines Process
+  Run Crate, Workflow Crate and Provenance Crate at increasing granularity.
+  Process Run Crate is implementable outside a workflow engine and is the likely
+  starting point, since one sealed archive is one process execution. Specs are
+  Apache-2.0 and examples are CC0. Reference paper: Leo et al. 2024, PLoS ONE
+  19(9) e0309210, [doi:10.1371/journal.pone.0309210](https://doi.org/10.1371/journal.pone.0309210).
+- [ ] Survey the existing implementations before designing anything. Each one
+  publishes a Zenodo example crate, so the profiles can be read as emitted
+  output rather than prose:
+  - [Autosubmit](https://autosubmit.readthedocs.io/) 4.0.100+ (Workflow) is the
+    closest analogue to our setup. It is the BSC HPC workflow manager for
+    climate and Earth system models and it submits through Slurm, so it shows
+    how a scheduler-backed run maps onto the model. Read this one first.
+  - [runcrate](https://www.researchobject.org/runcrate/) 0.5.0+ (Provenance) is
+    the reference implementation and CLI.
+  - [COMPSs](https://github.com/bsc-wdc/compss) 3.4+, also BSC and HPC, emits
+    either profile.
+  - [Nextflow](https://github.com/nextflow-io/nf-prov) 1.4.0+, Galaxy 23.1.1+,
+    [StreamFlow](https://streamflow.di.unito.it/),
+    [WfExS](https://wfexs-backend.readthedocs.io/) and
+    [Sapporo](https://github.com/sapporo-wes/sapporo) cover the rest.
+- [ ] Check how far the profiles carry the things we already record: declared
+  outputs, environment files and variable hashes, metric extraction, TORC
+  workflow and job identifiers, redaction. Record what has no home in the model
+  and would need a Waterology extension, and what we should drop because the
+  standard covers it better.
+- [ ] Decide where the fixity layer sits. RO-Crate leaves checksums to BagIt and
+  the working group has no signing story yet, so our sealed archive stays the
+  integrity source. Check whether the crate should live inside the archive or
+  wrap it.
+- [ ] Note the downstream reach before committing effort: the Workflow and
+  Provenance profiles extend the
+  [Workflow RO-Crate](https://w3id.org/workflowhub/workflow-ro-crate/) profile
+  that [WorkflowHub](https://about.workflowhub.eu/developer/ro-crate-api/)
+  accepts, and [Five Safes RO-Crate](https://w3id.org/5s-crate/) extends them
+  again for sensitive-data environments. The
+  [Galaxy training tutorial](https://training.galaxyproject.org/training-material/topics/fair/tutorials/ro-crate-workflow-run-ro-crate/tutorial.html)
+  is the fastest introduction. The group runs biweekly meetings and a `#ro-crate`
+  Slack channel if a TORC profile question needs an answer from them.
+
 ## ✅ Slice 1 — Foundation + conventions (done 2026-06-29)
 
 Manifests, LICENSE, ATTRIBUTION, README, CLAUDE.md, `check-all.py` runner,
