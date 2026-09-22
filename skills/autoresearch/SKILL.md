@@ -31,7 +31,8 @@ process. Work the gates in order and name the one you are on:
    rule, budgets and `workflow: NAME`, then `waterology study create`.
 4. __Managed evaluation.__ `study enqueue` and `study advance` against the study's
    pinned TORC profile, for local compute too.
-5. __Durable evidence.__ Archived runs and assessments, failures retained.
+5. __Durable evidence.__ Archived runs, automatic RO-Crate exports, and
+   assessments, failures retained.
 6. __Verified deliverable.__ `deliverable register` then `reproduce`.
 
 Skipping a gate is a reportable blocker, not a shortcut. If a gate cannot be
@@ -82,7 +83,11 @@ registration, execution and evidence collection; no skill is required to run the
 Use `waterology workflow run NAME --profile PROFILE` for an ordinary evaluation
 that does not need a bounded candidate loop. It waits for TORC and collects results.
 After interruption, use `waterology workflow watch RUN_ID` to resume collection.
-Do not recreate run records or copy metrics into a parallel agent log.
+Sealing creates `.waterology/ro-crates/RUN_ID/` with the unchanged archive under
+`run/`, Workflow Run Crate metadata when a named workflow is available, and an
+RO-Crate validator record when the validator is installed. Use
+`waterology archive export-crate RUN_ID DEST` for a shareable copy. Do not
+recreate run records or copy metrics into a parallel agent log.
 
 After selecting the final result explicitly, use `waterology deliverable register`
 and `waterology reproduce` to verify the exported source and declared outputs in
@@ -187,6 +192,6 @@ jobs. Stop also at the budget or acceptance boundary. Never extend limits,
 change test data, deploy a candidate, publish results or delete history without
 corresponding authority. Report the stopping reason and exact saved study ID.
 
-Output: durable `.waterology/studies/` records, sealed run archives, and a
-concise project handoff. Use `waterology compare-runs` for measurements and
-`waterology report` for a portable Quarto bundle.
+Output: durable `.waterology/studies/` records, sealed run archives, derived
+RO-Crate exports, and a concise project handoff. Use `waterology compare-runs`
+for measurements and `waterology report` for a portable Quarto bundle.

@@ -13,7 +13,9 @@ metadata:
 # Capture Environment
 
 Record the environment that produced a result without changing dependencies.
-Use `project-conventions` to select the existing package manager. Never replace
+For Waterology runs, the sealed archive stores `environment.json` and the derived
+RO-Crate links that file to the run action; keep both consistent. Use
+`project-conventions` to select the existing package manager. Never replace
 Pixi with pip, add renv to a project that uses another declared R workflow, or
 upgrade packages while capturing them.
 
@@ -69,6 +71,7 @@ sets another evidence location. Include:
 - seeds and RNG kind;
 - canonical entry command and expected runtime;
 - verification command, exit status, and date;
+- sealed run IDs and RO-Crate export paths when the capture supports an archive;
 - unavailable checks and restricted inputs.
 
 Reference detailed machine output, including `sessionInfo.txt`, rather than

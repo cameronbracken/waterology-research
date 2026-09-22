@@ -40,7 +40,8 @@ that a runtime provides a dedicated monitoring tool.
 
 - Read project guidance and any recorded tolerance overrides.
 - Confirm that the manuscript, output scope, and optional passport exist.
-- Record output modification times and available environment captures.
+- Record output modification times, available environment captures, sealed run
+  archives, and `.waterology/ro-crates/RUN_ID/` metadata when present.
 - Mark missing data, unreadable formats, and unavailable environments as
   limitations. Do not turn absent evidence into a pass.
 
@@ -120,7 +121,10 @@ Write `quality_reports/reproducibility-audit-<paper-slug>.md` with:
 - limitations, environment evidence, and concrete next actions.
 
 In passport mode, update each audited claim's status, `last_verified_on`, and
-`last_verified_by`. Update `paper.last_audit`. Do not delete claims that
+`last_verified_by`. Update claim anchor coverage and the conformance ladder.
+When claims reference archived runs, prefer the archive's `seal.json`,
+`checksums.sha256`, and derived RO-Crate metadata over ad hoc path notes. Update
+`paper.last_audit`. Do not delete claims that
 disappear from the manuscript. Leave them `STALE` for a person to retract or
 relocate. Warn about manuscript claims that have no passport entry.
 
@@ -128,5 +132,5 @@ The overall audit fails when any claim is `FAIL`. `EXPLAINED` remains visible
 but does not fail. Report `UNMATCHED`, `STALE`, and `UNVERIFIED` as incomplete
 evidence and do not describe the manuscript as fully verified while any remain.
 
-Output: claim extraction, updated passport when present, and reproducibility
-audit report.
+Output: claim extraction, updated passport when present, reproducibility audit
+report, and references to any sealed archive or RO-Crate export used as evidence.

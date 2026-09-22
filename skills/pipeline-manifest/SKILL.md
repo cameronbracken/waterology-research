@@ -38,7 +38,9 @@ For each script, record:
 - scripts or compiled programs invoked;
 - build dependencies, compiler, flags, and linked libraries;
 - figures, tables, or inline values fed to `.qmd`, `.tex`, or manuscript files;
-- whether each value was declared in a structured header or inferred from code.
+- whether each value was declared in a structured header or inferred from code;
+- Waterology workflow names, declared outputs, metric extractors, input hashes,
+  and any TORC workflow file needed for Workflow Run RO-Crate export.
 
 Recognize common Fortran I/O: `open`, `read`, `write`, `inquire`, command line
 arguments, and fixed unit mappings. Trace a wrapper that compiles or launches a
@@ -66,6 +68,9 @@ Write these sections in `pipeline.md`:
 4. Topological execution order with parallel groups.
 5. Diagnostics for cycles, missing inputs, duplicate producers, and orphans.
 6. Evidence status and limitations for every inferred edge.
+7. RO-Crate readiness: whether a registered Waterology workflow can encode the
+   entry command, inputs, outputs, metrics, environment files, and TORC workflow
+   definition in the automatic run crate.
 
 Preserve reviewed manual annotations when refreshing an existing manifest.
 Copy [the bundled run template](templates/run-all.sh) to `scripts/run-all.sh`

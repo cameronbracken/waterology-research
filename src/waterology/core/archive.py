@@ -8,8 +8,9 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import BinaryIO
+from typing import BinaryIO, Literal, cast
 
 from pydantic import ValidationError
 
@@ -42,6 +43,8 @@ _STAGING_PAYLOADS = {
     "result.md",
     "source.tar.zst",
     "source-commit.txt",
+    "seal.json",
+    "post-seal-edits.jsonl",
     "stderr.log",
     "stdout.log",
     "torc-output",
@@ -154,7 +157,7 @@ def build_run_archive(
         staging / "environment.json",
         _environment_payload(project, worktree, compute_profile=compute_profile),
     )
-    _write_json(staging / "metrics.json", metrics)
+    _write_json(staging / "metrics.json", _merge_stdout_metrics(metrics, stdout))
     _write_json(
         staging / "assessment.json",
         {"assessment": "unassessed", "schema_version": 1},
@@ -165,19 +168,36 @@ def build_run_archive(
         f"# Run {run_id}\n\nOperational state: {terminal_state}\n",
         encoding="utf-8",
     )
+    if not (staging / "execution-config.json").is_file():
+        _write_json(
+            staging / "execution-config.json",
+            {"schema_version": 1, "config": project.config.model_dump(mode="json")},
+        )
     _write_source_archive(project.root, commit_sha, staging / "source.tar.zst")
     commit_object = subprocess.run(["git", "-C", str(project.root), "cat-file", "commit", commit_sha], capture_output=True, check=True)
     (staging / "source-commit.txt").write_bytes(commit_object.stdout)
-    _write_checksums(staging)
+    seal_hash = _write_checksums(staging)
+    _write_json(
+        staging / "seal.json",
+        {
+            "schema_version": 1,
+            "algorithm": "sha256",
+            "checksums_sha256": seal_hash,
+            "sealed_at": datetime.now(UTC).isoformat(),
+            "post_seal_edits": "post-seal-edits.jsonl",
+        },
+    )
     (staging / "execution.json").unlink(missing_ok=True)
     (staging / ".execution.json.tmp").unlink(missing_ok=True)
     staging.replace(destination)
+    auto_export_run_crate(project.root, run_id)
     return destination
 
 
 def verify_archive(path: Path) -> ArchiveVerification:
     checksums_path = path / "checksums.sha256"
     expected = _read_checksums(checksums_path)
+    sidecars = {"seal.json", "post-seal-edits.jsonl"}
     payloads = tuple(child for child in path.rglob("*") if child != checksums_path)
     symlinks = {child.relative_to(path).as_posix() for child in payloads if child.is_symlink()}
     actual_paths = {
@@ -187,7 +207,7 @@ def verify_archive(path: Path) -> ArchiveVerification:
     } | symlinks
     expected_paths = set(expected)
     missing = tuple(sorted(expected_paths - actual_paths))
-    unexpected = tuple(sorted(actual_paths - expected_paths))
+    unexpected = tuple(sorted(actual_paths - expected_paths - sidecars))
     changed = tuple(
         sorted(
             (expected_paths & symlinks)
@@ -198,12 +218,33 @@ def verify_archive(path: Path) -> ArchiveVerification:
             }
         )
     )
+    seal_hash = None
+    seal_state = "unlocked"
+    seal_path = path / "seal.json"
+    if seal_path.is_file() and not seal_path.is_symlink():
+        try:
+            seal = json.loads(seal_path.read_text(encoding="utf-8"))
+            seal_hash = seal.get("checksums_sha256")
+            if not isinstance(seal_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", seal_hash):
+                raise ValueError("Invalid seal hash")
+            current_hash = hashlib.sha256(checksums_path.read_bytes()).hexdigest()
+            if current_hash != seal_hash or missing or changed or unexpected:
+                seal_state = "tampered"
+            elif (path / "post-seal-edits.jsonl").is_file():
+                seal_state = "revised"
+            else:
+                seal_state = "clean"
+        except (OSError, json.JSONDecodeError, ValueError):
+            seal_state = "tampered"
+    valid = not missing and not changed and not unexpected and seal_state in {"clean", "revised"}
     return ArchiveVerification(
         run_id=path.name,
-        valid=not missing and not changed and not unexpected,
+        valid=valid,
         missing=missing,
         changed=changed,
         unexpected=unexpected,
+        seal_state=cast(Literal["clean", "revised", "tampered", "unlocked"], seal_state),
+        seal_hash=seal_hash,
     )
 
 
@@ -252,6 +293,311 @@ def read_archive_logs(start: Path, run_id: str) -> dict[str, str]:
     }
 
 
+def export_run_crate(start: Path, run_id: str, destination: str, *, validate: bool = True) -> Path:
+    project = discover_project(start)
+    relative = PurePosixPath(destination)
+    if not destination or relative.is_absolute() or ".." in relative.parts or "\\" in destination:
+        raise ArchiveExportError("RO-Crate destination must be a relative project path")
+    output = project.root / relative.as_posix()
+    if output.exists() or output.is_symlink():
+        raise ArchiveExportError(f"RO-Crate export already exists: {relative.as_posix()}")
+    verification = verify_project_archive(project.root, run_id)
+    if not verification.valid:
+        raise ArchiveExportError(f"Archive failed verification before RO-Crate export: {run_id}")
+    manifest = load_archive(project.root, run_id)
+    source = project.paths.runs / run_id
+    output.mkdir(parents=True)
+    shutil.copytree(source, output / "run", symlinks=False)
+    crate = _run_crate_metadata(project, source, manifest, verification)
+    _write_json(output / "ro-crate-metadata.json", crate)
+    if validate:
+        _write_json(output / "ro-crate-validation.json", _validate_run_crate(output))
+    return output
+
+
+def auto_export_run_crate(start: Path, run_id: str) -> Path:
+    project = discover_project(start)
+    destination = project.paths.state / "ro-crates" / run_id
+    relative = destination.relative_to(project.root).as_posix()
+    if destination.exists():
+        shutil.rmtree(destination)
+    return export_run_crate(project.root, run_id, relative)
+
+
+def _run_crate_metadata(
+    project: Project,
+    source: Path,
+    manifest: RunManifest,
+    verification: ArchiveVerification,
+) -> dict[str, object]:
+    execution_config = _archived_execution_config(source, project.config)
+    workflow_name, workflow = _archive_workflow(execution_config, manifest, source)
+    workflow_entity = _workflow_entity(workflow_name, workflow)
+    workflow_profile = workflow_entity is not None
+    profile = (
+        "https://w3id.org/ro/wfrun/workflow/0.6"
+        if workflow_profile
+        else "https://w3id.org/ro/wfrun/process/0.6"
+    )
+    metrics = _read_json_object(source / "metrics.json")
+    parts = [
+        {"@id": "run/"},
+        {"@id": "run/manifest.json"},
+        {"@id": "run/checksums.sha256"},
+        {"@id": "run/environment.json"},
+        {"@id": "run/metrics.json"},
+        {"@id": "run/source.tar.zst"},
+    ]
+    parts.extend({"@id": f"run/artifacts/{relative}"} for relative in manifest.collected_artifacts)
+    parts.extend(
+        {"@id": f"run/{relative}"}
+        for relative in ("torc-workflow.yaml", "torc-slurm-workflow.yaml")
+        if (source / relative).is_file()
+    )
+    graph: list[dict[str, object]] = [
+        {
+            "@id": "ro-crate-metadata.json",
+            "@type": "CreativeWork",
+            "about": {"@id": "./"},
+            "conformsTo": {"@id": "https://w3id.org/ro/crate/1.1"},
+        },
+        {
+            "@id": "./",
+            "@type": "Dataset",
+            "conformsTo": {"@id": profile},
+            "hasPart": parts,
+            "name": f"Waterology sealed run {manifest.run_id}",
+            "mentions": {"@id": "#run"},
+            "waterology:sealState": verification.seal_state,
+            "waterology:sealHash": verification.seal_hash,
+        },
+        {
+            "@id": "run/",
+            "@type": "Dataset",
+            "name": "unchanged sealed Waterology archive",
+            "hasPart": parts[1:],
+        },
+        {"@id": "run/manifest.json", "@type": "File", "encodingFormat": "application/json"},
+        {
+            "@id": "run/checksums.sha256",
+            "@type": "File",
+            "encodingFormat": "text/plain",
+            "description": "Waterology SHA-256 manifest for the sealed run payload.",
+        },
+        {"@id": "run/environment.json", "@type": "File", "encodingFormat": "application/json"},
+        {
+            "@id": "run/metrics.json",
+            "@type": "File",
+            "encodingFormat": "application/json",
+            "variableMeasured": _metric_property_values(metrics, workflow),
+        },
+        {
+            "@id": "run/source.tar.zst",
+            "@type": "File",
+            "encodingFormat": "application/zstd",
+            "description": "Git source archive for the recorded commit.",
+        },
+        {
+            "@id": "#source-code",
+            "@type": "SoftwareSourceCode",
+            "codeRepository": project.root.as_uri(),
+            "version": manifest.commit_sha,
+            "hasPart": {"@id": "run/source.tar.zst"},
+        },
+        {
+            "@id": "#run",
+            "@type": "CreateAction",
+            "name": f"Waterology run {manifest.run_id}",
+            "instrument": {"@id": workflow_entity["@id"]} if workflow_entity else " ".join(manifest.command),
+            "object": _input_entities(workflow),
+            "result": _result_entities(manifest),
+            "startTime": manifest.started_at,
+            "endTime": manifest.finished_at,
+            "actionStatus": _action_status(manifest.terminal_state),
+            "agent": {"@id": "#waterology"},
+            "environment": {"@id": "run/environment.json"},
+        },
+        {
+            "@id": "#waterology",
+            "@type": "SoftwareApplication",
+            "name": "Waterology",
+        },
+    ]
+    graph.extend(_artifact_entities(manifest))
+    graph.extend(_parameter_entities(workflow))
+    if workflow_entity:
+        graph.append(workflow_entity)
+        for relative in ("torc-workflow.yaml", "torc-slurm-workflow.yaml"):
+            if (source / relative).is_file():
+                graph.append(
+                    {
+                        "@id": f"run/{relative}",
+                        "@type": ["File", "ComputationalWorkflow"],
+                        "encodingFormat": "text/yaml",
+                        "name": workflow_name or relative,
+                    }
+                )
+    return {
+        "@context": [
+            "https://w3id.org/ro/crate/1.1/context",
+            {"waterology": "https://waterology.dev/terms#"},
+        ],
+        "@graph": graph,
+    }
+
+
+def _archived_execution_config(source: Path, fallback: ProjectConfig) -> ProjectConfig:
+    snapshot = source / "execution-config.json"
+    if snapshot.is_file():
+        try:
+            payload = json.loads(snapshot.read_text(encoding="utf-8"))
+            if isinstance(payload, dict) and isinstance(payload.get("config"), dict):
+                return ProjectConfig.model_validate(payload["config"])
+        except (OSError, json.JSONDecodeError, ValidationError):
+            pass
+    return fallback
+
+
+def _archive_workflow(
+    config: ProjectConfig,
+    manifest: RunManifest,
+    source: Path,
+) -> tuple[str | None, object | None]:
+    for name, workflow in config.workflows.items():
+        command = workflow.command or (("torc", "workflow", workflow.torc_file) if workflow.torc_file else ())
+        if tuple(command) == manifest.command:
+            return name, workflow
+    if (source / "torc-workflow.yaml").is_file() or (source / "torc-slurm-workflow.yaml").is_file():
+        return "torc-workflow", None
+    return None, None
+
+
+def _workflow_entity(name: str | None, workflow: object | None) -> dict[str, object] | None:
+    if name is None:
+        return None
+    entity: dict[str, object] = {
+        "@id": "#workflow",
+        "@type": ["SoftwareSourceCode", "ComputationalWorkflow"],
+        "name": name,
+    }
+    if workflow is not None:
+        description = getattr(workflow, "description", "")
+        if description:
+            entity["description"] = description
+        torc_file = getattr(workflow, "torc_file", None)
+        if torc_file:
+            entity["mainEntity"] = {"@id": "run/torc-workflow.yaml"}
+    return entity
+
+
+def _read_json_object(path: Path) -> dict[str, object]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _metric_property_values(metrics: dict[str, object], workflow: object | None) -> list[dict[str, object]]:
+    units = {}
+    if workflow is not None:
+        for metric in getattr(workflow, "metrics", ()):
+            units[metric.name] = {"propertyID": metric.field, "source": metric.path}
+    values = []
+    for name, value in sorted(metrics.items()):
+        item: dict[str, object] = {"@type": "PropertyValue", "name": name, "value": value}
+        item.update(units.get(name, {}))
+        values.append(item)
+    return values
+
+
+def _input_entities(workflow: object | None) -> list[dict[str, str]]:
+    if workflow is None:
+        return [{"@id": "run/source.tar.zst"}]
+    inputs = [{"@id": f"#input-{_identifier(path)}"} for path in getattr(workflow, "input_files", {})]
+    return inputs or [{"@id": "run/source.tar.zst"}]
+
+
+def _result_entities(manifest: RunManifest) -> list[dict[str, str]]:
+    outputs = [{"@id": f"run/artifacts/{relative}"} for relative in manifest.collected_artifacts]
+    outputs.append({"@id": "run/metrics.json"})
+    return outputs
+
+
+def _artifact_entities(manifest: RunManifest) -> list[dict[str, object]]:
+    entities = []
+    for relative in manifest.collected_artifacts:
+        entities.append(
+            {
+                "@id": f"run/artifacts/{relative}",
+                "@type": "File",
+                "exampleOfWork": {"@id": f"#output-{_identifier(relative)}"},
+            }
+        )
+    return entities
+
+
+def _parameter_entities(workflow: object | None) -> list[dict[str, object]]:
+    if workflow is None:
+        return []
+    entities: list[dict[str, object]] = []
+    for relative in getattr(workflow, "outputs", ()):
+        entities.append(
+            {
+                "@id": f"#output-{_identifier(relative)}",
+                "@type": "FormalParameter",
+                "name": relative,
+                "additionalType": "File",
+            }
+        )
+    for name, digest in getattr(workflow, "input_files", {}).items():
+        entities.append(
+            {
+                "@id": f"#input-{_identifier(name)}",
+                "@type": "FormalParameter",
+                "name": name,
+                "additionalType": "File",
+                "sha256": digest,
+            }
+        )
+    return entities
+
+
+def _identifier(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip("-") or "value"
+
+
+def _action_status(state: str) -> str:
+    return {
+        "completed": "http://schema.org/CompletedActionStatus",
+        "failed": "http://schema.org/FailedActionStatus",
+        "cancelled": "http://schema.org/FailedActionStatus",
+        "lost": "http://schema.org/FailedActionStatus",
+    }.get(state, "http://schema.org/PotentialActionStatus")
+
+
+def _validate_run_crate(crate: Path) -> dict[str, object]:
+    command = shutil.which("rocrate-validator")
+    if command is None:
+        return {"status": "skipped", "reason": "rocrate-validator is not installed"}
+    completed = subprocess.run(
+        [command, str(crate)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    result = {
+        "status": "passed" if completed.returncode == 0 else "failed",
+        "command": [command, str(crate)],
+        "exit_code": completed.returncode,
+        "stdout": completed.stdout,
+        "stderr": completed.stderr,
+    }
+    if completed.returncode != 0:
+        raise ArchiveExportError("RO-Crate validator rejected the derived export")
+    return result
+
+
 def export_project_archive(start: Path, run_id: str, destination: str) -> Path:
     project = discover_project(start)
     relative = PurePosixPath(destination)
@@ -281,6 +627,11 @@ def export_project_archive(start: Path, run_id: str, destination: str) -> Path:
                 )
         expected_checksums = _read_checksums(source / "checksums.sha256")
         checksum_payload = (source / "checksums.sha256").read_bytes()
+        sidecar_payloads = {
+            relative: (source / relative).read_bytes()
+            for relative in ("seal.json", "post-seal-edits.jsonl")
+            if (source / relative).is_file()
+        }
         current = project.root
         for part in relative.parts[:-1]:
             current = current / part
@@ -319,6 +670,7 @@ def export_project_archive(start: Path, run_id: str, destination: str) -> Path:
                 run_id,
                 expected_checksums=expected_checksums,
                 checksum_payload=checksum_payload,
+                sidecar_payloads=sidecar_payloads,
             )
             os.link(staged, output)
             staged.unlink()
@@ -357,10 +709,13 @@ def _verify_export_tar(
     *,
     expected_checksums: dict[str, str],
     checksum_payload: bytes,
+    sidecar_payloads: dict[str, bytes] | None = None,
 ) -> None:
+    sidecar_payloads = sidecar_payloads or {}
     expected_files = {
         f"{run_id}/checksums.sha256",
         *(f"{run_id}/{relative}" for relative in expected_checksums),
+        *(f"{run_id}/{relative}" for relative in sidecar_payloads),
     }
     try:
         with tarfile.open(staged, mode="r:gz") as archive:
@@ -384,6 +739,10 @@ def _verify_export_tar(
                     raise ArchiveExportError(
                         f"Staged archive payload changed during export: {relative}"
                     )
+            for relative, expected in sidecar_payloads.items():
+                stream = archive.extractfile(f"{run_id}/{relative}")
+                if stream is None or stream.read() != expected:
+                    raise ArchiveExportError(f"Staged archive sidecar changed during export: {relative}")
     except (tarfile.TarError, OSError) as error:
         raise ArchiveExportError("Unable to verify staged archive export") from error
 
@@ -576,15 +935,36 @@ def _zstd_compress(data: bytes) -> bytes:
     return zstandard.ZstdCompressor().compress(data)
 
 
-def _write_checksums(directory: Path) -> None:
-    excluded = {"checksums.sha256", "execution.json", ".execution.json.tmp"}
+def _write_checksums(directory: Path) -> str:
+    excluded = {
+        "checksums.sha256",
+        "execution.json",
+        ".execution.json.tmp",
+        "seal.json",
+        "post-seal-edits.jsonl",
+    }
     paths = sorted(
         path
         for path in directory.rglob("*")
         if path.is_file() and path.relative_to(directory).as_posix() not in excluded
     )
     lines = [f"{_sha256(path)}  {path.relative_to(directory).as_posix()}" for path in paths]
-    (directory / "checksums.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    checksums = directory / "checksums.sha256"
+    checksums.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    seal_hash = hashlib.sha256(checksums.read_bytes()).hexdigest()
+    seal = directory / "seal.json"
+    if seal.is_file() and not seal.is_symlink():
+        _write_json(
+            seal,
+            {
+                "schema_version": 1,
+                "algorithm": "sha256",
+                "checksums_sha256": seal_hash,
+                "sealed_at": datetime.now(UTC).isoformat(),
+                "post_seal_edits": "post-seal-edits.jsonl",
+            },
+        )
+    return seal_hash
 
 
 def _read_checksums(path: Path) -> dict[str, str]:
@@ -608,6 +988,21 @@ def _read_checksums(path: Path) -> dict[str, str]:
             raise ArchiveError(f"Duplicate archive checksum path: {normalized}")
         checksums[normalized] = match.group("sha256")
     return checksums
+
+
+def _merge_stdout_metrics(metrics: dict[str, object], stdout: str) -> dict[str, object]:
+    merged = dict(metrics)
+    for line in stdout.splitlines():
+        if not line.startswith("WATEROLOGY_METRIC="):
+            continue
+        try:
+            payload = json.loads(line.removeprefix("WATEROLOGY_METRIC="))
+        except json.JSONDecodeError as error:
+            raise ArchiveError("Invalid WATEROLOGY_METRIC JSON marker") from error
+        if not isinstance(payload, dict) or not all(isinstance(key, str) for key in payload):
+            raise ArchiveError("WATEROLOGY_METRIC marker must be a JSON object")
+        merged.update(payload)
+    return merged
 
 
 def _write_json(path: Path, payload: object) -> None:

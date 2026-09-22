@@ -197,19 +197,17 @@ also relies on the Python validator.
 
 ## Implementation boundary
 
-A later implementation should proceed in four increments:
+The implemented exporter now covers the first three increments: every sealed run
+gets an automatic derived crate, named workflow archives receive Workflow Run
+metadata, and `ro-crate-validation.json` records a local validator result when
+`rocrate-validator` is installed. Manual copies use
+`waterology archive export-crate RUN_ID DEST`.
 
-1. Export completed and non-completed sealed runs as Process Run Crate 0.6,
-   preserving exact native state and redaction evidence.
-2. Add Workflow Run Crate 0.6 only for qualifying named workflow archives.
-3. Validate required and recommended rules against pinned local fixtures, then
-   inspect one export with runcrate and the RO-Crate validator.
-4. Add Provenance Run only after archive records capture per-step tool identity,
-   action status, inputs, outputs, and intermediates without log inference.
-
-Live WorkflowHub, Zenodo, and Galaxy qualification should be separate release
-checks because this evaluation inspected documented interfaces but did not
-publish or import a Waterology crate.
+Provenance Run remains out of scope until archive records capture per-step tool
+identity, action status, inputs, outputs, and intermediates without log
+inference. Live WorkflowHub, Zenodo, and Galaxy qualification should be separate
+release checks because this evaluation inspected documented interfaces but did
+not publish or import a Waterology crate.
 
 ## Sources
 

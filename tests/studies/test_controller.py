@@ -239,12 +239,21 @@ def test_archive_comparison_keeps_missing_and_incompatible_runs(sealed_run):
     result = compare_runs(root, [run_id, "run-other", "run-missing"], baseline=run_id)
     assert [r["status"] for r in result["rows"]] == ["verified", "incomparable", "unverified"]
     assert result["rows"][0]["deltas"]["error"] == 0
+    assert result["rows"][0]["moved"] == {"code": False, "environment": False, "data": False, "seed": False}
     assert result["rows"][1]["deltas"] == {}
     assert not result["complete"]
 
 
 def test_claims_preserve_conflicts_and_detect_archive_changes(sealed_run):
-    from waterology.core.claims import list_claims, register_claim, verify_claim
+    from waterology.core.claims import (
+        assess_claim,
+        claim_coverage,
+        conformance_ladder,
+        list_claims,
+        register_anchor,
+        register_claim,
+        verify_claim,
+    )
 
     root, run_id, _ = sealed_run
     first = register_claim(root, claim="Observed error", run_id=run_id, selector="/error")
@@ -261,6 +270,16 @@ def test_claims_preserve_conflicts_and_detect_archive_changes(sealed_run):
     assert verify_claim(root, first)["status"] == "UNVERIFIED"
     assert verify_claim(root, conflict)["status"] == "UNVERIFIED"
     assert len(list_claims(root)) == 2
+    unresolved = register_anchor(root, label="claim:intent", path="paper.qmd")
+    assert unresolved.resolved is False
+    resolved = register_anchor(root, label="claim:error", path="paper.qmd", claim_id=first.id)
+    assert resolved.resolved is True
+    coverage = claim_coverage(root)
+    assert coverage["covered_claims"] == 1
+    assert coverage["unresolved_anchors"]
+    ladder = conformance_ladder(root)
+    assert ladder["level"] == "index"
+    assess_claim(root, first.id, status="PASS", author="Fixture", note="Matches archived metric")
     with pytest.raises(KeyError):
         register_claim(root, claim="Missing", run_id=run_id, selector="/absent")
     with pytest.raises(ValueError):

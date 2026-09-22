@@ -56,9 +56,10 @@ The existing research roadmap follows. Each entry records upstream material,
 what to port, and what to omit. Adapted work needs a file header and an
 `ATTRIBUTION.md` entry.
 
-### TODO: graded reproducibility conformance and claim anchors
+### DONE: graded reproducibility conformance, claim anchors, and RO-Crate export (2026-09-22)
 
-Investigated 2026-09-20. Two candidate artifact formats were compared: the ARA
+Updated 2026-09-22 after implementing the remaining research feature items. Two
+candidate artifact formats were compared: the ARA
 protocol from [XScientist](https://github.com/smileformylove/XScientist)
 (arXiv [2607.12301](https://arxiv.org/abs/2607.12301), Apache-2.0) and
 [RO-Crate](https://www.researchobject.org/ro-crate/) with its
@@ -72,36 +73,28 @@ archive integrations already exist. The two are complementary: RO-Crate
 describes and packages, ARA grades and binds. Waterology already holds the
 fixity layer that RO-Crate leaves to BagIt.
 
-- [ ] __Conformance ladder.__ Give `archive verify` and the passport a named
-  level instead of a single checksum verdict: `index` (records are present and
-  schema valid), `trace` (every claim resolves to recorded evidence), `replay`
-  (code, data, environment, seed and command suffice to rerun), `verify` (an
-  independent check passed). Levels are one way and higher levels inherit lower
-  blockers. A blocked level is a scientific gap to report, not a failure to
-  retry. Extend `templates/passport.yaml` and `audit-reproducibility`.
-- [ ] __Manuscript claim anchors.__ `ClaimRecord` already binds run, archive
-  member, JSON pointer, member hash and value, which is stronger evidence
-  binding than ARA carries. What is missing is the manuscript side: a no-op
-  LaTeX macro and a Quarto shortcode that mark where a claim is asserted, so the
-  passport reports coverage rather than inferring it. Write unresolved anchors
-  with a resolved flag so intent stays visible. This turns `no-hardcoded-results`
-  from a scanner into a binding.
-- [ ] __Stdout metric marker.__ Accept a `WATEROLOGY_METRIC={...}` line, last
-  match wins, alongside the declared `[[metrics]]` extractors. Extractors need
-  per-project configuration and a parseable output file. A stdout marker works
-  unchanged from R, Fortran and Python, which matters for mixed pipelines.
-- [ ] __Seal state.__ Archives seal with `checksums.sha256`, which detects drift
-  but cannot separate a later legitimate annotation from tampering. Record the
-  seal hash and append post-seal edits, then report `clean`, `revised`,
-  `tampered` or `unlocked` with distinct exit codes.
-- [ ] __Typed run diff.__ `compare_archived_runs` reports metric deltas. Add the
-  cause: which of code, environment, data or seed actually moved.
-- [ ] __RO-Crate export.__ Emit a Process Run Crate from each eligible sealed
-  archive. Add Workflow Run Crate conformance only when the archive contains an
-  authoritative executable workflow definition. Wrap the unchanged sealed run
-  under `run/`, retain its checksum manifest as the fixity source, and validate
-  the derived export with
-  [rocrate-validator](https://github.com/crs4/rocrate-validator). See the
+- [X] __Conformance ladder.__ `conformance_ladder` and the passport template now
+  report `index`, `trace`, `replay`, and `verify` as one-way levels with
+  inherited blockers. Blocked levels are reported as evidence gaps rather than retry
+  failures.
+- [X] __Manuscript claim anchors.__ `ManuscriptAnchor` records no-op LaTeX macro
+  and Quarto shortcode intent, including unresolved anchors. Claim coverage is
+  now explicit rather than inferred by `no-hardcoded-results`.
+- [X] __Stdout metric marker.__ Sealing accepts `WATEROLOGY_METRIC={...}` stdout
+  lines alongside declared `[[metrics]]` extractors. The last marker wins and
+  works from R, Fortran, Python, or shell workflows.
+- [X] __Seal state.__ Archives record `seal.json` with the checksum manifest hash
+  and distinguish `clean`, `revised`, `tampered`, and `unlocked` in archive
+  verification and CLI exit codes.
+- [X] __Typed run diff.__ `compare_archived_runs` now reports whether code,
+  environment, data, or seed evidence moved along with metric deltas.
+- [X] __RO-Crate export.__ Run sealing now writes a derived crate under
+  `.waterology/ro-crates/<run-id>/`, and `waterology archive export-crate` emits
+  a shareable copy. Process Run Crate is the fallback; Workflow Run Crate is used
+  when a named workflow or TORC workflow definition is archived. The unchanged
+  sealed run is wrapped under `run/`, Waterology checksums remain the fixity
+  source, and `ro-crate-validation.json` records the RO-Crate validator result
+  when the validator is installed. See the
   [evaluation](docs/workflow-run-ro-crate.md).
 
 Not adopted from XScientist: the tree search over Python code nodes, the

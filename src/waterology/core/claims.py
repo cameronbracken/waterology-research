@@ -31,6 +31,17 @@ class ClaimRecord(BaseModel):
     related_claim: str | None = None
 
 
+class ManuscriptAnchor(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    schema_version: Literal[1] = 1
+    id: str = Field(pattern=r"^anchor-[0-9a-f]{16}$")
+    label: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    claim_id: str | None = Field(default=None, pattern=r"^claim-[0-9a-f]{16}$")
+    resolved: bool = False
+    context: str | None = None
+
+
 def _claims_dir(start: Path) -> Path:
     path = discover_project(start).paths.state / "claims"
     if path.is_symlink():
@@ -122,6 +133,96 @@ def list_claims(start: Path) -> list[ClaimRecord]:
 def _claim_hash(claim: ClaimRecord) -> str:
     payload = json.dumps(claim.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def register_anchor(
+    start: Path,
+    *,
+    label: str,
+    path: str,
+    claim_id: str | None = None,
+    context: str | None = None,
+) -> ManuscriptAnchor:
+    with project_state_lock(start):
+        claims = {claim.id for claim in list_claims(start)}
+        resolved = claim_id in claims if claim_id is not None else False
+        if claim_id is not None and not resolved:
+            raise ValueError("Claim anchor references an unknown claim")
+        record = ManuscriptAnchor(
+            id=f"anchor-{uuid4().hex[:16]}",
+            label=label,
+            path=_portable_project_path(path),
+            claim_id=claim_id,
+            resolved=resolved,
+            context=context,
+        )
+        write_json(_claims_dir(start) / f"{record.id}.json", record.model_dump(mode="json"))
+        return record
+
+
+def list_anchors(start: Path) -> list[ManuscriptAnchor]:
+    records = []
+    for path in sorted(_claims_dir(start).glob("anchor-*.json")):
+        if path.is_symlink():
+            raise ValueError("Claim anchor must not be a symlink")
+        record = ManuscriptAnchor.model_validate_json(path.read_text())
+        if record.id != path.stem:
+            raise ValueError("Claim anchor identity mismatch")
+        records.append(record)
+    return records
+
+
+def claim_coverage(start: Path) -> dict[str, object]:
+    claims = {claim.id for claim in list_claims(start)}
+    anchors = list_anchors(start)
+    unresolved = [anchor.model_dump(mode="json") for anchor in anchors if not anchor.resolved]
+    anchored_claims = {anchor.claim_id for anchor in anchors if anchor.resolved and anchor.claim_id}
+    missing = sorted(claims - anchored_claims)
+    return {
+        "schema_version": 1,
+        "claims": len(claims),
+        "anchors": len(anchors),
+        "covered_claims": len(anchored_claims),
+        "missing_claim_ids": missing,
+        "unresolved_anchors": unresolved,
+    }
+
+
+def conformance_ladder(start: Path) -> dict[str, object]:
+    claims = list_claims(start)
+    claim_checks = [verify_claim(start, claim) for claim in claims]
+    archives = {claim.run_id for claim in claims}
+    archive_checks = {run_id: verify_project_archive(start, run_id) for run_id in archives}
+    blockers = {
+        "index": [],
+        "trace": [],
+        "replay": [],
+        "verify": [],
+    }
+    if any(not check.valid for check in archive_checks.values()):
+        blockers["index"].append("one or more archive records fail schema or checksum verification")
+    coverage = claim_coverage(start)
+    if coverage["missing_claim_ids"] or coverage["unresolved_anchors"]:
+        blockers["trace"].append("manuscript claim anchors are incomplete")
+    if any(check["reference_status"] != "PASS" for check in claim_checks):
+        blockers["trace"].append("one or more claims do not resolve to recorded evidence")
+    project = discover_project(start)
+    for run_id in archives:
+        archive = project.paths.runs / run_id
+        if not all((archive / name).is_file() for name in ("source.tar.zst", "environment.json", "command.json")):
+            blockers["replay"].append(f"{run_id} lacks replay source, environment or command evidence")
+    if any(check["status"] not in {"PASS", "EXPLAINED"} for check in claim_checks):
+        blockers["verify"].append("one or more claim assessments are missing or failing")
+    levels = ("index", "trace", "replay", "verify")
+    achieved = "none"
+    inherited: list[str] = []
+    results = {}
+    for level in levels:
+        inherited.extend(blockers[level])
+        results[level] = {"passed": not inherited, "blockers": tuple(inherited)}
+        if not inherited:
+            achieved = level
+    return {"schema_version": 1, "level": achieved, "levels": results, "coverage": coverage}
 
 
 def assess_claim(start: Path, claim_id: str, *, status: str, author: str, note: str) -> dict:

@@ -58,10 +58,13 @@ with this skill name, including common preferences and matching local guidance.
 
 ## Report mode
 
-For archived Waterology runs, start with `waterology compare-runs` and export
-selected runs with `waterology report --baseline RUN_ID --destination reports/SLUG`.
-Supply the selected run IDs as arguments. The bundle contains Quarto source,
-measurement data, figure code and provenance. Regenerate with its `render.py`,
+For archived Waterology runs, start with `waterology compare-runs`. Each sealed
+run should also have `.waterology/ro-crates/RUN_ID/`; use
+`waterology archive export-crate RUN_ID DEST` when a report needs a shareable
+RO-Crate alongside the HTML. Export selected runs with
+`waterology report --baseline RUN_ID --destination reports/SLUG`. Supply the
+selected run IDs as arguments. The bundle contains Quarto source, measurement
+data, figure code and provenance. Regenerate with its `render.py`,
 then render and inspect the HTML as described below. Claim-reference integrity
 and assessed claim support are separate. Do not describe an unassessed claim as
 verified merely because its archive bytes match.

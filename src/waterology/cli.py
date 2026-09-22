@@ -16,6 +16,7 @@ from waterology import __version__, services
 from waterology.agents.supervisor import interrupt_session, launch_session, reconcile_session
 from waterology.core.archive import (
     ArchiveNotFoundError,
+    export_run_crate,
     list_archives,
     load_archive,
     read_archive_logs,
@@ -646,11 +647,12 @@ def archive_verify_command(
     else:
         _show_table(
             "Archive verification",
-            ("Run", "Status", "Missing", "Changed", "Unexpected"),
+            ("Run", "Status", "Seal", "Missing", "Changed", "Unexpected"),
             (
                 (
                     verification.run_id,
                     status,
+                    verification.seal_state,
                     str(len(verification.missing)),
                     str(len(verification.changed)),
                     str(len(verification.unexpected)),
@@ -658,7 +660,26 @@ def archive_verify_command(
             ),
         )
     if not verification.valid:
-        raise typer.Exit(1)
+        raise typer.Exit({"tampered": 2, "unlocked": 3}.get(verification.seal_state, 1))
+
+
+@archive_app.command("export-crate")
+def archive_export_crate_command(
+    run_id: str = typer.Argument(...),
+    destination: str = typer.Argument(...),
+    path: Path = _PROJECT_PATH_OPTION,
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Export a sealed run as a derived Process Run RO-Crate."""
+    try:
+        output = export_run_crate(path, run_id, destination)
+    except Exception as error:
+        _show_core_failure(error, json_output=json_output, title="RO-Crate export failed")
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({"destination": str(output)})
+    else:
+        typer.echo(output)
 
 
 @run_app.command("start")

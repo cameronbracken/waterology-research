@@ -3,7 +3,12 @@
 A passport is a YAML record at
 `quality_reports/passports/<paper-slug>.yaml`. Copy
 `templates/passport.yaml` when the Waterology source assets are available, or
-create the same structure from this reference.
+create the same structure from this reference. The passport records a one-way
+conformance ladder: `index` (records are present and schema-valid), `trace`
+(claims resolve to recorded evidence and manuscript anchors), `replay` (code,
+data, environment, seed and command are sufficient to rerun), and `verify` (an
+independent check passed). A blocked level is a scientific gap to report, not a
+retry loop.
 
 ## Paper record
 
@@ -15,6 +20,20 @@ create the same structure from this reference.
 - `branch`: branch on which the record is current.
 - `last_audit`: RFC 3339 timestamp or `null`.
 - `last_audit_by`: auditor identifier or `null`.
+
+## Manuscript anchors
+
+Use a no-op LaTeX macro or Quarto shortcode near each asserted claim. Preserve
+unresolved anchors with `resolved: false` so audit intent remains visible.
+
+```tex
+\newcommand{\waterologyclaim}[2][]{#2}
+The error was \waterologyclaim[id=C1]{0.50}.
+```
+
+```qmd
+{{< waterology-claim id="C1" >}}0.50{{< /waterology-claim >}}
+```
 
 ## Claim record
 

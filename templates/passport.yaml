@@ -12,6 +12,20 @@ paper:
   last_audit: null
   last_audit_by: null
 
+conformance:
+  level: index
+  levels:
+    index: {passed: false, blockers: ["populate the passport"]}
+    trace: {passed: false, blockers: []}
+    replay: {passed: false, blockers: []}
+    verify: {passed: false, blockers: []}
+
+anchors:
+  - label: claim:C1
+    path: papers/example-paper.qmd
+    claim_id: C1
+    resolved: false
+
 claims:
   - id: C1
     claim: "Replace with one numeric manuscript claim"

@@ -8,6 +8,7 @@ import pytest
 import zstandard
 from typer.testing import CliRunner
 
+import waterology.core.archive as archive_module
 from waterology.cli import app
 from waterology.core.archive import (
     ArchiveArtifactMissingError,
@@ -23,6 +24,7 @@ from waterology.core.archive import (
 from waterology.core.config import (
     ArchiveConfig,
     ProjectConfig,
+    WorkflowConfig,
     load_project_config,
     project_config_toml,
 )
@@ -627,4 +629,105 @@ def test_sealed_archive_is_never_overwritten(tmp_path: Path) -> None:
         build_run_archive(root, **arguments)
 
     assert (archive / "stdout.log").read_text(encoding="utf-8") == "first\n"
-import waterology.core.archive as archive_module
+
+
+def test_stdout_metric_markers_seal_state_and_ro_crate_export(tmp_path: Path) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    output = worktree / "artifacts" / "result.json"
+    output.parent.mkdir()
+    output.write_text('{}\n', encoding="utf-8")
+    archive = build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-marker",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout='WATEROLOGY_METRIC={"rmse":2.0}\nWATEROLOGY_METRIC={"rmse":1.0,"seed":7}\n',
+        stderr="",
+        metrics={"rmse": 9.0},
+    )
+
+    assert json.loads((archive / "metrics.json").read_text(encoding="utf-8")) == {"rmse": 1.0, "seed": 7}
+    verification = verify_archive(archive)
+    assert verification.valid is True
+    assert verification.seal_state == "clean"
+    (archive / "post-seal-edits.jsonl").write_text('{"note":"curated label"}\n', encoding="utf-8")
+    assert verify_archive(archive).seal_state == "revised"
+    (archive / "stdout.log").write_text("changed\n", encoding="utf-8")
+    tampered = verify_archive(archive)
+    assert tampered.valid is False
+    assert tampered.seal_state == "tampered"
+
+    (archive / "stdout.log").write_text('WATEROLOGY_METRIC={"rmse":2.0}\nWATEROLOGY_METRIC={"rmse":1.0,"seed":7}\n', encoding="utf-8")
+    from waterology.core.archive import _write_checksums, export_run_crate
+
+    _write_checksums(archive)
+    auto_crate = root / ".waterology" / "ro-crates" / "run-marker"
+    assert (auto_crate / "ro-crate-metadata.json").is_file()
+    crate = export_run_crate(root, "run-marker", "exports/run-marker-crate")
+    metadata = json.loads((crate / "ro-crate-metadata.json").read_text(encoding="utf-8"))
+    validation = json.loads((crate / "ro-crate-validation.json").read_text(encoding="utf-8"))
+    assert (crate / "run" / "checksums.sha256").is_file()
+    assert validation["status"] == "skipped"
+    assert any(node.get("@id") == "#run" for node in metadata["@graph"])
+    root_node = next(node for node in metadata["@graph"] if node.get("@id") == "./")
+    assert "process/0.6" in root_node["conformsTo"]["@id"]
+
+
+def test_ro_crate_is_automatic_and_encodes_workflow_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology" / "worktrees" / experiment_id
+    config = load_project_config(worktree / "waterology.toml")
+    workflow = WorkflowConfig(
+        command=("python3", "model.py"),
+        outputs=("artifacts/result.json",),
+        metrics=({"name": "rmse", "path": "artifacts/result.json", "field": "rmse"},),
+        description="Fixture workflow for RO-Crate export.",
+    )
+    config = config.model_copy(update={"workflows": {"simulate": workflow}})
+    (worktree / "waterology.toml").write_text(project_config_toml(config), encoding="utf-8")
+    subprocess.run(["git", "-C", str(worktree), "add", "waterology.toml"], check=True)
+    subprocess.run(
+        ["git", "-C", str(worktree), "commit", "--quiet", "-m", "Add workflow contract"],
+        check=True,
+    )
+    output = worktree / "artifacts" / "result.json"
+    output.parent.mkdir()
+    output.write_text('{"rmse": 1.25}\n', encoding="utf-8")
+    monkeypatch.setattr(archive_module.shutil, "which", lambda name: "/bin/echo")
+
+    build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-workflow-crate",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-08-25T10:00:00Z",
+        finished_at="2026-08-25T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="",
+        stderr="",
+        metrics={"rmse": 1.25},
+        config=config,
+    )
+
+    crate = root / ".waterology" / "ro-crates" / "run-workflow-crate"
+    metadata = json.loads((crate / "ro-crate-metadata.json").read_text(encoding="utf-8"))
+    validation = json.loads((crate / "ro-crate-validation.json").read_text(encoding="utf-8"))
+    root_node = next(node for node in metadata["@graph"] if node.get("@id") == "./")
+    action = next(node for node in metadata["@graph"] if node.get("@id") == "#run")
+    workflow_node = next(node for node in metadata["@graph"] if node.get("@id") == "#workflow")
+    metrics_node = next(node for node in metadata["@graph"] if node.get("@id") == "run/metrics.json")
+    assert "workflow/0.6" in root_node["conformsTo"]["@id"]
+    assert action["instrument"] == {"@id": "#workflow"}
+    assert workflow_node["name"] == "simulate"
+    assert metrics_node["variableMeasured"][0]["name"] == "rmse"
+    assert metrics_node["variableMeasured"][0]["propertyID"] == "rmse"
+    assert (crate / "run" / "checksums.sha256").is_file()
+    assert validation["status"] == "passed"

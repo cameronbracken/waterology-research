@@ -286,6 +286,8 @@ class ArchiveVerification(BaseModel):
     missing: tuple[str, ...]
     changed: tuple[str, ...]
     unexpected: tuple[str, ...]
+    seal_state: Literal["clean", "revised", "tampered", "unlocked"] = "unlocked"
+    seal_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class AssessmentRecord(BaseModel):
