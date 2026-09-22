@@ -96,10 +96,13 @@ fixity layer that RO-Crate leaves to BagIt.
   `tampered` or `unlocked` with distinct exit codes.
 - [ ] __Typed run diff.__ `compare_archived_runs` reports metric deltas. Add the
   cause: which of code, environment, data or seed actually moved.
-- [ ] __RO-Crate export.__ Emit a Workflow Run RO-Crate from a sealed archive so
-  results are readable by Galaxy, Nextflow, WorkflowHub and Zenodo without
-  Waterology. Validate with [rocrate-validator](https://github.com/crs4/rocrate-validator).
-  [rocrateR](https://cran.r-project.org/package=rocrateR) covers the R side.
+- [ ] __RO-Crate export.__ Emit a Process Run Crate from each eligible sealed
+  archive. Add Workflow Run Crate conformance only when the archive contains an
+  authoritative executable workflow definition. Wrap the unchanged sealed run
+  under `run/`, retain its checksum manifest as the fixity source, and validate
+  the derived export with
+  [rocrate-validator](https://github.com/crs4/rocrate-validator). See the
+  [evaluation](docs/workflow-run-ro-crate.md).
 
 Not adopted from XScientist: the tree search over Python code nodes, the
 LLM-authored manuscript pipeline, and the self-evolution and signed-promotion
@@ -111,18 +114,25 @@ Worth keeping from its framing: ARA explicitly declines bit-for-bit
 reproducibility and targets same claim, same code, comparable metric. That is
 the honest standard for HPC output and a better promise for the passport.
 
-### TODO: evaluate Workflow Run RO-Crate as the run provenance model
+### DONE: evaluate Workflow Run RO-Crate as the run provenance model (2026-09-21)
 
-- [ ] Study the [Workflow Run RO-Crate](https://www.researchobject.org/workflow-run-crate/)
+The [evaluation](docs/workflow-run-ro-crate.md) recommends Process Run Crate 0.6
+as the universal export baseline and Workflow Run Crate 0.6 only for archives
+with an authoritative workflow definition. Provenance Run Crate must wait for
+structured step-level tool and dataflow evidence. A derived crate wraps the
+unchanged sealed archive under `run/`; it does not replace Waterology fixity.
+
+- [X] Study the [Workflow Run RO-Crate](https://www.researchobject.org/workflow-run-crate/)
   working group output and decide which of its three profiles a sealed
   Waterology run should conform to. The
-  [profile collection](https://www.researchobject.org/profiles) defines Process
-  Run Crate, Workflow Crate and Provenance Crate at increasing granularity.
+  [profile collection](https://www.researchobject.org/workflow-run-crate/profiles/)
+  defines Process Run Crate, Workflow Run Crate and Provenance Run Crate at
+  increasing granularity.
   Process Run Crate is implementable outside a workflow engine and is the likely
   starting point, since one sealed archive is one process execution. Specs are
   Apache-2.0 and examples are CC0. Reference paper: Leo et al. 2024, PLoS ONE
   19(9) e0309210, [doi:10.1371/journal.pone.0309210](https://doi.org/10.1371/journal.pone.0309210).
-- [ ] Survey the existing implementations before designing anything. Each one
+- [X] Survey the existing implementations before designing anything. Each one
   publishes a Zenodo example crate, so the profiles can be read as emitted
   output rather than prose:
   - [Autosubmit](https://autosubmit.readthedocs.io/) 4.0.100+ (Workflow) is the
@@ -137,16 +147,16 @@ the honest standard for HPC output and a better promise for the passport.
     [StreamFlow](https://streamflow.di.unito.it/),
     [WfExS](https://wfexs-backend.readthedocs.io/) and
     [Sapporo](https://github.com/sapporo-wes/sapporo) cover the rest.
-- [ ] Check how far the profiles carry the things we already record: declared
+- [X] Check how far the profiles carry the things we already record: declared
   outputs, environment files and variable hashes, metric extraction, TORC
   workflow and job identifiers, redaction. Record what has no home in the model
   and would need a Waterology extension, and what we should drop because the
   standard covers it better.
-- [ ] Decide where the fixity layer sits. RO-Crate leaves checksums to BagIt and
+- [X] Decide where the fixity layer sits. RO-Crate leaves checksums to BagIt and
   the working group has no signing story yet, so our sealed archive stays the
   integrity source. Check whether the crate should live inside the archive or
   wrap it.
-- [ ] Note the downstream reach before committing effort: the Workflow and
+- [X] Note the downstream reach before committing effort: the Workflow and
   Provenance profiles extend the
   [Workflow RO-Crate](https://w3id.org/workflowhub/workflow-ro-crate/) profile
   that [WorkflowHub](https://about.workflowhub.eu/developer/ro-crate-api/)
