@@ -1,0 +1,12 @@
+schema_version = 1
+name = "waterology-research"
+artifact_roots = ["artifacts"]
+command = []
+environment_files = []
+outputs = []
+default_compute_profile = "direct"
+
+[archive]
+allow_missing_outputs = false
+environment_allowlist = []
+log_redactions = []

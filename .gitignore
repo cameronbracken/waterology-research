@@ -39,3 +39,4 @@ __pycache__/
 
 # Local Git worktrees
 .worktrees/
+.waterology/
