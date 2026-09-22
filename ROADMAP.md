@@ -1,56 +1,5 @@
 # Roadmap
 
-## Managed workflow expansion
-
-The [ECC/Zotero extension](docs/superpowers/plans/2026-09-05-ecc-learning-zotero.md)
-adds project lesson assessment and retrieval, shared improvement proposals,
-automatic reference capture and human-authored NestedText contracts. No
-overlapping ECC agents or runtime hooks are imported.
-
-The [implementation plan](docs/superpowers/plans/2026-09-05-openresearch-expansion.md)
-and [user guide](docs/managed-studies.md) cover shared research/engineering
-contracts, pinned TORC execution, bounded candidate sessions, archive comparisons,
-claim assessments, recorded discovery, report bundles and connected views.
-See the plan's validation record for completed checks and qualification limits.
-
-## Platform roadmap
-
-Each platform slice preserves a working Claude plugin and receives its own
-implementation plan and review checkpoint.
-
-- [x] **Slice 1: cross runtime foundation**
-
-  Package Waterology for Claude Code, Codex, and OpenCode. Keep canonical root
-  skills and agent definitions, generate runtime adapters, and preserve Claude
-  compatibility commands.
-
-- [x] **Slice 2: research methods**
-
-  Move durable research workflows into runtime neutral skills, generate Claude
-  compatibility commands, add portable delegation guidance and bounded source
-  summarization, remove product assumptions, and complete pinned attribution.
-
-- [x] **Slice 3: experiment core**
-
-  Add project configuration, experiment trees, Git worktrees, direct execution,
-  immutable archives, SQLite indexing, CLI JSON output, and index repair.
-
-
-- [x] **Slice 4: TORC integration**
-
-  Add TORC workflow generation, compute profiles, state reconciliation, remote
-  confirmation, artifact collection, and TORC dashboard or TUI links.
-
-- [x] **Slice 5: agent sessions and MCP**
-
-  Add runtime process adapters, parallel worktree ownership, resume support,
-  session logs, and the Waterology MCP server.
-
-- [x] **Slice 6: research dashboard**
-
-  Add the local research dashboard on the established service layer, including guarded actions,
-  server rendered views, live summary events, theme support, and remote access controls.
-
 ### TODO: complete documentation site with examples
 
 - [ ] Build a searchable documentation site with installation and upgrade guides,
@@ -82,12 +31,6 @@ implementation plan and review checkpoint.
   and migration cost. Record whether Waterology should retain Pixi, supplement it,
   or replace it before changing the project environment.
 
-## Research feature roadmap
-
-The existing research roadmap follows. Each entry records upstream material,
-what to port, and what to omit. Adapted work needs a file header and an
-`ATTRIBUTION.md` entry.
-
 ### TODO: download papers through the browser
 
 - [ ] Add a browser download fallback when direct HTTP or API requests hit bot
@@ -106,6 +49,12 @@ what to port, and what to omit. Adapted work needs a file header and an
   unverified. Evaluate local Zotero access only when a concrete workflow needs it.
   See the [validation record](docs/validation/2026-09-05-ecc-zotero.md) and
   [Pyzotero documentation](https://pyzotero.readthedocs.io/en/latest/).
+
+## Research feature roadmap
+
+The existing research roadmap follows. Each entry records upstream material,
+what to port, and what to omit. Adapted work needs a file header and an
+`ATTRIBUTION.md` entry.
 
 ### TODO: graded reproducibility conformance and claim anchors
 
@@ -206,6 +155,60 @@ the honest standard for HPC output and a better promise for the passport.
   [Galaxy training tutorial](https://training.galaxyproject.org/training-material/topics/fair/tutorials/ro-crate-workflow-run-ro-crate/tutorial.html)
   is the fastest introduction. The group runs biweekly meetings and a `#ro-crate`
   Slack channel if a TORC profile question needs an answer from them.
+
+
+## Previous work:
+## Managed workflow expansion
+
+The [ECC/Zotero extension](docs/superpowers/plans/2026-09-05-ecc-learning-zotero.md)
+adds project lesson assessment and retrieval, shared improvement proposals,
+automatic reference capture and human-authored NestedText contracts. No
+overlapping ECC agents or runtime hooks are imported.
+
+The [implementation plan](docs/superpowers/plans/2026-09-05-openresearch-expansion.md)
+and [user guide](docs/managed-studies.md) cover shared research/engineering
+contracts, pinned TORC execution, bounded candidate sessions, archive comparisons,
+claim assessments, recorded discovery, report bundles and connected views.
+See the plan's validation record for completed checks and qualification limits.
+
+## Platform roadmap
+
+Each platform slice preserves a working Claude plugin and receives its own
+implementation plan and review checkpoint.
+
+- [x] **Slice 1: cross runtime foundation**
+
+  Package Waterology for Claude Code, Codex, and OpenCode. Keep canonical root
+  skills and agent definitions, generate runtime adapters, and preserve Claude
+  compatibility commands.
+
+- [x] **Slice 2: research methods**
+
+  Move durable research workflows into runtime neutral skills, generate Claude
+  compatibility commands, add portable delegation guidance and bounded source
+  summarization, remove product assumptions, and complete pinned attribution.
+
+- [x] **Slice 3: experiment core**
+
+  Add project configuration, experiment trees, Git worktrees, direct execution,
+  immutable archives, SQLite indexing, CLI JSON output, and index repair.
+
+
+- [x] **Slice 4: TORC integration**
+
+  Add TORC workflow generation, compute profiles, state reconciliation, remote
+  confirmation, artifact collection, and TORC dashboard or TUI links.
+
+- [x] **Slice 5: agent sessions and MCP**
+
+  Add runtime process adapters, parallel worktree ownership, resume support,
+  session logs, and the Waterology MCP server.
+
+- [x] **Slice 6: research dashboard**
+
+  Add the local research dashboard on the established service layer, including guarded actions,
+  server rendered views, live summary events, theme support, and remote access controls.
+
 
 ## ✅ Slice 1 — Foundation + conventions (done 2026-06-29)
 
