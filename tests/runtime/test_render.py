@@ -14,6 +14,7 @@ from waterology.runtime.render import (
     render_claude_command,
     render_codex,
     render_opencode,
+    render_pi,
 )
 from waterology.runtime.skills import ClaudeCommand, SkillDefinition
 
@@ -77,6 +78,27 @@ def test_opencode_renderer_uses_v2_subagent_format(tmp_path: Path) -> None:
     metadata, body = split_markdown_frontmatter(render_opencode(sample_agent(tmp_path)))
 
     assert metadata == {"description": "Gather primary evidence.", "mode": "subagent"}
+    assert "Gather evidence and cite it." in body
+
+
+def test_pi_renderer_uses_namespaced_subagent_format(tmp_path: Path) -> None:
+    metadata, body = split_markdown_frontmatter(render_pi(sample_agent(tmp_path)))
+
+    assert metadata == {
+        "name": "researcher",
+        "package": "waterology",
+        "description": "Gather primary evidence.",
+        "advertise": True,
+        "tools": (
+            "read, grep, find, ls, write, edit, bash, web_search, fetch_content, "
+            "get_search_content, source_check"
+        ),
+        "systemPromptMode": "replace",
+        "inheritProjectContext": True,
+        "inheritGlobalContext": False,
+        "inheritSkills": True,
+    }
+    assert "Generated from agent-definitions/researcher.md" in body
     assert "Gather evidence and cite it." in body
 
 
@@ -148,6 +170,7 @@ def test_render_agents_writes_checks_and_detects_stale_outputs(tmp_path: Path) -
         output_root / "agents/researcher.md",
         output_root / ".codex/agents/researcher.toml",
         output_root / ".opencode/agents/researcher.md",
+        output_root / "pi-agents/researcher.md",
     }
 
     changed = render_agents(AssetCatalog.discover(source_root), output_root)

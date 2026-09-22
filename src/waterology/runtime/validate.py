@@ -16,11 +16,12 @@ from waterology.runtime.skills import parse_skill
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 MANIFESTS = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
-GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents")
+GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents", "pi-agents")
 GENERATED_AGENT_SUFFIXES = {
     ".codex/agents": ".toml",
     "agents": ".md",
     ".opencode/agents": ".md",
+    "pi-agents": ".md",
 }
 REQUIRED_AGENT_NAMES = (
     "r-reviewer",
@@ -91,6 +92,14 @@ def _validate_pi_package(catalog: AssetCatalog) -> list[ValidationIssue]:
     if data.get("pi") != {"skills": ["./skills"]}:
         issues.append(
             ValidationIssue(relative, "invalid-pi-package", "pi.skills must select ./skills")
+        )
+    if data.get("pi-subagents") != {"agents": ["./pi-agents"]}:
+        issues.append(
+            ValidationIssue(
+                relative,
+                "invalid-pi-package",
+                "pi-subagents.agents must select ./pi-agents",
+            )
         )
     return issues
 
@@ -424,7 +433,7 @@ def _validate_generated_agents(
                         path.relative_to(catalog.root).as_posix(), "invalid-toml", str(error)
                     )
                 )
-    for directory in ("agents", ".opencode/agents"):
+    for directory in ("agents", ".opencode/agents", "pi-agents"):
         if directory not in directories:
             continue
         for path in sorted(directories[directory].glob("*.md")):

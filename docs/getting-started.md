@@ -22,9 +22,13 @@ pixi run waterology install opencode
 pixi run waterology install pi
 ```
 
-The Pi adapter installs canonical skills under `.pi/skills/` (project scope) or
-`~/.pi/agent/skills/` (user scope). A checkout is also a native Pi package and
-can be registered with `pi install /path/to/waterology-research`.
+The Pi adapter installs canonical skills and generated agents under
+`.pi/skills/` and `.pi/agents/` (project scope), or under
+`~/.pi/agent/skills/` and `~/.pi/agent/agents/` (user scope). A checkout is also
+a native Pi package and can be registered with
+`pi install /path/to/waterology-research`. Install `npm:pi-subagents` separately
+to run the namespaced `waterology.*` agents; Pi core does not load agent
+definitions itself.
 
 Use `--scope user` for user configuration. Preview changes with `--dry-run` when the command
 supports it.

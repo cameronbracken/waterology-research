@@ -47,7 +47,7 @@ def test_project_claude_plan_keeps_command_shims(tmp_path: Path) -> None:
     )
 
 
-def test_project_pi_plan_installs_canonical_skills_only(tmp_path: Path) -> None:
+def test_project_pi_plan_installs_canonical_skills_and_subagents(tmp_path: Path) -> None:
     plan = build_install_plan(
         runtime=Runtime.PI,
         scope=InstallScope.PROJECT,
@@ -58,7 +58,7 @@ def test_project_pi_plan_installs_canonical_skills_only(tmp_path: Path) -> None:
 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
     assert ".pi/skills/project-conventions" in destinations
-    assert not any("agents" in destination for destination in destinations)
+    assert ".pi/agents/researcher.md" in destinations
     assert not any(destination.endswith(".json") for destination in destinations)
 
 
@@ -192,6 +192,7 @@ def test_user_pi_plan_uses_pi_agent_skills(tmp_path: Path, monkeypatch) -> None:
 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
     assert ".pi/agent/skills/project-conventions" in destinations
+    assert ".pi/agent/agents/researcher.md" in destinations
     assert plan.trusted_root == tmp_path.absolute()
 
 

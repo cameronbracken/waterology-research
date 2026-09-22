@@ -20,6 +20,14 @@ CLAUDE_TOOLS = {
         "mcp__kagi__kagi_extract",
     ),
 }
+PI_TOOLS = {
+    "read": ("read", "grep", "find", "ls"),
+    "write": ("write", "edit"),
+    "shell": ("bash",),
+    "web": ("web_search", "fetch_content", "get_search_content", "source_check"),
+}
+
+
 def render_claude(agent: AgentDefinition) -> str:
     tools = tuple(tool for capability in agent.capabilities for tool in CLAUDE_TOOLS[capability])
     frontmatter = yaml.safe_dump(
@@ -42,6 +50,26 @@ def render_codex(agent: AgentDefinition) -> str:
 def render_opencode(agent: AgentDefinition) -> str:
     frontmatter = yaml.safe_dump(
         {"description": agent.description, "mode": "subagent"},
+        sort_keys=False,
+    ).rstrip()
+    marker = f"<!-- Generated from agent-definitions/{agent.name}.md. Do not edit. -->"
+    return f"---\n{frontmatter}\n---\n\n{marker}\n\n{agent.body}"
+
+
+def render_pi(agent: AgentDefinition) -> str:
+    tools = tuple(tool for capability in agent.capabilities for tool in PI_TOOLS[capability])
+    frontmatter = yaml.safe_dump(
+        {
+            "name": agent.name,
+            "package": "waterology",
+            "description": agent.description,
+            "advertise": True,
+            "tools": ", ".join(tools),
+            "systemPromptMode": "replace",
+            "inheritProjectContext": True,
+            "inheritGlobalContext": False,
+            "inheritSkills": True,
+        },
         sort_keys=False,
     ).rstrip()
     marker = f"<!-- Generated from agent-definitions/{agent.name}.md. Do not edit. -->"
@@ -86,6 +114,7 @@ DESTINATIONS: dict[str, tuple[str, str, Renderer]] = {
     "claude": ("agents", ".md", render_claude),
     "codex": (".codex/agents", ".toml", render_codex),
     "opencode": (".opencode/agents", ".md", render_opencode),
+    "pi": ("pi-agents", ".md", render_pi),
 }
 
 

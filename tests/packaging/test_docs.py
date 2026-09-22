@@ -109,7 +109,10 @@ def test_canonical_guidance_has_required_commands() -> None:
     ):
         assert heading in agents
     assert "Root `skills/` and `agent-definitions/` are canonical." in agents
-    assert "`agents/`, `.codex/agents/`, and `.opencode/agents/` are generated." in agents
+    assert (
+        "`agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated."
+        in agents
+    )
     assert "pixi run pytest" in agents
     assert "pixi run ruff check" in agents
     assert "waterology render --check" in agents
@@ -137,10 +140,11 @@ def test_roadmap_marks_platform_and_research_slices_complete() -> None:
     assert roadmap.count("done 2026-08-26") == 5
 
 
-def test_pi_package_loads_canonical_skills_only() -> None:
+def test_pi_package_loads_canonical_skills_and_subagents() -> None:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
 
     assert "pi-package" in package["keywords"]
     assert package["pi"] == {"skills": ["./skills"]}
+    assert package["pi-subagents"] == {"agents": ["./pi-agents"]}
     assert "extensions" not in package["pi"]
     assert "prompts" not in package["pi"]

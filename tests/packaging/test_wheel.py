@@ -68,6 +68,7 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         "waterology_assets/.codex/agents/researcher.toml",
         "waterology_assets/.codex/config.toml",
         "waterology_assets/.opencode/agents/researcher.md",
+        "waterology_assets/pi-agents/researcher.md",
         "waterology_assets/templates/passport.yaml",
         "waterology_assets/templates/run-all.sh",
         "waterology_assets/templates/latexmkrc",
@@ -186,7 +187,10 @@ def test_pi_project_install_smoke(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.stdout
     assert (tmp_path / ".pi/skills/project-conventions/SKILL.md").is_file()
-    assert not (tmp_path / ".pi/agents").exists()
+    agent = tmp_path / ".pi/agents/researcher.md"
+    assert agent.is_file()
+    metadata = yaml.safe_load(agent.read_text(encoding="utf-8").split("---", 2)[1])
+    assert metadata["package"] == "waterology"
     manifest = tmp_path / ".pi/.waterology-install.json"
     assert manifest.is_file()
     _assert_manifest_covers_installed_destinations(manifest)

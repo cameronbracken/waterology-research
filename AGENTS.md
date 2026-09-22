@@ -7,8 +7,8 @@ Waterology is a research workflow package for Claude Code, Codex, OpenCode, and 
 ## Source layout
 
 Root `skills/` and `agent-definitions/` are canonical. Runtime agent files in
-`agents/`, `.codex/agents/`, and `.opencode/agents/` are generated. Do not edit
-generated runtime files.
+`agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated.
+Do not edit generated runtime files.
 
 ## Development
 

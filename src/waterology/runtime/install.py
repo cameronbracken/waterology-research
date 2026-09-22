@@ -696,7 +696,8 @@ def _installation_layout(
         )
     trusted_root = _absolute_lexical(Path.home())
     if runtime is Runtime.PI:
-        return {"skills": trusted_root / ".pi" / "agent" / "skills"}, trusted_root
+        base = trusted_root / ".pi" / "agent"
+        return {"skills": base / "skills", "agents": base / "agents"}, trusted_root
     return _runtime_directories(runtime, trusted_root), trusted_root
 
 
@@ -711,7 +712,7 @@ def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
         return {"skills": base / ".agents" / "skills", "agents": base / ".codex" / "agents"}
     if runtime is Runtime.OPENCODE:
         return {"skills": base / ".opencode" / "skills", "agents": base / ".opencode" / "agents"}
-    return {"skills": base / ".pi" / "skills"}
+    return {"skills": base / ".pi" / "skills", "agents": base / ".pi" / "agents"}
 
 
 def _agent_directory(runtime: Runtime) -> str | None:
@@ -721,6 +722,8 @@ def _agent_directory(runtime: Runtime) -> str | None:
         return ".codex/agents"
     if runtime is Runtime.OPENCODE:
         return ".opencode/agents"
+    if runtime is Runtime.PI:
+        return "pi-agents"
     return None
 
 

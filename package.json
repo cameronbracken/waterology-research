@@ -12,5 +12,10 @@
     "skills": [
       "./skills"
     ]
+  },
+  "pi-subagents": {
+    "agents": [
+      "./pi-agents"
+    ]
   }
 }

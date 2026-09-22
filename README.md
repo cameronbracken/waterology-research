@@ -11,7 +11,8 @@ The package keeps research skills and agent definitions in the repository, then
 installs runtime adapters for each supported tool. Packaging and agents support
 all four runtimes. Research workflows are runtime neutral. Claude slash
 commands are generated compatibility shims that invoke the canonical skills.
-Pi loads the canonical skills directly through the root Pi package manifest.
+Pi loads canonical skills directly and exposes generated agents through the
+optional `pi-subagents` integration declared in the root package manifest.
 
 The installed `wgy` command is an alias for `waterology` and accepts the same
 subcommands and options, for example `wgy workflow list`.
@@ -32,7 +33,8 @@ agent-definitions/  canonical agent definitions
 agents/              generated Claude Code agents
 .codex/agents/      generated Codex agents
 .opencode/agents/   generated OpenCode agents
-package.json        Pi package manifest for canonical skills
+pi-agents/          generated pi-subagents agents
+package.json        Pi package manifest for skills and pi-subagents agents
 commands/           Claude Code compatibility commands
 rules/              path scoped conventions
 constraints/        paired checks run by check-all.py
@@ -86,13 +88,23 @@ OpenCode installs project files under `.opencode/`, including agents and
 skills. See the official [OpenCode skills documentation](https://opencode.ai/docs/skills)
 and [OpenCode agent documentation](https://opencode.ai/v2/docs/agents).
 
-Pi installs project skills under `.pi/skills/` or user skills under
-`~/.pi/agent/skills/`. The root `package.json` is also a native Pi package, so a
-checkout can be registered directly with `pi install /path/to/waterology-research`
-(or `pi install /path/to/waterology-research -l` for project scope). Pi exposes
-each workflow as `/skill:<name>` and does not receive generated subagent or MCP
-configuration because Pi has neither a built-in subagent format nor built-in MCP.
-Use the installed `waterology` CLI from Pi's shell tool for managed operations.
+Pi installs project skills and agents under `.pi/skills/` and `.pi/agents/`, or
+user assets under `~/.pi/agent/skills/` and `~/.pi/agent/agents/`. The root
+`package.json` is also a native Pi package, so a checkout can be registered
+directly with `pi install /path/to/waterology-research` (or add `-l` for project
+scope). Pi exposes each workflow as `/skill:<name>`.
+
+Pi core has no built-in subagent definition format. Install
+[`pi-subagents`](https://github.com/nicobailon/pi-subagents) to discover the
+namespaced `waterology.*` agents declared by the package manifest:
+
+```console
+pi install npm:pi-subagents
+```
+
+Agents with web capabilities also require the web tools documented by
+`pi-subagents`. Pi still has no built-in MCP registration, so use the installed
+`waterology` CLI from Pi's shell tool for managed operations.
 
 ### Claude Code plugin
 

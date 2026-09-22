@@ -35,6 +35,7 @@ def test_runtime_manifests_have_matching_identity() -> None:
     assert claude["name"] == codex["name"] == "waterology"
     assert claude["version"] == codex["version"] == pi["version"] == "0.5.7"
     assert pi["pi"] == {"skills": ["./skills"]}
+    assert pi["pi-subagents"] == {"agents": ["./pi-agents"]}
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
         assert claude[field] == codex[field]
     assert "Claude Code plugin" not in claude["description"]
@@ -49,7 +50,8 @@ def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     package = catalog.path("package.json")
     package.write_text(
-        '{"version":"0.5.7","keywords":["pi-package"],"pi":{"skills":[]}}\n',
+        '{"version":"0.5.7","keywords":["pi-package"],"pi":{"skills":[]},'
+        '"pi-subagents":{"agents":[]}}\n',
         encoding="utf-8",
     )
 
@@ -276,7 +278,9 @@ def test_validation_reports_a_missing_manifest(tmp_path: Path) -> None:
     assert not manifest.exists()
 
 
-@pytest.mark.parametrize("directory", (".codex/agents", "agents", ".opencode/agents"))
+@pytest.mark.parametrize(
+    "directory", (".codex/agents", "agents", ".opencode/agents", "pi-agents")
+)
 def test_validation_reports_a_missing_generated_agent_directory(
     tmp_path: Path, directory: str
 ) -> None:
@@ -338,6 +342,7 @@ def test_validation_reports_a_missing_canonical_agent_and_orphaned_adapters(
         "agents/writer.md",
         ".codex/agents/writer.toml",
         ".opencode/agents/writer.md",
+        "pi-agents/writer.md",
     ):
         assert (path, "orphaned-generated-agent") in issue_codes
 
@@ -442,6 +447,7 @@ def test_validation_reports_invalid_canonical_agent_definitions(
         ("agents", "writer.md"),
         (".codex/agents", "writer.toml"),
         (".opencode/agents", "writer.md"),
+        ("pi-agents", "writer.md"),
     ),
 )
 def test_validation_reports_a_missing_generated_agent(
@@ -465,6 +471,7 @@ def test_validation_reports_a_missing_generated_agent(
         ("agents", "orphan.md"),
         (".codex/agents", "orphan.toml"),
         (".opencode/agents", "orphan.md"),
+        ("pi-agents", "orphan.md"),
     ),
 )
 def test_validation_reports_an_orphaned_generated_agent(

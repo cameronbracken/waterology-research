@@ -53,6 +53,7 @@ packages = ["src/waterology", "src/waterology_assets"]
 ".codex/agents" = "waterology_assets/.codex/agents"
 ".codex/config.toml" = "waterology_assets/.codex/config.toml"
 ".opencode/agents" = "waterology_assets/.opencode/agents"
+"pi-agents" = "waterology_assets/pi-agents"
 ".claude-plugin" = "waterology_assets/.claude-plugin"
 ".codex-plugin" = "waterology_assets/.codex-plugin"
 ".mcp.json" = "waterology_assets/.mcp.json"
