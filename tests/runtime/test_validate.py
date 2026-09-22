@@ -30,9 +30,11 @@ def test_runtime_manifests_have_matching_identity() -> None:
     catalog = AssetCatalog.discover()
     claude = json.loads(catalog.path(".claude-plugin/plugin.json").read_text())
     codex = json.loads(catalog.path(".codex-plugin/plugin.json").read_text())
+    pi = json.loads(catalog.path("package.json").read_text())
 
     assert claude["name"] == codex["name"] == "waterology"
-    assert claude["version"] == codex["version"] == "0.5.7"
+    assert claude["version"] == codex["version"] == pi["version"] == "0.5.7"
+    assert pi["pi"] == {"skills": ["./skills"]}
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
         assert claude[field] == codex[field]
     assert "Claude Code plugin" not in claude["description"]
@@ -41,6 +43,22 @@ def test_runtime_manifests_have_matching_identity() -> None:
 
 def test_repository_assets_validate_cleanly() -> None:
     assert validate_assets(AssetCatalog.discover()) == ()
+
+
+def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
+    catalog = copied_catalog(tmp_path)
+    package = catalog.path("package.json")
+    package.write_text(
+        '{"version":"0.5.7","keywords":["pi-package"],"pi":{"skills":[]}}\n',
+        encoding="utf-8",
+    )
+
+    issues = validate_assets(catalog)
+
+    assert any(
+        issue.path == "package.json" and issue.code == "invalid-pi-package"
+        for issue in issues
+    )
 
 
 def test_validation_reports_a_mismatched_skill_directory(tmp_path: Path) -> None:

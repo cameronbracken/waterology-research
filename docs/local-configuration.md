@@ -137,7 +137,7 @@ the launch. The launcher never prints credential values.
 ## Installation, sharing, and migration
 
 The same resolver is included in copy/link installs for Claude Code, Codex,
-and OpenCode, and in packaged/plugin skills. No local configuration is needed
+OpenCode, and Pi, and in packaged/plugin skills. No local configuration is needed
 to install. Each user supplies their own file. Keep the global configuration
 outside the checkout; copying an entire home/config directory into a repository
 would defeat this separation.

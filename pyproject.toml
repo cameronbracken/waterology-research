@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "waterology-research"
 version = "0.5.7"
-description = "Research workflows for Claude Code, Codex, and OpenCode"
+description = "Research workflows for Claude Code, Codex, OpenCode, and Pi"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -57,6 +57,7 @@ packages = ["src/waterology", "src/waterology_assets"]
 ".codex-plugin" = "waterology_assets/.codex-plugin"
 ".mcp.json" = "waterology_assets/.mcp.json"
 "opencode.json" = "waterology_assets/opencode.json"
+"package.json" = "waterology_assets/package.json"
 "ATTRIBUTION.md" = "waterology_assets/ATTRIBUTION.md"
 "LICENSE" = "waterology_assets/LICENSE"
 

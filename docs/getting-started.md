@@ -19,7 +19,12 @@ Install the adapters needed by the current project:
 pixi run waterology install claude
 pixi run waterology install codex
 pixi run waterology install opencode
+pixi run waterology install pi
 ```
+
+The Pi adapter installs canonical skills under `.pi/skills/` (project scope) or
+`~/.pi/agent/skills/` (user scope). A checkout is also a native Pi package and
+can be registered with `pi install /path/to/waterology-research`.
 
 Use `--scope user` for user configuration. Preview changes with `--dry-run` when the command
 supports it.

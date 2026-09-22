@@ -20,6 +20,7 @@ class Runtime(StrEnum):
     CLAUDE = "claude"
     CODEX = "codex"
     OPENCODE = "opencode"
+    PI = "pi"
 
 
 class InstallScope(StrEnum):
@@ -93,9 +94,14 @@ def build_install_plan(
     catalog: AssetCatalog,
 ) -> InstallPlan:
     directories, trusted_root = _installation_layout(runtime, scope, target)
+    agent_directory = _agent_directory(runtime)
     actions = (
         _skill_actions(catalog, directories["skills"], mode)
-        + _file_actions(catalog, _agent_directory(runtime), directories["agents"], mode)
+        + (
+            _file_actions(catalog, agent_directory, directories["agents"], mode)
+            if agent_directory is not None
+            else ()
+        )
         + _command_actions(catalog, directories.get("commands"), mode)
         + _mcp_configuration_actions(catalog, runtime, scope, trusted_root)
     )
@@ -689,6 +695,8 @@ def _installation_layout(
             trusted_root,
         )
     trusted_root = _absolute_lexical(Path.home())
+    if runtime is Runtime.PI:
+        return {"skills": trusted_root / ".pi" / "agent" / "skills"}, trusted_root
     return _runtime_directories(runtime, trusted_root), trusted_root
 
 
@@ -701,15 +709,19 @@ def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
         }
     if runtime is Runtime.CODEX:
         return {"skills": base / ".agents" / "skills", "agents": base / ".codex" / "agents"}
-    return {"skills": base / ".opencode" / "skills", "agents": base / ".opencode" / "agents"}
+    if runtime is Runtime.OPENCODE:
+        return {"skills": base / ".opencode" / "skills", "agents": base / ".opencode" / "agents"}
+    return {"skills": base / ".pi" / "skills"}
 
 
-def _agent_directory(runtime: Runtime) -> str:
+def _agent_directory(runtime: Runtime) -> str | None:
     if runtime is Runtime.CLAUDE:
         return "agents"
     if runtime is Runtime.CODEX:
         return ".codex/agents"
-    return ".opencode/agents"
+    if runtime is Runtime.OPENCODE:
+        return ".opencode/agents"
+    return None
 
 
 def _skill_actions(
@@ -750,7 +762,7 @@ def _mcp_configuration_actions(
     scope: InstallScope,
     trusted_root: Path,
 ) -> tuple[InstallAction, ...]:
-    if scope is not InstallScope.PROJECT:
+    if scope is not InstallScope.PROJECT or runtime is Runtime.PI:
         return ()
     source_id, relative = {
         Runtime.CLAUDE: (".mcp.json", ".mcp.json"),

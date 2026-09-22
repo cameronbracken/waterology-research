@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Waterology is a research workflow package for Claude Code, Codex, and OpenCode.
+Waterology is a research workflow package for Claude Code, Codex, OpenCode, and Pi.
 
 ## Source layout
 

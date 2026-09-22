@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from waterology.cli import app
@@ -33,12 +34,22 @@ def test_opencode_project_config_uses_current_v2_shape() -> None:
 
 
 def test_runtime_config_snippets_contain_no_machine_paths_or_environment() -> None:
-    for runtime in Runtime:
+    for runtime in (Runtime.CLAUDE, Runtime.CODEX, Runtime.OPENCODE):
         config = runtime_mcp_config(runtime)
         serialized = json.dumps(config, sort_keys=True)
         assert "waterology-mcp" in serialized
         assert str(Path.home()) not in serialized
         assert "environment" not in serialized
+
+
+def test_pi_mcp_registration_is_explicitly_unsupported() -> None:
+    with pytest.raises(ValueError, match="no built-in MCP"):
+        runtime_mcp_config(Runtime.PI)
+
+    result = runner.invoke(app, ["mcp", "config", "pi", "--json"])
+
+    assert result.exit_code == 2
+    assert "no built-in MCP" in result.output
 
 
 def test_registration_commands_use_supported_runtime_interfaces() -> None:
@@ -56,6 +67,7 @@ def test_registration_commands_use_supported_runtime_interfaces() -> None:
     )
     assert registration_command(Runtime.CODEX) is None
     assert registration_command(Runtime.OPENCODE) is None
+    assert registration_command(Runtime.PI) is None
 
 
 def test_mcp_config_cli_prints_machine_neutral_runtime_snippet() -> None:

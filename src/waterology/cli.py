@@ -65,7 +65,7 @@ from waterology.user_config_cli import register_user_config_commands
 from waterology.workflow_cli import register_workflow_commands
 
 app = typer.Typer(
-    help="Waterology research workflows for Claude Code, Codex, and OpenCode.",
+    help="Waterology research workflows for Claude Code, Codex, OpenCode, and Pi.",
     no_args_is_help=True,
 )
 register_knowledge_commands(app)
@@ -157,7 +157,7 @@ def _selected_runtimes(value: str) -> tuple[Runtime, ...]:
         return (Runtime(value),)
     except ValueError as error:
         raise typer.BadParameter(
-            "must be one of: claude, codex, opencode, all",
+            "must be one of: claude, codex, opencode, pi, all",
             param_hint="runtime",
         ) from error
 
@@ -1174,7 +1174,10 @@ def mcp_config_command(
     json_output: bool = typer.Option(False, "--json"),
 ) -> None:
     """Print a machine neutral MCP registration snippet for one runtime."""
-    config = runtime_mcp_config(runtime)
+    try:
+        config = runtime_mcp_config(runtime)
+    except ValueError as error:
+        raise typer.BadParameter(str(error), param_hint="runtime") from error
     command = registration_command(runtime)
     if json_output:
         _emit_json(
@@ -1251,7 +1254,7 @@ def render(
 @app.command()
 def install(
     ctx: typer.Context,
-    runtime: str = typer.Argument(..., metavar="<claude|codex|opencode|all>"),
+    runtime: str = typer.Argument(..., metavar="<claude|codex|opencode|pi|all>"),
     scope: InstallScope = _INSTALL_SCOPE_OPTION,
     target: Path = _INSTALL_TARGET_OPTION,
     mode: InstallMode = _INSTALL_MODE_OPTION,

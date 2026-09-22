@@ -67,6 +67,7 @@ def test_readme_documents_install_scope_and_runtime_contracts() -> None:
         "pixi run waterology install claude",
         "pixi run waterology install codex",
         "pixi run waterology install opencode",
+        "pixi run waterology install pi",
         "pixi run waterology install all --dry-run",
         "pixi run waterology doctor",
         "pixi run waterology install codex --scope user",
@@ -134,3 +135,12 @@ def test_roadmap_marks_platform_and_research_slices_complete() -> None:
     for slice_number in range(3, 8):
         assert f"## Slice {slice_number} -" in roadmap
     assert roadmap.count("done 2026-08-26") == 5
+
+
+def test_pi_package_loads_canonical_skills_only() -> None:
+    package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+
+    assert "pi-package" in package["keywords"]
+    assert package["pi"] == {"skills": ["./skills"]}
+    assert "extensions" not in package["pi"]
+    assert "prompts" not in package["pi"]

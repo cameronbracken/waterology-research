@@ -181,8 +181,8 @@ implementation plan and review checkpoint.
 
 - [x] **Slice 1: cross runtime foundation**
 
-  Package Waterology for Claude Code, Codex, and OpenCode. Keep canonical root
-  skills and agent definitions, generate runtime adapters, and preserve Claude
+  Package Waterology for Claude Code, Codex, OpenCode, and Pi. Keep canonical
+  root skills and agent definitions, generate runtime adapters, and preserve Claude
   compatibility commands.
 
 - [x] **Slice 2: research methods**

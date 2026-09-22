@@ -58,6 +58,7 @@ def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
         (Runtime.CLAUDE, ".claude/skills"),
         (Runtime.CODEX, ".agents/skills"),
         (Runtime.OPENCODE, ".opencode/skills"),
+        (Runtime.PI, ".pi/skills"),
     ],
 )
 def test_installed_autoresearch_tree_reference_resolves(

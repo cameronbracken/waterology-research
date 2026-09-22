@@ -31,7 +31,7 @@ def run_diagnostics(
             f"{len(issues)} asset validation issue(s)" if issues else "Assets are valid",
         )
     ]
-    for name in ("claude", "codex", "opencode"):
+    for name in ("claude", "codex", "opencode", "pi"):
         path = shutil.which(name)
         required = runtime == name
         diagnostics.append(

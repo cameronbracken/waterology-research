@@ -33,6 +33,7 @@ def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
         "waterology/mcp/server.py",
         "waterology_assets/.mcp.json",
         "waterology_assets/opencode.json",
+        "waterology_assets/package.json",
         "waterology_assets/skills/project-conventions/SKILL.md",
         "waterology_assets/skills/project-conventions/references/local-preferences.md",
         "waterology_assets/skills/writing-style/SKILL.md",
@@ -178,6 +179,17 @@ def test_project_install_smoke(
 
     if runtime == "claude":
         assert (tmp_path / ".claude/commands/deepresearch.md").is_file()
+
+
+def test_pi_project_install_smoke(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["install", "pi", "--target", str(tmp_path)])
+
+    assert result.exit_code == 0, result.stdout
+    assert (tmp_path / ".pi/skills/project-conventions/SKILL.md").is_file()
+    assert not (tmp_path / ".pi/agents").exists()
+    manifest = tmp_path / ".pi/.waterology-install.json"
+    assert manifest.is_file()
+    _assert_manifest_covers_installed_destinations(manifest)
 
 
 def test_all_runtime_dry_run_is_json_and_read_only(tmp_path: Path) -> None:

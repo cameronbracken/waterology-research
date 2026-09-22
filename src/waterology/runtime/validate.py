@@ -70,6 +70,31 @@ def _validate_manifests(catalog: AssetCatalog) -> list[ValidationIssue]:
     return issues
 
 
+def _validate_pi_package(catalog: AssetCatalog) -> list[ValidationIssue]:
+    relative = "package.json"
+    try:
+        path = catalog.path(relative)
+    except AssetNotFoundError:
+        return [ValidationIssue(relative, "missing-asset", "Pi package manifest is missing")]
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        return [ValidationIssue(relative, "invalid-json", str(error))]
+    if not isinstance(data, dict):
+        return [ValidationIssue(relative, "invalid-manifest", "manifest must be a JSON object")]
+    issues = []
+    if data.get("version") != __version__:
+        issues.append(ValidationIssue(relative, "wrong-version", str(data.get("version"))))
+    keywords = data.get("keywords")
+    if not isinstance(keywords, list) or "pi-package" not in keywords:
+        issues.append(ValidationIssue(relative, "missing-field", "keywords: pi-package"))
+    if data.get("pi") != {"skills": ["./skills"]}:
+        issues.append(
+            ValidationIssue(relative, "invalid-pi-package", "pi.skills must select ./skills")
+        )
+    return issues
+
+
 def _frontmatter(path: Path) -> dict[str, object]:
     parts = path.read_text(encoding="utf-8").split("---", 2)
     if len(parts) != 3:
@@ -422,6 +447,7 @@ def validate_assets(catalog: AssetCatalog) -> tuple[ValidationIssue, ...]:
     canonical_issues, canonical_names, canonical_valid = _validate_canonical_agents(catalog)
     issues = [
         *_validate_manifests(catalog),
+        *_validate_pi_package(catalog),
         *_validate_skills(catalog),
         *_validate_skill_commands(catalog),
         *canonical_issues,

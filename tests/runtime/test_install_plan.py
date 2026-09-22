@@ -47,6 +47,21 @@ def test_project_claude_plan_keeps_command_shims(tmp_path: Path) -> None:
     )
 
 
+def test_project_pi_plan_installs_canonical_skills_only(tmp_path: Path) -> None:
+    plan = build_install_plan(
+        runtime=Runtime.PI,
+        scope=InstallScope.PROJECT,
+        target=tmp_path,
+        mode=InstallMode.COPY,
+        catalog=AssetCatalog.discover(),
+    )
+
+    destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
+    assert ".pi/skills/project-conventions" in destinations
+    assert not any("agents" in destination for destination in destinations)
+    assert not any(destination.endswith(".json") for destination in destinations)
+
+
 def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
     plan = build_install_plan(
         runtime=Runtime.OPENCODE,
@@ -80,6 +95,7 @@ def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
             Runtime.OPENCODE,
             {".opencode/.waterology-install.json", ".waterology-opencode-install.json"},
         ),
+        (Runtime.PI, {".pi/.waterology-install.json"}),
     ],
 )
 def test_project_plans_put_manifests_at_runtime_roots(
@@ -161,6 +177,22 @@ def test_user_claude_plan_uses_home_directories(tmp_path: Path, monkeypatch) -> 
     assert ".claude/skills/project-conventions" in destinations
     assert ".claude/agents/researcher.md" in destinations
     assert ".claude/commands/deepresearch.md" in destinations
+
+
+def test_user_pi_plan_uses_pi_agent_skills(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+
+    plan = build_install_plan(
+        runtime=Runtime.PI,
+        scope=InstallScope.USER,
+        target=Path("unused"),
+        mode=InstallMode.COPY,
+        catalog=AssetCatalog.discover(),
+    )
+
+    destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
+    assert ".pi/agent/skills/project-conventions" in destinations
+    assert plan.trusted_root == tmp_path.absolute()
 
 
 def test_user_opencode_plan_honors_xdg_config_home(tmp_path: Path, monkeypatch) -> None:

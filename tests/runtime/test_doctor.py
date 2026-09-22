@@ -61,6 +61,7 @@ def test_doctor_json_reports_runtime_commands(monkeypatch, tmp_path: Path) -> No
     assert payload["assets"]["status"] == "pass"
     assert payload["runtimes"]["codex"]["status"] == "pass"
     assert payload["runtimes"]["claude"]["status"] == "warn"
+    assert payload["runtimes"]["pi"]["status"] == "warn"
     assert payload["torc"]["binary"]["status"] == "warn"
     assert payload["mcp"]["sdk"]["status"] in {"pass", "warn"}
     assert payload["mcp"]["server"]["status"] == "warn"
@@ -129,6 +130,17 @@ def test_doctor_rejects_incompatible_torc_version(monkeypatch, tmp_path: Path) -
     payload = json.loads(result.stdout)
     assert payload["torc"]["connectivity"]["status"] == "fail"
     assert "0.40.0 or newer" in payload["torc"]["connectivity"]["message"]
+
+
+def test_doctor_detects_requested_pi_runtime(monkeypatch, tmp_path: Path) -> None:
+    pi = tmp_path / "bin" / "pi"
+    monkeypatch.setattr("shutil.which", lambda name: str(pi) if name == "pi" else None)
+
+    result = runner.invoke(app, ["doctor", "--runtime", "pi", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["runtimes"]["pi"]["status"] == "pass"
 
 
 def test_doctor_returns_exit_one_when_requested_runtime_is_missing(monkeypatch) -> None:
