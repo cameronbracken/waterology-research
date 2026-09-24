@@ -26,6 +26,7 @@ def test_repository_has_sorted_canonical_agents() -> None:
     agents = load_agents(AssetCatalog.discover())
 
     assert [agent.name for agent in agents] == [
+        "engineer",
         "r-reviewer",
         "reproducibility-auditor",
         "researcher",

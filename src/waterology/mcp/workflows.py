@@ -34,6 +34,21 @@ def register_workflow_tools(server, bounded_tool):
         ).model_dump(mode="json")
 
     @bounded_tool(server)
+    def engineering_create(contract_path: str, authorized_by: str,
+                           profile: str | None = None, project_path: str = ".") -> dict:
+        """Create a specification-driven study from an authored project contract."""
+        from waterology.core.engineering import create_engineering_study
+        root = Path(project_path).resolve()
+        return create_engineering_study(root, root / contract_path,
+                                        authorized_by=authorized_by, profile=profile).model_dump(mode="json")
+
+    @bounded_tool(server)
+    def engineering_status(study_id: str, project_path: str = ".") -> dict:
+        """Inspect engineering requirements and archive-verified acceptance evidence."""
+        from waterology.core.engineering import engineering_status as status
+        return status(Path(project_path), study_id)
+
+    @bounded_tool(server)
     def study_status(study_id: str, project_path: str = ".") -> dict:
         """Read durable authorization, queue, attempts and stopping state."""
         return load_study(Path(project_path), study_id).model_dump(mode="json")

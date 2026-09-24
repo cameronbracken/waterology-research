@@ -1,6 +1,6 @@
 # waterology-research
 
-waterology-research is a set of skills, agents, and workflows for
+waterology-research provides research and engineering skills, agents, and workflows for
 [Claude Code](https://claude.com/claude-code),
 [Codex](https://openai.com/codex/),
 [OpenCode](https://opencode.ai/), and
@@ -49,7 +49,12 @@ ATTRIBUTION.md      citation ledger for adapted upstream material
 
 The [documentation index](docs/README.md) links the maintained user guides:
 
+- [Engineering: build, repair, and optimize](docs/engineering.md)
+- [Workflow guide with diagrams](docs/workflow-guide.md)
 - [Getting started](docs/getting-started.md)
+- [Execute and reproduce a project](docs/workflow-execution.md)
+- [Managed studies](docs/managed-studies.md)
+- [RO-Crate integration](docs/ro-crate.md)
 - [Configuration](docs/configuration.md)
 - [TORC execution](docs/torc.md)
 
@@ -368,7 +373,7 @@ constraint, validating the full repository, or preparing a release.
 
 ## Research workflows
 
-The research bundle provides seven agents: `researcher`, `writer`, `verifier`,
+The bundle provides eight agents: `engineer`, `researcher`, `writer`, `verifier`,
 `reviewer`, `r-reviewer`, `sim-reviewer`, and `reproducibility-auditor`. It also
 installs research skills and Claude Code compatibility commands.
 
@@ -389,6 +394,7 @@ support, MyST to Quarto conversion, and verified LaTeX builds.
 
 | Command | Does |
 | --- | --- |
+| `/engineering` | Build or repair to a specification, or optimize under constraints |
 | `/deepresearch` | Multi source investigation to a cited brief with provenance |
 | `/lit` | Literature review or a publication corpus review |
 | `/draft` | Findings to a paper style Quarto or LaTeX draft |

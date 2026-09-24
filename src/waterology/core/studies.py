@@ -51,6 +51,7 @@ class StudyContract(BaseModel):
     allowed_paths: tuple[str, ...] = Field(min_length=1)
     evaluation: dict[str, object] = Field(min_length=1)
     acceptance: tuple[MetricRule, ...] = Field(min_length=1)
+    candidate_strategy: Literal["best", "latest_completed"] = "best"
     promotion_metric: str | None = None
     promotion_margin: float = Field(default=0, ge=0, allow_inf_nan=False)
     max_iterations: int = Field(ge=1)
@@ -67,6 +68,8 @@ class StudyContract(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_compatible(self, handler):
         payload = handler(self)
+        if self.candidate_strategy == "best":
+            payload.pop("candidate_strategy", None)
         if self.workflow is None:
             payload.pop("workflow", None)
         return payload
@@ -297,6 +300,8 @@ def evaluate_metrics(contract: StudyContract, metrics: dict[str, object]) -> dic
             {
                 "name": rule.name,
                 "unit": rule.unit,
+                "direction": rule.direction,
+                "threshold": rule.threshold,
                 "value": value if numeric else None,
                 "passed": bool(passed),
                 "reason": None if numeric else "missing or nonfinite measurement",
@@ -307,7 +312,7 @@ def evaluate_metrics(contract: StudyContract, metrics: dict[str, object]) -> dic
         "feasible": feasible,
         "accepted": feasible and contract.mode == "engineering",
         "checks": checks,
-        "scientific_answer": "unassessed",
+        "scientific_answer": "unassessed" if contract.mode == "research" else "not_applicable",
     }
 
 

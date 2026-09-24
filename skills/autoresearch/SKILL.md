@@ -84,8 +84,10 @@ Use `waterology workflow run NAME --profile PROFILE` for an ordinary evaluation
 that does not need a bounded candidate loop. It waits for TORC and collects results.
 After interruption, use `waterology workflow watch RUN_ID` to resume collection.
 Sealing creates `.waterology/ro-crates/RUN_ID/` with the unchanged archive under
-`run/`, Workflow Run Crate metadata when a named workflow is available, and an
-RO-Crate validator record when the validator is installed. Use
+`run/`, Workflow Run Crate metadata when an executable TORC definition is archived, and a
+validator result or explicit skipped status. Named commands without an archived
+workflow receive Process Run metadata. Packaging errors are recorded separately
+from sealed execution results. Use
 `waterology archive export-crate RUN_ID DEST` for a shareable copy. Do not
 recreate run records or copy metrics into a parallel agent log.
 
@@ -105,7 +107,9 @@ Use one managed loop with an explicit mode:
   design, uncertainty and evidence needed. A negative or inconclusive result is
   valid. A numeric improvement alone does not establish an explanation.
 
-Keep `autoresearch` as the entry point for both. Do not force engineering work
+Use `engineering-workflow` and the `waterology engineering` commands for an explicit
+engineering entry point. Existing engineering studies remain available through
+`autoresearch` and `study`; both use the same records and controller. Do not force engineering work
 into a hypothesis narrative or require tree search for cumulative implementation.
 For tree search, read [experiment-tree.md](references/experiment-tree.md).
 

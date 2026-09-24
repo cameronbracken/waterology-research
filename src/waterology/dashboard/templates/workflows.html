@@ -1,9 +1,17 @@
 <!doctype html>
 <html lang="en" data-theme="system"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Waterology studies</title><link rel="stylesheet" href="/static/dashboard.css"><script src="/static/dashboard.js" defer></script></head>
 <body><main class="main-content"><button class="theme-button" type="button" data-theme-toggle aria-label="Change color theme">Theme: system</button><nav aria-label="Research navigation"><a href="/">Overview</a> | <a href="/experiments">Experiment tree</a> | <a href="/studies">Studies</a> | <a href="/comparison">Compare runs</a> | <a href="/evidence">Evidence</a></nav>
+<p>Engineering builds to a specification or optimizes under fixed constraints. Start with <code>waterology engineering init</code>. Research studies retain explicit scientific conclusions.</p>
 <h1>{{ 'Managed studies' if studies is not none else 'Compare archived runs' }}</h1>
 {% if studies is not none %}
 {% for study in studies %}<section class="panel"><h2>{{ study.contract.objective }}</h2><p>{{ study.id }} | {{ study.contract.mode }} | {{ study.state }}</p><p>{{ study.reason or 'Within the saved authorization and execution contract.' }}</p><p>Profile: {{ study.profile }}. Attempts: {{ study.attempts | length }} / {{ study.contract.max_iterations }}.</p>
+{% if study.contract.mode == 'engineering' %}
+<h3>Acceptance requirements</h3>
+<div class="table-wrap"><table><thead><tr><th>Metric</th><th>Direction</th><th>Threshold</th><th>Unit</th></tr></thead><tbody>
+{% for rule in study.contract.acceptance %}<tr><td>{{ rule.name }}</td><td>{{ rule.direction }}</td><td>{{ rule.threshold }}</td><td>{{ rule.unit }}</td></tr>{% endfor %}
+</tbody></table></div>
+<p>Candidate ancestry: {{ study.contract.candidate_strategy }}. Every requirement must pass.</p>
+{% endif %}
 <details><summary>Authorization and contract</summary><p>{{ study.authorized_by }}</p><code>{{ study.contract_hash }}</code></details>
 {% if study.attempts %}<a href="/comparison?baseline={{ study.attempts[0].run_id }}{% for attempt in study.attempts %}&amp;run={{ attempt.run_id }}{% endfor %}">Compare this study</a>{% endif %}
 <ul>{% for attempt in study.attempts %}<li><a href="/experiments/{{ attempt.experiment_id }}">{{ attempt.experiment_id }}</a>: {{ attempt.state }}. <a href="/archives/{{ attempt.run_id }}">Run evidence</a>. Acceptance: {% if attempt.assessment %}{{ 'met' if attempt.assessment.accepted else 'not met' if study.contract.mode == 'engineering' else 'scientific assessment pending' }}{% else %}unassessed{% endif %}. <a href="/changes/{{ attempt.run_id }}">Code changes</a></li>{% endfor %}</ul></section>{% else %}<p>No managed studies yet. Create a bounded contract with <code>waterology study create</code>.</p>{% endfor %}

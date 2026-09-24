@@ -11,6 +11,10 @@ threshold to pass. Research mode retains the measurements and requires an explic
 conclusion supported by assessed claims. Neither mode equates process completion
 with scientific support.
 
+For specification-first setup, cumulative implementation, and constrained
+optimization, see [Engineering](engineering.md). The `engineering` commands and
+`study` commands share the same controller and durable records.
+
 ## Prepare a contract
 
 Initialize the project and configure a TORC profile using

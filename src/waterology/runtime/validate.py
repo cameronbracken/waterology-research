@@ -24,6 +24,7 @@ GENERATED_AGENT_SUFFIXES = {
     "pi-agents": ".md",
 }
 REQUIRED_AGENT_NAMES = (
+    "engineer",
     "r-reviewer",
     "reproducibility-auditor",
     "researcher",

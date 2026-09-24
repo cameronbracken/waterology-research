@@ -382,8 +382,9 @@ def test_stale_outputs_cannot_satisfy_acceptance(study_project, monkeypatch):
     assert result.best_run is None
 
 
+@pytest.mark.parametrize("mode", ["research", "engineering"])
 def test_candidate_driver_uses_owned_session_and_queues_committed_change(
-    study_project, monkeypatch
+    study_project, monkeypatch, mode
 ):
     from types import SimpleNamespace
 
@@ -394,7 +395,7 @@ def test_candidate_driver_uses_owned_session_and_queues_committed_change(
     from waterology.torc.runs import inspect_torc_run
 
     root, worktree, machine, spec = study_project
-    spec = spec.model_copy(update={"mode": "research", "max_iterations": 2})
+    spec = spec.model_copy(update={"mode": mode, "max_iterations": 2})
     monkeypatch.setattr(
         studies, "start_torc_run", lambda *a, **kw: start_torc_run(*a, **kw, gateway=Gateway())
     )
@@ -408,7 +409,7 @@ def test_candidate_driver_uses_owned_session_and_queues_committed_change(
     record = studies.create_study(root, spec, authorized_by="user authorized bounded fixture")
     studies.advance_study(root, record.id)
     (worktree / "results").mkdir(exist_ok=True)
-    (worktree / "results/metrics.json").write_text('{"error":0.5}')
+    (worktree / "results/metrics.json").write_text('{"error":9.0}')
     assert studies.advance_study(root, record.id).state == "ready"
     launches = []
 
@@ -419,6 +420,7 @@ def test_candidate_driver_uses_owned_session_and_queues_committed_change(
         git(candidate, "add", "model.py")
         git(candidate, "-c", "commit.gpgsign=false", "commit", "-qm", "agent fixture")
         launches.append(session_id)
+        assert session.role == ("engineer" if mode == "engineering" else "researcher")
         assert "Do not launch evaluations" in prompt
         return session
 
@@ -980,3 +982,41 @@ def test_recovery_rechecks_pinned_input_bytes(study_project, monkeypatch):
     with pytest.raises(studies.StudyError, match="Input identity mismatch"):
         studies.retry_submission(root, blocked.id, blocked.attempts[0].run_id, gateway=gateway)
     assert gateway.launches == 0
+
+
+def test_engineering_cli_mcp_status_checks_current_archive(sealed_run):
+    import json
+
+    from typer.testing import CliRunner
+
+    from waterology.cli import app
+    from waterology.core.archive import _write_checksums
+    from waterology.core.engineering import engineering_status
+    from waterology.mcp.workflows import register_workflow_tools
+
+    root, run_id, record = sealed_run
+    tools = {}
+    def bounded(server):
+        def register(function):
+            tools[function.__name__] = function
+            return function
+        return register
+    register_workflow_tools(None, bounded)
+    status = engineering_status(root, record.id)
+    assert status["accepted_runs"] == [run_id]
+    assert status == tools["engineering_status"](record.id, project_path=str(root))
+    cli = CliRunner().invoke(app, ["--output-format", "json", "engineering", "show",
+                                   record.id, "--path", str(root)])
+    assert cli.exit_code == 0, cli.output
+    assert json.loads(cli.stdout) == status
+    directory = root / ".waterology/runs" / run_id
+    (directory / "metrics.json").write_text('{"error": 99}')
+    assert engineering_status(root, record.id)["accepted_runs"] == []
+    digest = _write_checksums(directory)
+    seal = json.loads((directory / "seal.json").read_text())
+    seal["checksums_sha256"] = digest
+    (directory / "seal.json").write_text(json.dumps(seal))
+    changed = engineering_status(root, record.id)
+    assert changed["attempts"][0]["archive_valid"]
+    assert not changed["attempts"][0]["assessment_current"]
+    assert changed["accepted_runs"] == []

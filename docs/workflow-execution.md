@@ -199,3 +199,17 @@ Symlinks and submodules require a different packaging strategy and are rejected.
 Remote input mounts, worker software and platform compatibility require separate
 qualification on the selected host. A local reproduction does not establish
 identical results on every platform.
+
+## Export run provenance
+
+Sealed runs also produce an automatic RO-Crate under
+`.waterology/ro-crates/RUN_ID/`. To create a separate copy:
+
+```console
+waterology archive export-crate RUN_ID exports/run-crate
+```
+
+This wraps a copy of the archive with descriptive metadata. It does not execute
+the workflow or replace the deliverable export used by `reproduce --bundle`.
+See [RO-Crate integration](ro-crate.md) for the directory layout, profile
+declarations, validation outcomes, and current limitations.
