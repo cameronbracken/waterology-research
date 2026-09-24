@@ -25,9 +25,13 @@ quarto = ">=1.6"
 [feature.reports.pypi-dependencies]
 plotly = ">=6,<7"
 
+[feature.rocrate.pypi-dependencies]
+roc-validator = "==0.11.4"
+
 [environments]
 default = { features = ["dev"], solve-group = "default" }
 reports = { features = ["dev", "reports"], solve-group = "reports" }
+rocrate = { features = ["dev", "rocrate"], solve-group = "rocrate" }
 
 [tasks]
 test = "pytest"

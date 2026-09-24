@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "profile": "workflow-run-crate-0.5",
+  "severity": "required",
+  "validator_version": "0.11.4",
+  "exit_code": 0,
+  "statistics": {
+    "started_at": "2026-09-24T11:04:38.056556+00:00",
+    "finished_at": "2026-09-24T11:04:38.366063+00:00",
+    "duration": 0.309507,
+    "profiles": [
+      "process-run-crate-0.5",
+      "ro-crate-1.1",
+      "workflow-ro-crate-1.0",
+      "workflow-run-crate-0.5"
+    ],
+    "total_requirements": 24,
+    "total_passed_requirements": 24,
+    "total_failed_requirements": 0,
+    "total_checks": 55,
+    "total_passed_checks": 55,
+    "total_failed_checks": 0,
+    "total_checks_by_severity": {
+      "REQUIRED": 55,
+      "RECOMMENDED": 0,
+      "OPTIONAL": 0
+    }
+  },
+  "fixture": "local synthetic TORC engineering study",
+  "run_id": "run-9687d6f7200448d5"
+}

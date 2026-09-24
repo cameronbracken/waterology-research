@@ -3,6 +3,11 @@
 Waterology records research experiments as committed Git variants. Each run keeps its command,
 environment evidence, logs, metrics, outputs, and assessment together.
 
+For a map of the pieces and when to use them, read the
+[workflow guide](workflow-guide.md). The walkthrough below uses the single-command
+experiment API. For existing project tasks and reproducible deliverables, use
+[named workflows](workflow-execution.md).
+
 ## Install
 
 From a source checkout:

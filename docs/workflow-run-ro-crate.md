@@ -1,8 +1,17 @@
 # Workflow Run RO-Crate evaluation
 
-## Decision
+For usage, read [RO-Crate integration](ro-crate.md). Automatic and manual exports
+are implemented. This evaluation describes the recommended profile design; the
+[implementation boundary](#implementation-boundary) below distinguishes current
+behavior from that recommendation.
 
-Waterology should export every eligible sealed run as a
+## Design target
+
+Current exports use the compatible RO-Crate 1.1 / Workflow Run 0.5 set supported
+by the pinned validator. The newer set below is an upgrade target, not the
+implemented declaration.
+
+The longer-term profile target is to export every eligible sealed run as a
 [Process Run Crate 0.6](https://www.researchobject.org/workflow-run-crate/profiles/process_run_crate/)
 and add
 [Workflow Run Crate 0.6](https://www.researchobject.org/workflow-run-crate/profiles/workflow_run_crate/)
@@ -197,11 +206,24 @@ also relies on the Python validator.
 
 ## Implementation boundary
 
-The implemented exporter now covers the first three increments: every sealed run
-gets an automatic derived crate, named workflow archives receive Workflow Run
-metadata, and `ro-crate-validation.json` records a local validator result when
-`rocrate-validator` is installed. Manual copies use
-`waterology archive export-crate RUN_ID DEST`.
+The exporter creates an automatic derived crate when sealing a run, with manual
+copies through `waterology archive export-crate RUN_ID DEST`. It emits Process
+Run 0.5 on RO-Crate 1.1. Workflow Run 0.5 and Workflow RO-Crate 1.0 declarations
+are added only when an executor reference identifies an archived submitted TORC
+definition. For Slurm this is the generated Slurm definition. Command-backed
+registrations without that evidence remain Process Run crates.
+
+This supported version set is deliberate: pinned `roc-validator==0.11.4` implements
+these profiles but not the newer set recommended above. The optional integration
+selects the profile and REQUIRED severity explicitly, verifies the validator
+version, and retains a structured success, failure, skipped, or error record.
+Real positive and negative fixture checks cover both exported profiles.
+
+Automatic packaging failure is isolated from the sealed execution result, and
+manual failure leaves diagnostics for inspection. Metadata uses archived evidence
+without falling back to current project configuration or exporting the local
+repository URI. See the [usage guide](ro-crate.md#profiles-and-validation) for the
+validation boundary and recovery instructions.
 
 Provenance Run remains out of scope until archive records capture per-step tool
 identity, action status, inputs, outputs, and intermediates without log

@@ -165,6 +165,9 @@ def run_driver(
 
 def register_workflow_commands(app: typer.Typer):
     app.add_typer(study_app, name="study")
+    from waterology.engineering_cli import register_engineering_commands
+
+    register_engineering_commands(app)
 
     @app.command("compare-runs")
     def compare(run_ids: list[str], baseline: str = typer.Option(...), path: Path = _PATH_OPTION):

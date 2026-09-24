@@ -165,7 +165,7 @@ def _drive_study(start: Path, study_id: str) -> dict:
         driver["proposals"].append(proposal)
         _save_driver(start, study_id, driver)
     try:
-        parent = next((a for a in study.attempts if a.run_id == study.best_run), None)
+        parent = candidate_parent(study)
         parent_experiment = parent.experiment_id if parent else study.contract.baseline_experiment
         parent_record = load_experiment(start, parent_experiment)
         parent_commit = parent.commit_sha if parent else study.baseline_commit
@@ -202,7 +202,7 @@ def _drive_study(start: Path, study_id: str) -> dict:
             start,
             experiment_id=experiment.id,
             runtime=driver["runtime"],
-            role="researcher",
+            role="engineer" if study.contract.mode == "engineering" else "researcher",
             task=task,
             compute_profile=study.profile,
             session_id=proposal["session_id"],
@@ -229,3 +229,11 @@ def _drive_study(start: Path, study_id: str) -> dict:
         )
         _save_driver(start, study_id, driver)
     return {"study": load_study(start, study_id).model_dump(mode="json"), "driver": driver}
+
+
+def candidate_parent(study):
+    """Select evidence-backed ancestry without marking partial work as accepted."""
+    if study.contract.candidate_strategy == "latest_completed":
+        return next((a for a in reversed(study.attempts)
+                     if a.state == "completed" and a.assessment is not None), None)
+    return next((a for a in study.attempts if a.run_id == study.best_run), None)

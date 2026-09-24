@@ -631,7 +631,8 @@ def test_sealed_archive_is_never_overwritten(tmp_path: Path) -> None:
     assert (archive / "stdout.log").read_text(encoding="utf-8") == "first\n"
 
 
-def test_stdout_metric_markers_seal_state_and_ro_crate_export(tmp_path: Path) -> None:
+def test_stdout_metric_markers_seal_state_and_ro_crate_export(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(archive_module.shutil, "which", lambda name: None)
     root, experiment_id = make_experiment(tmp_path / "study")
     worktree = root / ".waterology" / "worktrees" / experiment_id
     output = worktree / "artifacts" / "result.json"
@@ -676,10 +677,10 @@ def test_stdout_metric_markers_seal_state_and_ro_crate_export(tmp_path: Path) ->
     assert validation["status"] == "skipped"
     assert any(node.get("@id") == "#run" for node in metadata["@graph"])
     root_node = next(node for node in metadata["@graph"] if node.get("@id") == "./")
-    assert "process/0.6" in root_node["conformsTo"]["@id"]
+    assert {"@id": "https://w3id.org/ro/wfrun/process/0.5"} in root_node["conformsTo"]
 
 
-def test_ro_crate_is_automatic_and_encodes_workflow_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_named_command_crate_preserves_metrics_without_claiming_native_workflow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root, experiment_id = make_experiment(tmp_path / "study")
     worktree = root / ".waterology" / "worktrees" / experiment_id
     config = load_project_config(worktree / "waterology.toml")
@@ -699,7 +700,7 @@ def test_ro_crate_is_automatic_and_encodes_workflow_metadata(tmp_path: Path, mon
     output = worktree / "artifacts" / "result.json"
     output.parent.mkdir()
     output.write_text('{"rmse": 1.25}\n', encoding="utf-8")
-    monkeypatch.setattr(archive_module.shutil, "which", lambda name: "/bin/echo")
+    monkeypatch.setattr(archive_module.shutil, "which", lambda name: None)
 
     build_run_archive(
         root,
@@ -722,12 +723,12 @@ def test_ro_crate_is_automatic_and_encodes_workflow_metadata(tmp_path: Path, mon
     validation = json.loads((crate / "ro-crate-validation.json").read_text(encoding="utf-8"))
     root_node = next(node for node in metadata["@graph"] if node.get("@id") == "./")
     action = next(node for node in metadata["@graph"] if node.get("@id") == "#run")
-    workflow_node = next(node for node in metadata["@graph"] if node.get("@id") == "#workflow")
+    assert {"@id": "https://w3id.org/ro/wfrun/process/0.5"} in root_node["conformsTo"]
+    assert action["instrument"] == {"@id": "#tool"}
     metrics_node = next(node for node in metadata["@graph"] if node.get("@id") == "run/metrics.json")
-    assert "workflow/0.6" in root_node["conformsTo"]["@id"]
-    assert action["instrument"] == {"@id": "#workflow"}
-    assert workflow_node["name"] == "simulate"
-    assert metrics_node["variableMeasured"][0]["name"] == "rmse"
-    assert metrics_node["variableMeasured"][0]["propertyID"] == "rmse"
+    metric_id = metrics_node["variableMeasured"][0]["@id"]
+    metric = next(node for node in metadata["@graph"] if node["@id"] == metric_id)
+    assert metric["name"] == "rmse"
+    assert metric["propertyID"] == "rmse"
     assert (crate / "run" / "checksums.sha256").is_file()
-    assert validation["status"] == "passed"
+    assert validation["status"] == "skipped"

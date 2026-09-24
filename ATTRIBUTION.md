@@ -243,6 +243,16 @@ source are credited here; this page is the canonical list.
 - **Credit string:** *Managed execution integrates with TORC
   (NatLabRockies/torc, BSD 3-Clause).*
 
+### Workflow Run RO-Crate and roc-validator
+
+- **Authors:** Workflow Run RO-Crate working group; CRS4 roc-validator contributors.
+- **Specifications:** <https://www.researchobject.org/workflow-run-crate/profiles/0.5/>
+- **Validator:** <https://github.com/crs4/rocrate-validator>, release 0.11.4.
+- **License:** Apache-2.0 for the profile specifications and validator.
+- **What we use:** Original metadata generation implementing Process Run 0.5 and
+  Workflow Run 0.5 on RO-Crate 1.1, with the validator invoked as an optional
+  dependency. No upstream implementation or example metadata is copied.
+
 ## Original to this plugin
 
 Fortran support (discovery globs, `gfortran` runner, reproducibility header,
