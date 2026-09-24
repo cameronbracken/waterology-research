@@ -4,14 +4,13 @@ waterology-research provides research and engineering skills, agents, and workfl
 [Claude Code](https://claude.com/claude-code),
 [Codex](https://openai.com/codex/),
 [OpenCode](https://opencode.ai/), and
-[Pi](https://pi.dev/). It supports research software in R, Python,
-Fortran, Quarto, and LaTeX.
+[Pi](https://pi.dev/). It supports research software in R, Python, Julia,
+Fortran, and Rust with documentation using Markdown, Quarto, and LaTeX.
 
-The package keeps research skills and agent definitions in the repository, then
-installs runtime adapters for each supported tool. Packaging and agents support
-all four runtimes. Research workflows are runtime neutral. Claude slash
-commands are generated compatibility shims that invoke the canonical skills.
-Pi loads canonical skills directly and exposes generated agents through the
+The package includes research skills and agent definitions in the repository and 
+installs runtime adapters for each supported harness. Claude slash
+commands are wrappers that invoke the the underlying skills.
+Pi loads skills directly and exposes generated agents through the
 optional `pi-subagents` integration declared in the root package manifest.
 
 The installed `wgy` command is an alias for `waterology` and accepts the same
