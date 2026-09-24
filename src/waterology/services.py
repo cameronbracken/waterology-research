@@ -29,6 +29,7 @@ from waterology.core.experiments import (
     load_experiment,
     load_worktree,
 )
+from waterology.core.log_access import run_log_page, session_log_page
 from waterology.core.profiles import load_machine_config, machine_config_path
 from waterology.core.project import Project, discover_project, inspect_project
 from waterology.core.sessions import (
@@ -394,3 +395,47 @@ def _process_alive(process_id: int) -> bool:
     except OSError:
         return False
     return True
+
+
+def run_log_excerpt(
+    path: Path,
+    run_id: str,
+    *,
+    stream: str = "stdout",
+    offset: int = 0,
+    max_bytes: int = 8192,
+    query: str | None = None,
+    snapshot: str | None = None,
+) -> dict[str, object]:
+    return run_log_page(
+        path,
+        run_id,
+        stream=stream,
+        offset=offset,
+        max_bytes=max_bytes,
+        query=query,
+        snapshot=snapshot,
+    )
+
+
+def session_log_excerpt(
+    path: Path,
+    session_id: str,
+    *,
+    stream: str = "events",
+    attempt: int | None = None,
+    offset: int = 0,
+    max_bytes: int = 8192,
+    query: str | None = None,
+    snapshot: str | None = None,
+) -> dict[str, object]:
+    return session_log_page(
+        path,
+        session_id,
+        stream=stream,
+        attempt=attempt,
+        offset=offset,
+        max_bytes=max_bytes,
+        query=query,
+        snapshot=snapshot,
+    )

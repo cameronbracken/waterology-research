@@ -73,6 +73,9 @@ pixi run waterology doctor
 Project scope is the default. Use `--scope user` for user configuration.
 `--target` is available only for project installs. Both `install` and `doctor` support `--json`.
 
+For uninstall, upgrades, dry runs, and interrupted-operation recovery, see
+[installation lifecycle](docs/install-lifecycle.md).
+
 For a user-scoped Codex install:
 
 ```console
@@ -283,6 +286,9 @@ an isolated editable tool:
 ```console
 uv tool install --editable '.[mcp]'
 ```
+
+MCP log tools return bounded pages with optional literal search. See
+[log-reading arguments and response changes](docs/mcp-log-reading.md).
 
 The server uses local stdio and offers bounded tools for experiments, runs, archives, metrics,
 evidence, artifact references, and session notes. It does not expose shell execution, arbitrary file

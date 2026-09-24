@@ -141,9 +141,30 @@ def create_server() -> MCPServer:
         )
 
     @_bounded_tool(server)
-    def read_run_logs(run_id: str, project_path: str = ".") -> dict[str, str]:
-        """Read stdout and stderr from a sealed run archive."""
-        return services.run_logs(Path(project_path), run_id)
+    def read_run_logs(
+        run_id: str,
+        project_path: str = ".",
+        stream: str = "stdout",
+        offset: int = 0,
+        max_bytes: int = 8192,
+        query: str | None = None,
+        snapshot: str | None = None,
+    ) -> dict[str, object]:
+        """Read one bounded log page. Choose stdout/stderr. Follow next_offset until null.
+
+        query seeks a case-sensitive literal match, scanning at most 1 MiB per call.
+        A search with no match can still have a next_offset. Pass snapshot on later
+        pages to reject changed files. Defaults to the start, not the log tail.
+        """
+        return services.run_log_excerpt(
+            Path(project_path),
+            run_id,
+            stream=stream,
+            offset=offset,
+            max_bytes=max_bytes,
+            query=query,
+            snapshot=snapshot,
+        )
 
     @_bounded_tool(server)
     def read_run_metrics(run_id: str, project_path: str = ".") -> dict[str, object]:
@@ -166,9 +187,32 @@ def create_server() -> MCPServer:
         return services.session_status(Path(project_path), session_id)
 
     @_bounded_tool(server)
-    def read_session_logs(session_id: str, project_path: str = ".") -> list[dict[str, object]]:
-        """Read native JSON events and stderr for every session attempt."""
-        return services.session_logs(Path(project_path), session_id)
+    def read_session_logs(
+        session_id: str,
+        project_path: str = ".",
+        stream: str = "events",
+        attempt: int | None = None,
+        offset: int = 0,
+        max_bytes: int = 8192,
+        query: str | None = None,
+        snapshot: str | None = None,
+    ) -> dict[str, object]:
+        """Read one bounded page from events/stderr; defaults to the latest attempt.
+
+        Select an earlier attempt explicitly. Follow next_offset until null.
+        query seeks a case-sensitive literal match within a 1 MiB scan; no match
+        can still have a continuation. Pass snapshot to reject changed files.
+        """
+        return services.session_log_excerpt(
+            Path(project_path),
+            session_id,
+            stream=stream,
+            attempt=attempt,
+            offset=offset,
+            max_bytes=max_bytes,
+            query=query,
+            snapshot=snapshot,
+        )
 
     @_bounded_tool(server)
     def register_evidence(
@@ -221,8 +265,10 @@ def create_server() -> MCPServer:
         return services.record_session_note(Path(project_path), session_id, text, author)
 
     from waterology.mcp.workflows import register_workflow_tools
+
     register_workflow_tools(server, _bounded_tool)
     from waterology.mcp.execution import register_execution_tools
+
     register_execution_tools(server, _bounded_tool)
     return server
 

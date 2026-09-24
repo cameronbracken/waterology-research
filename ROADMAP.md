@@ -8,20 +8,39 @@
   sample inputs, expected outputs, and troubleshooting. Check example commands
   and documentation links in CI.
 
-### TODO: add explicit uninstall support
+### IMPLEMENTED: CLI uninstall and recoverable upgrades (2026-09-24)
 
-- [ ] Add an explicit uninstall command for each supported runtime and scope.
-  Remove only files managed by Waterology, preserve user-owned configuration and
-  data, support a dry run, and report anything that requires manual cleanup.
-  Document and test install, upgrade, and uninstall round trips.
+- [X] Add `uninstall` for Claude, Codex, OpenCode, and Pi, in project and user
+  scopes, with dry run and JSON output. Preserve unowned and modified assets.
+- [X] Retire unchanged old assets during installation and protect edited runtime
+  configuration, including when force is requested.
+- [X] Add process-interruption journals and `install-recover`, sharing rollback
+  machinery with uninstall. Test round trips and killed subprocesses.
+- [ ] Qualify native marketplace install/upgrade/uninstall round trips and run
+  the new lifecycle tests on Windows and Linux. Current runtime filesystem
+  layouts are covered with temporary fixtures on macOS. Historical upgrades
+  use a synthetic schema 1 manifest, not archived released installers.
 
-### TODO: detect and handle upgrades
+See [installation lifecycle](docs/install-lifecycle.md) for commands and manual
+cleanup limits. Native plugin registrations and Python package removal remain
+with their respective package managers.
 
-- [ ] Before installing Waterology, detect an existing installation in the
-  requested runtime and scope. If one exists, run the uninstall path before
-  installing the new version. Remove only files managed by Waterology. Never
-  delete or overwrite user configuration files. Test upgrades across supported
-  versions, runtimes, and scopes, including interrupted upgrade recovery.
+### REVIEWED: bigpowers and context-mode (2026-09-24)
+
+The [source evaluation](docs/plugin-evaluation-2026-09-24.md) now recommends
+against adopting either plugin or scheduling the initial handoff/search-index
+prototypes. Existing handoff guidance overlaps substantially. A synthetic probe
+confirmed unbounded log-reader responses, but ordinary filtering handled its
+known error-retrieval task without an index. Reconsider broader additions only
+when a concrete restart or repeated-search workload demonstrates their value.
+Neither upstream plugin is installed or imported.
+
+### IMPLEMENTED: bounded MCP log reads (2026-09-24)
+
+`read_run_logs` and `read_session_logs` now select one stream/attempt and return
+bounded pages, optional literal search, continuation offsets, and change tokens.
+See [MCP log reading](docs/mcp-log-reading.md) for the changed response contract.
+This uses existing log files and does not require either evaluated plugin.
 
 ### TODO: evaluate alternatives to Pixi
 
