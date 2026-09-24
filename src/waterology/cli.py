@@ -54,8 +54,13 @@ from waterology.runtime.install import (
     InstallScope,
     Runtime,
     apply_install_plan,
+    apply_uninstall_plan,
     build_install_plan,
+    build_uninstall_plan,
     preflight,
+    recover_install,
+    uninstall_paths,
+    uninstall_preflight,
 )
 from waterology.runtime.mcp import registration_command, runtime_mcp_config
 from waterology.runtime.render import GeneratedAssetsStaleError, render_assets
@@ -1327,6 +1332,84 @@ def install(
             for name, result in results.items()
         ),
     )
+
+
+@app.command("install-recover")
+def install_recover(
+    ctx: typer.Context,
+    runtime: Runtime,
+    scope: InstallScope = _INSTALL_SCOPE_OPTION,
+    target: Path = _INSTALL_TARGET_OPTION,
+    dry_run: bool = typer.Option(False, "--dry-run"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Recover an interrupted CLI install or uninstall after its process exits."""
+    if scope is InstallScope.USER and ctx.get_parameter_source("target").name != "DEFAULT":
+        raise typer.BadParameter("cannot be used with --scope user", param_hint="--target")
+    payload = {"runtime": runtime.value, "scope": scope.value, "dry_run": dry_run}
+    try:
+        plan = build_install_plan(runtime, scope, target, InstallMode.COPY, AssetCatalog.discover())
+        recovered = recover_install(plan, dry_run)
+    except (InstallConflictError, OSError, TypeError, ValueError) as error:
+        if json_output:
+            _emit_json(_install_failure_payload(payload, error))
+        else:
+            _show_install_failure(error)
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({**payload, "status": "pass", "paths": [str(path) for path in recovered]})
+    else:
+        _show_table(
+            "Recovery dry run" if dry_run else "Recovery complete",
+            ("Paths",),
+            ((str(len(recovered)),),),
+        )
+
+
+@app.command()
+def uninstall(
+    ctx: typer.Context,
+    runtime: str = typer.Argument(..., metavar="<claude|codex|opencode|pi|all>"),
+    scope: InstallScope = _INSTALL_SCOPE_OPTION,
+    target: Path = _INSTALL_TARGET_OPTION,
+    dry_run: bool = typer.Option(False, "--dry-run"),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Remove unchanged Waterology assets recorded by the CLI installer."""
+    if scope is InstallScope.USER and ctx.get_parameter_source("target").name != "DEFAULT":
+        raise typer.BadParameter("cannot be used with --scope user", param_hint="--target")
+    runtimes = _selected_runtimes(runtime)
+    payload = {"runtime": runtime, "scope": scope.value, "dry_run": dry_run}
+    manual = [
+        "Native marketplace plugins, external MCP registrations, and the Python package use their own uninstall commands."
+    ]
+    try:
+        catalog = AssetCatalog.discover()
+        plans = tuple(
+            build_uninstall_plan(selected, scope, target, catalog) for selected in runtimes
+        )
+        conflicts = tuple(conflict for plan in plans for conflict in uninstall_preflight(plan))
+        if conflicts:
+            raise InstallConflictError(conflicts)
+        results = {}
+        for plan in plans:
+            paths = uninstall_paths(plan) if dry_run else apply_uninstall_plan(plan).changed
+            results[plan.runtime.value] = [str(path) for path in paths]
+    except (InstallConflictError, OSError, TypeError, ValueError) as error:
+        if json_output:
+            _emit_json({**_install_failure_payload(payload, error), "manual_cleanup": manual})
+        else:
+            _show_install_failure(error)
+        raise typer.Exit(1) from error
+    if json_output:
+        _emit_json({**payload, "status": "pass", "results": results, "manual_cleanup": manual})
+    else:
+        _show_table(
+            "Uninstall dry run" if dry_run else "Uninstall complete",
+            ("Runtime", "Assets"),
+            ((name, str(len(paths))) for name, paths in results.items()),
+        )
+        Console().print(manual[0])
 
 
 @app.command()

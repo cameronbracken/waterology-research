@@ -4,7 +4,9 @@ import json
 import os
 import re
 import shutil
+import sys
 import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
@@ -12,6 +14,8 @@ from pathlib import Path, PurePosixPath
 from waterology import __version__
 from waterology.runtime.assets import AssetCatalog
 
+_RECOVERY_LOCK_NAME = ".waterology-install-recovery.lock"
+_TRANSACTION_NAME = ".waterology-install-transaction.json"
 _INSTALL_LOCK_NAME = ".waterology-install.lock"
 _LOCAL_ASSET_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".DS_Store")
 
@@ -73,7 +77,7 @@ class InstallResult:
 @dataclass
 class _PreparedChange:
     destination: Path
-    staged: Path
+    staged: Path | None
     expected: "_PathState"
     backup: Path | None = None
     installed_state: "_PathState | None" = None
@@ -122,12 +126,14 @@ def preflight(plan: InstallPlan, force: bool = False) -> tuple[InstallConflict, 
 def _preflight(
     plan: InstallPlan, force: bool = False
 ) -> tuple[tuple[InstallConflict, ...], dict[Path, _PathState]]:
+    _require_no_transaction(plan.trusted_root)
     path_conflicts = _plan_path_conflicts(plan)
     if path_conflicts:
         return path_conflicts, {}
     expected_states = _snapshot_plan_paths(plan)
     records = _load_manifests(plan)
-    conflicts = []
+    expected_states.update(_record_states(records))
+    conflicts = list(_retired_conflicts(plan, records))
     blocked_parents: set[Path] = set()
     for action in plan.actions:
         blocked_parent = _blocked_parent(action.destination.parent)
@@ -163,7 +169,8 @@ def _preflight(
             )
             continue
         unchanged_since_install = _fingerprint(action.destination).lower() == prior_sha256.lower()
-        if not unchanged_since_install and not force:
+        is_config = action.source_id in {".mcp.json", ".codex/config.toml", "opencode.json"}
+        if not unchanged_since_install and (not force or is_config):
             conflicts.append(InstallConflict(action.destination, "owned destination was modified"))
     conflicts.extend(_state_conflicts(expected_states, "path changed during preflight"))
     return tuple(conflicts), expected_states
@@ -219,6 +226,7 @@ def apply_install_plan(plan: InstallPlan, force: bool = False) -> InstallResult:
     if conflicts:
         raise InstallConflictError(conflicts)
 
+    _require_no_transaction(plan.trusted_root)
     lock, lock_parents = _acquire_install_lock(plan.trusted_root)
     try:
         conflicts, expected_states = _preflight(plan, force=force)
@@ -237,6 +245,11 @@ def _apply_locked_plan(plan: InstallPlan, expected_states: dict[Path, _PathState
     unchanged = []
     manifests = tuple(sorted({action.manifest for action in plan.actions}))
     committed = False
+    records = _load_manifests(plan)
+    for destination in _retired_paths(plan, records):
+        if expected_states[destination].kind != "missing":
+            prepared.append(_PreparedChange(destination, None, expected_states[destination]))
+            changed.append(destination)
     try:
         for action in plan.actions:
             if _matches_planned_source(action):
@@ -251,7 +264,9 @@ def _apply_locked_plan(plan: InstallPlan, expected_states: dict[Path, _PathState
                 )
             )
             changed.append(action.destination)
-        staged_assets = {change.destination: change.staged for change in prepared}
+        staged_assets = {
+            change.destination: change.staged for change in prepared if change.staged is not None
+        }
         prepared.extend(
             _stage_install_manifests(
                 plan,
@@ -260,7 +275,7 @@ def _apply_locked_plan(plan: InstallPlan, expected_states: dict[Path, _PathState
                 created_parents,
             )
         )
-        _commit_prepared_changes(prepared, expected_states)
+        _run_transaction(prepared, expected_states, plan)
         committed = True
     finally:
         _cleanup_staged_paths(prepared)
@@ -275,6 +290,7 @@ def _acquire_install_lock(trusted_root: Path) -> tuple[Path, list[Path]]:
     created_parents: list[Path] = []
     _ensure_parent(trusted_root, trusted_root.parent, created_parents)
     lock = trusted_root / _INSTALL_LOCK_NAME
+    _check_recovery_lock(trusted_root)
     try:
         descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError as error:
@@ -286,7 +302,9 @@ def _acquire_install_lock(trusted_root: Path) -> tuple[Path, list[Path]]:
         _cleanup_created_parents(created_parents)
         raise
     try:
+        os.write(descriptor, str(os.getpid()).encode("ascii"))
         os.close(descriptor)
+        _check_recovery_lock(trusted_root)
     except BaseException:
         lock.unlink(missing_ok=True)
         _cleanup_created_parents(created_parents)
@@ -358,7 +376,8 @@ def _validate_manifest_assets(
             raise ValueError(f"Invalid install manifest asset record: {manifest}: {key}")
         action = planned.get(key)
         if action is None:
-            raise ValueError(f"Install manifest asset is not in the plan: {manifest}: {key}")
+            _validate_retired_record(manifest, key, record, planned)
+            continue
         if source != action.source_id:
             raise ValueError(
                 f"Install manifest asset source does not match the plan: {manifest}: {key}"
@@ -374,6 +393,146 @@ def _validate_manifest_assets(
             raise ValueError(
                 f"Install manifest asset kind does not match the destination: {manifest}: {key}"
             )
+
+
+def _validate_retired_record(
+    manifest: Path, key: str, record: dict, planned: dict[str, InstallAction]
+) -> None:
+    # Old names are allowed only within a known asset family, with the same
+    # source/destination mapping. A manifest cannot claim arbitrary user files.
+    relative = PurePosixPath(key)
+    source = PurePosixPath(record["source"])
+    for candidate_key, action in planned.items():
+        candidate = PurePosixPath(candidate_key)
+        candidate_source = PurePosixPath(action.source_id)
+        if (
+            len(relative.parts) == 2
+            and relative.parent == candidate.parent
+            and source == candidate_source.parent / relative.name
+            and relative.suffix == candidate.suffix
+            and record["kind"] == _planned_kind(action)
+        ):
+            return
+    raise ValueError(f"Install manifest asset is not in a managed asset family: {manifest}: {key}")
+
+
+def _record_states(records: dict[Path, dict]) -> dict[Path, _PathState]:
+    return {
+        manifest.parent / key: _path_state(manifest.parent / key)
+        for manifest, data in records.items()
+        for key in data["assets"]
+    }
+
+
+def _retired_paths(plan: InstallPlan, records: dict[Path, dict]) -> tuple[Path, ...]:
+    current = {action.destination for action in plan.actions}
+    return tuple(path for path in _record_states(records) if path not in current)
+
+
+def _retired_conflicts(plan: InstallPlan, records: dict[Path, dict]) -> tuple[InstallConflict, ...]:
+    current = {action.destination for action in plan.actions}
+    return tuple(
+        InstallConflict(
+            manifest.parent / key, "retired owned destination was modified; manual cleanup required"
+        )
+        for manifest, data in records.items()
+        for key, record in data["assets"].items()
+        if manifest.parent / key not in current
+        and _path_state(manifest.parent / key).kind != "missing"
+        and _path_state(manifest.parent / key)
+        != _PathState(record["kind"], record["sha256"].lower())
+    )
+
+
+def build_uninstall_plan(
+    runtime: Runtime, scope: InstallScope, target: Path, catalog: AssetCatalog
+) -> InstallPlan:
+    plan = build_install_plan(runtime, scope, target, InstallMode.COPY, catalog)
+    conflicts = _plan_path_conflicts(plan)
+    if conflicts:
+        raise InstallConflictError(conflicts)
+    modes = set()
+    for manifest in {action.manifest for action in plan.actions}:
+        if manifest.is_symlink():
+            raise ValueError(f"Install manifest must be a regular file: {manifest}")
+        if manifest.exists():
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError(f"Invalid install manifest: {manifest}")
+            modes.add(InstallMode(data.get("mode")))
+    if len(modes) > 1:
+        raise ValueError("Installation manifests disagree on install mode; manual cleanup required")
+    if modes:
+        plan = build_install_plan(runtime, scope, target, modes.pop(), catalog)
+    return plan
+
+
+def uninstall_preflight(plan: InstallPlan) -> tuple[InstallConflict, ...]:
+    conflicts, _ = _uninstall_preflight(plan)
+    return conflicts
+
+
+def _uninstall_preflight(
+    plan: InstallPlan,
+) -> tuple[tuple[InstallConflict, ...], dict[Path, _PathState]]:
+    _require_no_transaction(plan.trusted_root)
+    conflicts = _plan_path_conflicts(plan)
+    if conflicts:
+        return conflicts, {}
+    expected = {
+        manifest: _path_state(manifest) for manifest in {action.manifest for action in plan.actions}
+    }
+    records = _load_manifests(plan)
+    expected.update(_record_states(records))
+    conflicts = []
+    for manifest, data in records.items():
+        for key, record in data["assets"].items():
+            path = manifest.parent / key
+            state = expected[path]
+            if state.kind != "missing" and state != _PathState(
+                record["kind"], record["sha256"].lower()
+            ):
+                conflicts.append(
+                    InstallConflict(path, "owned destination was modified; manual cleanup required")
+                )
+    conflicts.extend(_state_conflicts(expected, "path changed during uninstall preflight"))
+    return tuple(conflicts), expected
+
+
+def uninstall_paths(plan: InstallPlan) -> tuple[Path, ...]:
+    """Return recorded assets and manifests, including assets retired upstream."""
+    records = _load_manifests(plan)
+    return tuple(_record_states(records)) + tuple(path for path in records if path.exists())
+
+
+def apply_uninstall_plan(plan: InstallPlan) -> InstallResult:
+    """Remove an unchanged managed installation, preserving unowned paths."""
+    conflicts, expected = _uninstall_preflight(plan)
+    if conflicts:
+        raise InstallConflictError(conflicts)
+    if all(state.kind == "missing" for state in expected.values()):
+        return InstallResult((), (), ())
+    _require_no_transaction(plan.trusted_root)
+    lock, parents = _acquire_install_lock(plan.trusted_root)
+    prepared = []
+    committed = False
+    try:
+        conflicts, expected = _uninstall_preflight(plan)
+        if conflicts:
+            raise InstallConflictError(conflicts)
+        prepared = [
+            _PreparedChange(path, None, state)
+            for path, state in expected.items()
+            if state.kind != "missing"
+        ]
+        _run_transaction(prepared, expected, plan)
+        committed = True
+        return InstallResult(tuple(change.destination for change in prepared), (), ())
+    finally:
+        if committed:
+            _cleanup_backups(prepared)
+        lock.unlink(missing_ok=True)
+        _cleanup_created_parents(parents)
 
 
 def _is_normalized_relative_key(key: object) -> bool:
@@ -507,6 +666,307 @@ def _reserve_sibling(destination: Path, purpose: str) -> Path:
     return Path(name)
 
 
+def _require_no_transaction(root: Path) -> None:
+    path = root / _TRANSACTION_NAME
+    if path.exists() or path.is_symlink():
+        raise InstallConflictError(
+            (InstallConflict(path, "interrupted transaction; run install-recover before retrying"),)
+        )
+
+
+def _write_transaction(path: Path, payload: dict) -> None:
+    temporary = _reserve_sibling(path, "journal")
+    try:
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump(payload, stream, sort_keys=True)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _run_transaction(
+    prepared: list[_PreparedChange], expected: dict[Path, _PathState], plan: InstallPlan
+) -> None:
+    """Keep rollback material discoverable if the installing process is killed."""
+    root = plan.trusted_root
+    journal = root / _TRANSACTION_NAME
+    _require_no_transaction(root)
+    records = []
+    for change in prepared:
+        if change.expected.kind != "missing":
+            change.backup = _reserve_sibling(change.destination, "backup")
+            change.backup.unlink()
+        installed = (
+            _path_state(change.staged) if change.staged is not None else _PathState("missing", None)
+        )
+        records.append(
+            {
+                "destination": change.destination.relative_to(root).as_posix(),
+                "staged": change.staged.relative_to(root).as_posix()
+                if change.staged is not None
+                else None,
+                "backup": change.backup.relative_to(root).as_posix()
+                if change.backup is not None
+                else None,
+                "before": {"kind": change.expected.kind, "sha256": change.expected.sha256},
+                "after": {"kind": installed.kind, "sha256": installed.sha256},
+            }
+        )
+    payload = {
+        "schema": 1,
+        "pid": os.getpid(),
+        "runtime": plan.runtime.value,
+        "state": "pending",
+        "changes": records,
+    }
+    _write_transaction(journal, payload)
+    try:
+        _commit_prepared_changes(prepared, expected)
+    except BaseException:
+        # The commit helper rolls back ordinary exceptions. Retain the journal
+        # when an external edit prevented complete restoration.
+        if not _state_conflicts(expected, "rollback incomplete"):
+            journal.unlink(missing_ok=True)
+        raise
+    payload["state"] = "committed"
+    try:
+        _write_transaction(journal, payload)
+    except BaseException:
+        _rollback_changes(prepared)
+        if not _state_conflicts(expected, "rollback incomplete"):
+            journal.unlink(missing_ok=True)
+        raise
+    _cleanup_backups(prepared)
+    journal.unlink()
+
+
+def recover_install(plan: InstallPlan, dry_run: bool = False) -> tuple[Path, ...]:
+    """Restore an interrupted transaction after its process has exited."""
+    if dry_run or not plan.trusted_root.exists():
+        return _recover_install(plan, dry_run)
+    with _recovery_guard(plan.trusted_root):
+        return _recover_install(plan, dry_run)
+
+
+@contextmanager
+def _recovery_guard(root: Path):
+    # OS advisory locks release on process death. Keep the coordination file
+    # so another process cannot acquire a different inode during unlink.
+    path = root / _RECOVERY_LOCK_NAME
+    if path.is_symlink():
+        raise ValueError("Recovery lock must not be a symlink")
+    with path.open("a+b") as stream:
+        if os.name == "nt":
+            import msvcrt
+
+            if stream.seek(0, os.SEEK_END) == 0:
+                stream.write(b"0")
+                stream.flush()
+            stream.seek(0)
+            try:
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError as error:
+                raise ValueError("Installation recovery is in progress") from error
+        else:
+            import fcntl
+
+            try:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                raise ValueError("Installation recovery is in progress") from error
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+def _check_recovery_lock(root: Path) -> None:
+    path = root / _RECOVERY_LOCK_NAME
+    if path.exists() or path.is_symlink():
+        with _recovery_guard(root):
+            pass
+
+
+def _require_exited(pid: object) -> None:
+    if type(pid) is not int or pid <= 0:
+        raise ValueError("Invalid transaction process identifier")
+    if sys.platform == "win32":
+        if not _windows_process_is_running(pid):
+            return
+    else:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+    raise ValueError("Transaction process is still running; recovery refused")
+
+
+def _windows_process_is_running(pid: int) -> bool:
+    # os.kill(pid, 0) terminates processes on Windows. Query a synchronization
+    # handle instead; access denial remains a refusal to recover.
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+    if not handle:
+        error = ctypes.get_last_error()
+        if error == 87:  # ERROR_INVALID_PARAMETER: no such process
+            return False
+        raise ctypes.WinError(error)
+    try:
+        state = kernel.WaitForSingleObject(handle, 0)
+        if state == 0:  # WAIT_OBJECT_0: process exited
+            return False
+        if state == 258:  # WAIT_TIMEOUT: still running
+            return True
+        raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def _recover_install(plan: InstallPlan, dry_run: bool) -> tuple[Path, ...]:
+    root = plan.trusted_root
+    journal = root / _TRANSACTION_NAME
+    if journal.is_symlink():
+        raise ValueError("Transaction journal must not be a symlink")
+    if not journal.exists():
+        lock = root / _INSTALL_LOCK_NAME
+        if lock.is_symlink():
+            raise ValueError("Install lock must not be a symlink")
+        if lock.exists():
+            text = lock.read_text()
+            _require_exited(int(text))
+            if not dry_run:
+                if lock.read_text() != text:
+                    raise ValueError("Install lock changed during recovery")
+                lock.unlink()
+            return (lock,)
+        return ()
+    data = json.loads(journal.read_text(encoding="utf-8"))
+    if (
+        not isinstance(data, dict)
+        or data.get("schema") != 1
+        or data.get("runtime") != plan.runtime.value
+        or data.get("state") not in {"pending", "committed"}
+    ):
+        raise ValueError("Invalid transaction journal or runtime mismatch")
+    pid = data.get("pid")
+    _require_exited(pid)
+    changes = data.get("changes")
+    if not isinstance(changes, list):
+        raise TypeError("Invalid transaction changes")
+    manifests = {action.manifest for action in plan.actions}
+    destinations = {action.destination for action in plan.actions}
+    asset_parents = {
+        action.destination.parent
+        for action in plan.actions
+        if len(PurePosixPath(action.source_id).parts) >= 2
+    }
+    decoded = []
+    for record in changes:
+        if not isinstance(record, dict):
+            raise TypeError("Invalid transaction change")
+        key = record.get("destination")
+        if not _is_normalized_relative_key(key):
+            raise ValueError("Invalid transaction destination")
+        destination = root / key
+        if destination not in manifests | destinations and destination.parent not in asset_parents:
+            raise ValueError("Transaction destination is outside managed assets")
+        for parent in destination.relative_to(root).parents:
+            if (root / parent).is_symlink():
+                raise ValueError("Transaction destination traverses a symlink")
+        paths = []
+        for name, purpose in (("backup", "backup"), ("staged", "stage")):
+            key = record.get(name)
+            path = None
+            if key is not None:
+                if not _is_normalized_relative_key(key):
+                    raise ValueError("Invalid transaction auxiliary path")
+                path = root / key
+                if path.parent != destination.parent or not path.name.startswith(
+                    f".{destination.name}.waterology-{purpose}-"
+                ):
+                    raise ValueError("Invalid transaction auxiliary path")
+            paths.append(path)
+        states = []
+        for name in ("before", "after"):
+            value = record.get(name)
+            if not isinstance(value, dict) or value.get("kind") not in {
+                "missing",
+                "file",
+                "directory",
+                "symlink",
+            }:
+                raise ValueError("Invalid transaction state")
+            digest = value.get("sha256")
+            if value["kind"] != "missing" and (
+                not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+            ):
+                raise ValueError("Invalid transaction fingerprint")
+            states.append(_PathState(value["kind"], digest))
+        backup, staged = paths
+        before, after = states
+        actual = _path_state(destination)
+        saved = _path_state(backup) if backup is not None else _PathState("missing", None)
+        if data["state"] == "committed":
+            valid = actual == after and saved in (before, _PathState("missing", None))
+        else:
+            valid = (actual == before and saved.kind == "missing") or (
+                actual in (after, _PathState("missing", None)) and saved == before
+            )
+        if not valid:
+            raise ValueError(
+                f"Recovery would overwrite changed data; manual cleanup required: {destination}"
+            )
+        if staged is not None and _path_state(staged) not in (after, _PathState("missing", None)):
+            raise ValueError(f"Staged data changed; manual cleanup required: {staged}")
+        decoded.append((destination, backup, staged, before, after, actual, saved))
+    if dry_run:
+        return tuple(item[0] for item in decoded)
+    # Refuse a lock acquired by a different process since the interruption.
+    lock = root / _INSTALL_LOCK_NAME
+    if lock.is_symlink() or (lock.exists() and lock.read_text() != str(pid)):
+        raise ValueError("Install lock does not belong to the interrupted transaction")
+    for destination, backup, staged, before, after, actual, saved in reversed(decoded):
+        for parent in destination.relative_to(root).parents:
+            if (root / parent).is_symlink():
+                raise ValueError("Recovery path changed to a symlink")
+        if _path_state(destination) != actual or (
+            backup is not None and _path_state(backup) != saved
+        ):
+            raise ValueError(
+                f"Data changed during recovery; manual cleanup required: {destination}"
+            )
+        if staged is not None and _path_state(staged) not in (after, _PathState("missing", None)):
+            raise ValueError(f"Staged data changed during recovery: {staged}")
+        if data["state"] == "pending":
+            if backup is not None and (backup.exists() or backup.is_symlink()):
+                _remove_path(destination)
+                os.replace(backup, destination)
+            elif before.kind == "missing":
+                _remove_path(destination)
+        elif backup is not None:
+            _remove_path(backup)
+        if staged is not None:
+            _remove_path(staged)
+    journal.unlink()
+    lock.unlink(missing_ok=True)
+    return tuple(item[0] for item in decoded)
+
+
 def _commit_prepared_changes(
     prepared: list[_PreparedChange], expected_states: dict[Path, _PathState]
 ) -> None:
@@ -527,8 +987,10 @@ def _commit_prepared_changes(
                 )
             commit_log.append(change)
             if change.destination.exists() or change.destination.is_symlink():
-                backup = _reserve_sibling(change.destination, "backup")
-                backup.unlink()
+                backup = change.backup
+                if backup is None:
+                    backup = _reserve_sibling(change.destination, "backup")
+                    backup.unlink()
                 try:
                     os.replace(change.destination, backup)
                 except BaseException:
@@ -544,9 +1006,10 @@ def _commit_prepared_changes(
                             ),
                         )
                     )
-            change.installed_state = _path_state(change.staged)
-            os.replace(change.staged, change.destination)
-            change.installed = True
+            if change.staged is not None:
+                change.installed_state = _path_state(change.staged)
+                os.replace(change.staged, change.destination)
+                change.installed = True
     except BaseException as error:
         rollback_errors = _rollback_changes(commit_log)
         if rollback_errors:
@@ -571,7 +1034,7 @@ def _rollback_changes(commit_log: list[_PreparedChange]) -> list[OSError]:
                         f"{change.destination}{backup_note}"
                     )
                 _remove_path(change.destination)
-            if change.backup is not None:
+            if change.backup is not None and (change.backup.exists() or change.backup.is_symlink()):
                 if change.destination.exists() or change.destination.is_symlink():
                     raise OSError(
                         f"Cannot restore backup {change.backup} over an unexpected destination: "
@@ -634,7 +1097,8 @@ def _stage_install_manifests(
 
 def _cleanup_staged_paths(prepared: list[_PreparedChange]) -> None:
     for change in prepared:
-        _remove_path(change.staged)
+        if change.staged is not None:
+            _remove_path(change.staged)
 
 
 def _cleanup_backups(prepared: list[_PreparedChange]) -> None:
@@ -656,7 +1120,7 @@ def _fingerprint(path: Path, *, source_assets: bool = False) -> str:
     if path.is_symlink():
         digest.update(str(path.resolve()).encode())
     elif path.is_dir():
-        for child in sorted(candidate for candidate in path.rglob("*") if candidate.is_file()):
+        for child in sorted(path.rglob("*")):
             relative = child.relative_to(path)
             if source_assets and any(
                 fnmatch.fnmatch(part, pattern)
@@ -664,9 +1128,18 @@ def _fingerprint(path: Path, *, source_assets: bool = False) -> str:
                 for pattern in _LOCAL_ASSET_PATTERNS
             ):
                 continue
-            digest.update(relative.as_posix().encode())
-            digest.update(b"\0")
-            digest.update(child.read_bytes())
+            if child.is_symlink():
+                digest.update(b"SYMLINK\0" + relative.as_posix().encode() + b"\0")
+                digest.update(os.readlink(child).encode())
+            elif child.is_dir():
+                if not any(child.iterdir()):
+                    digest.update(b"EMPTY_DIRECTORY\0" + relative.as_posix().encode() + b"\0")
+            elif child.is_file():
+                digest.update(relative.as_posix().encode())
+                digest.update(b"\0")
+                digest.update(child.read_bytes())
+            else:
+                digest.update(b"SPECIAL\0" + relative.as_posix().encode())
     else:
         digest.update(path.read_bytes())
     return digest.hexdigest()

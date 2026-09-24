@@ -163,3 +163,42 @@ def test_session_tools_reconcile_completed_runtime_before_reading(tmp_path: Path
         assert result.structured_content["result"]["state"] == "completed"
 
     asyncio.run(inspect_completed())
+
+
+def test_log_tools_expose_pages_and_validate_size(monkeypatch, tmp_path):
+    from waterology.core.log_pages import read_log_page
+
+    path = tmp_path / "events.log"
+    path.write_text("ERROR early\n" + "progress\n" * 10000)
+
+    def read_session(root, identifier, **options):
+        assert options.pop("stream") == "events"
+        assert options.pop("attempt") == 2
+        return read_log_page(path, **options)
+
+    monkeypatch.setattr(server_module.services, "session_log_excerpt", read_session)
+    monkeypatch.setattr(
+        server_module.services,
+        "run_log_excerpt",
+        lambda root, identifier, stream, **options: read_log_page(path, **options),
+    )
+
+    async def exercise():
+        async with Client(server_module.create_server(), raise_exceptions=True) as client:
+            session = await client.call_tool(
+                "read_session_logs",
+                {"session_id": "fixture", "attempt": 2, "max_bytes": 32, "query": "ERROR"},
+            )
+            result = session.structured_content["result"]
+            assert result["content"].startswith("ERROR early")
+            assert result["returned_bytes"] <= 32
+            assert result["next_offset"] == 32
+            run = await client.call_tool("read_run_logs", {"run_id": "fixture", "max_bytes": 4})
+            assert run.structured_content["result"]["content"] == "ERRO"
+            invalid = await client.call_tool(
+                "read_run_logs", {"run_id": "fixture", "max_bytes": 1000000}
+            )
+            assert invalid.structured_content["ok"] is False
+            assert invalid.structured_content["error"]["code"] == "invalid_input"
+
+    asyncio.run(exercise())

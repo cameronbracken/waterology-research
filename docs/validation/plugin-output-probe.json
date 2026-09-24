@@ -1,0 +1,41 @@
+{
+  "scope": "synthetic log-reader probe; not an upstream plugin or agent-quality benchmark",
+  "rows": [
+    {
+      "lines": 200,
+      "source_sha256": "e6e517cbc1d164749ccbaddb786f3b9ceeca2df69d8ba8d6836e0f790c09d361",
+      "source_bytes": 14881,
+      "service_json_bytes": 17119,
+      "service_evidence_found": 2,
+      "tail_bytes": 8192,
+      "tail_evidence_found": 1,
+      "rg_context_bytes": 794,
+      "rg_evidence_found": 2,
+      "expected_evidence_count": 2
+    },
+    {
+      "lines": 2000,
+      "source_sha256": "26b97041e81e3da97f55a7a23c25a5e94085947a4c71f5b16c896cbceccef823",
+      "source_bytes": 150878,
+      "service_json_bytes": 172916,
+      "service_evidence_found": 2,
+      "tail_bytes": 8192,
+      "tail_evidence_found": 0,
+      "rg_context_bytes": 812,
+      "rg_evidence_found": 2,
+      "expected_evidence_count": 2
+    },
+    {
+      "lines": 20000,
+      "source_sha256": "72e6e21cf824cd1376d3913cb04a048f5ce27faccd9e6d9a2f798ef860cca43b",
+      "source_bytes": 1528875,
+      "service_json_bytes": 1748913,
+      "service_evidence_found": 2,
+      "tail_bytes": 8192,
+      "tail_evidence_found": 0,
+      "rg_context_bytes": 830,
+      "rg_evidence_found": 2,
+      "expected_evidence_count": 2
+    }
+  ]
+}

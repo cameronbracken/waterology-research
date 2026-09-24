@@ -290,3 +290,35 @@ def test_add_session_note_rejects_symlinked_notes_directory(tmp_path: Path) -> N
         add_session_note(root, session.id, "Do not write this outside.")
 
     assert list(outside.iterdir()) == []
+
+
+def test_session_log_pages_select_attempt_and_preserve_earlier_errors(tmp_path):
+    from waterology.agents.supervisor import begin_attempt
+    from waterology.services import session_log_excerpt
+
+    root, experiment_id = make_experiment(tmp_path / "study")
+    session = create_session(
+        root,
+        experiment_id=experiment_id,
+        runtime="codex",
+        role="researcher",
+        task="Read bounded logs",
+    )
+    session = begin_attempt(root, session.id, prompt="First attempt")
+    events = root / session.attempts[-1].events_path
+    events.write_text("ERROR old failure\n" + "progress\n" * 10000)
+    stderr = root / session.attempts[-1].stderr_path
+    stderr.write_text("separate diagnostic")
+    page = session_log_excerpt(root, session.id, query="ERROR", max_bytes=32, attempt=1)
+    assert page["attempt"] == 1
+    assert page["content"].startswith("ERROR old failure")
+    assert page["returned_bytes"] <= 32
+    assert (
+        session_log_excerpt(root, session.id, stream="stderr")["content"] == "separate diagnostic"
+    )
+    with pytest.raises(ValueError, match="Unknown"):
+        session_log_excerpt(root, session.id, attempt=99)
+    events.unlink()
+    events.symlink_to(stderr)
+    with pytest.raises(SessionConflictError):
+        session_log_excerpt(root, session.id)

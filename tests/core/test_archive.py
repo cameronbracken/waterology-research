@@ -732,3 +732,39 @@ def test_named_command_crate_preserves_metrics_without_claiming_native_workflow(
     assert metric["propertyID"] == "rmse"
     assert (crate / "run" / "checksums.sha256").is_file()
     assert validation["status"] == "skipped"
+
+
+def test_run_log_excerpt_reads_selected_stream_and_rejects_links(tmp_path):
+    from waterology.services import run_log_excerpt
+
+    root, experiment_id = make_experiment(tmp_path / "study")
+    worktree = root / ".waterology/worktrees" / experiment_id
+    output = worktree / "artifacts/result.json"
+    output.parent.mkdir()
+    output.write_text("{}")
+    build_run_archive(
+        root,
+        experiment_id=experiment_id,
+        run_id="run-pages",
+        commit_sha=git(worktree, "rev-parse", "HEAD"),
+        command=("python3", "model.py"),
+        started_at="2026-09-24T10:00:00Z",
+        finished_at="2026-09-24T10:00:01Z",
+        terminal_state="completed",
+        exit_code=0,
+        stdout="progress\n" * 10000,
+        stderr="ERROR retained diagnostic",
+        metrics={},
+    )
+    page = run_log_excerpt(root, "run-pages", max_bytes=16)
+    assert page["returned_bytes"] == 16
+    assert page["next_offset"] == 16
+    assert (
+        run_log_excerpt(root, "run-pages", stream="stderr")["content"]
+        == "ERROR retained diagnostic"
+    )
+    path = root / ".waterology/runs/run-pages/stdout.log"
+    path.unlink()
+    path.symlink_to(root / "waterology.toml")
+    with pytest.raises(ValueError, match="symlink"):
+        run_log_excerpt(root, "run-pages")
