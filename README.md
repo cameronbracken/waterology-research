@@ -1,17 +1,96 @@
 # waterology-research
 
-waterology-research provides research and engineering skills, agents, and workflows for
+Waterology is a set of tools for computationally focused research with a heavy focus on reproducibility. 
+It is also a worflow that helps you build software to a specification, 
+optimize under fixed constraints, or answer scientific questions. This repo provides skills, agents, and
+dynamic workflows for
 [Claude Code](https://claude.com/claude-code),
 [Codex](https://openai.com/codex/),
 [OpenCode](https://opencode.ai/), and
-[Pi](https://pi.dev/). It supports research software in R, Python, Julia,
+[Pi](https://pi.dev/). It supports reproducible research using R, Python, Julia,
 Fortran, and Rust with documentation using Markdown, Quarto, and LaTeX.
 
-The package includes research skills and agent definitions in the repository and 
-installs runtime adapters for each supported harness. Claude slash
-commands are wrappers that invoke the the underlying skills.
-Pi loads skills directly and exposes generated agents through the
-optional `pi-subagents` integration declared in the root package manifest.
+To get started, consider your research goals and what it would take to get there.
+Use skills for planning, implementation, literature review, review, and writing.
+When the work needs measured candidate evaluations, use a registered workflow
+and a bounded study to connect committed changes to results.
+Research workflows are runtime neutral.
+
+## Intended workflow
+
+| Starting point | Define success before execution | Entry point |
+| --- | --- | --- |
+| Build or repair software | Specification and protected acceptance checks | [`engineering-workflow`](skills/engineering-workflow/SKILL.md) and [`waterology engineering`](docs/engineering.md) |
+| Optimize under constraints | A target plus correctness, resource, and regression limits that must all pass | [`waterology engineering`](docs/engineering.md#optimize-under-fixed-constraints) |
+| Investigate a research question | Evaluation protocol, metrics, and evidence needed for a conclusion | [Research workflows](#research-workflows) and [managed studies](docs/managed-studies.md) |
+
+The engineering workflow does not require a scientific question or literature review. A
+literature review, code review, or report can also use skills directly without
+starting a compute study.
+
+For work that needs execution, the shared path is:
+
+```mermaid
+flowchart TD
+    E[Engineering specification or optimization target] --> P[Define evaluation, constraints, and evidence]
+    R[Research question] --> P
+    P --> W[Register workflow and commit source and environment]
+    W --> B[Evaluate baseline through TORC]
+    B --> A[Inspect archived evidence]
+    A --> D{Outcome and next step?}
+    D -->|Continue within authorized bounds| C[Commit a candidate in an isolated worktree]
+    C --> T[Evaluate through TORC]
+    T --> A
+    D -->|Requirements met or conclusion supported| S[Explicitly select a deliverable]
+    S --> V[Reproduce and check against the reference run]
+    D -->|Budget exhausted or blocked| U[Retain partial results and unresolved checks]
+```
+
+_Each sealed run preserves logs, metrics, declared outputs, and provenance.
+RO-Crate packages that evidence for exchange. Failed attempts remain part of
+the record._
+
+1. __Define the evaluation.__ Declare inputs, outputs, environment restoration,
+   metrics, and acceptance or assessment criteria. Keep evaluation checks outside
+   the source paths a candidate may change.
+2. __Establish a baseline.__ Register a named workflow and run the committed
+   project. Pixi, uv, or rv manages the environment; TORC runs jobs and their
+   dependencies, including on a local machine.
+3. __Iterate within a contract.__ For repeated candidate work, save the objective,
+   allowed paths, evaluation, and authorized budget in a study contract. Candidates
+   can be written manually or proposed by an agent. The study keeps the evaluation
+   fixed and records attempts and assessments.
+4. __Decide from evidence.__ Engineering acceptance requires every declared rule
+   to pass. Research needs an explicit assessment of what the evidence supports.
+   An improved metric alone does not establish either outcome.
+5. __Select and reproduce.__ Choose a reference run and declare the deliverable's
+   comparison checks. Reproduction restores and executes the workflow again, then
+   compares the new outputs with that reference.
+
+The records have distinct roles: a __workflow__ is the evaluation recipe, an
+__experiment__ identifies a committed candidate, a __run__ is an execution
+attempt, a __study__ controls bounded iterations, and a __deliverable__ names a
+selected reference run and its reproduction checks.
+
+See [execute and reproduce a project](docs/workflow-execution.md) for registration
+and commands, [engineering](docs/engineering.md) for build and optimization
+contracts, and the [workflow guide](docs/workflow-guide.md) for component diagrams.
+
+### Evidence and RO-Crate
+
+Waterology archives run evidence and derives an RO-Crate package when a run is
+sealed. You can inspect archive integrity and export the crate:
+
+```console
+waterology archive verify RUN_ID
+waterology archive export-crate RUN_ID exports/run-crate
+```
+
+Archive integrity, RO-Crate conformance, engineering acceptance, scientific
+support, and successful reproduction are separate checks. Packaging failure is
+recorded separately from execution. Export creates a local package; it does not
+publish it. See [RO-Crate integration](docs/ro-crate.md) for supported profiles,
+validation, and export contents.
 
 The installed `wgy` command is an alias for `waterology` and accepts the same
 subcommands and options, for example `wgy workflow list`.
@@ -25,6 +104,12 @@ machine profiles remain in the same global file. See
 examples, local guidance, and the configurable dashboard launcher.
 
 ## What's here
+
+The package includes research skills and agent definitions in the repository and
+installs runtime adapters for each supported harness. Claude slash commands are
+wrappers that invoke the underlying skills. Pi loads skills directly and exposes
+generated agents through the optional `pi-subagents` integration declared in the
+root package manifest.
 
 ```
 skills/             canonical research skills
@@ -153,7 +238,12 @@ stale local marketplace path. It uses a temporary development version to avoid s
 then restores the tracked manifests. Use `--runtime codex`, `--runtime claude`, or `--runtime all`
 for a first install. Start a new Codex thread or restart Claude Code after the refresh.
 
-## Experiment core
+## Single-command experiment API
+
+For named workflows, engineering acceptance, and bounded studies, start with
+[execute and reproduce a project](docs/workflow-execution.md). The older
+single-command API below remains available for manually managed research
+experiments.
 
 Waterology manages local experiments as committed Git variants. Initialize a
 repository, then edit `waterology.toml` to set the fixed command, declared
@@ -198,7 +288,9 @@ repair commands support structured JSON where automation needs it.
 
 ## TORC managed execution
 
-Direct execution remains available without TORC. Managed execution requires TORC 0.40.0 or newer
+Named workflows and managed studies use TORC, including for local execution.
+The older single-command API also supports direct execution without TORC.
+Managed execution requires TORC 0.40.0 or newer
 and a running TORC server. Define machine profiles in `$HOME/.config/waterology/config.toml`:
 
 ```toml
