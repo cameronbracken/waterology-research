@@ -75,7 +75,7 @@ def build_mcp_plan(project_root: Path) -> tuple[tuple[str, ...], ...]:
             "tool",
             "install",
             "--editable",
-            f"{project_root.resolve()}[mcp]",
+            f"{project_root.resolve()}[mcp,zotero]",
             "--force",
         ),
     )

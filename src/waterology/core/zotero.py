@@ -477,12 +477,20 @@ def sync_references(
                 record = load_document(path)
                 record["error"] = type(error).__name__
                 write_document(path, record)
-            return {
+            result = {
                 "status": "blocked",
                 "error": type(error).__name__,
                 "remaining": remaining,
                 "references": [],
             }
+            if isinstance(error, ModuleNotFoundError) and error.name == "pyzotero":
+                result["missing_dependency"] = "pyzotero"
+                result["hint"] = (
+                    "Install waterology-research with the zotero extra in the environment "
+                    "running this command, preserving any existing extras. "
+                    "For a development checkout, run pixi run reinstall-plugins."
+                )
+            return result
         for path in paths[:limit]:
             if path.is_symlink():
                 raise ValueError("Reference record must not be a symlink")

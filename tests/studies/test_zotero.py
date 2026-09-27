@@ -305,3 +305,30 @@ def test_one_bad_source_does_not_drop_later_capture(project, monkeypatch):
     result = search_literature(project, "fixture", fetcher=lambda *a, **kw: payload)
     assert len(result["capture_errors"]) == 1
     assert reference_status(project)[0]["source"]["title"] == "Valid paper"
+
+
+@pytest.mark.parametrize("missing", ["pyzotero", "unrelated_dependency"])
+def test_missing_sdk_reports_safe_action_and_preserves_queue(project, monkeypatch, missing):
+    import builtins
+
+    original_import = builtins.__import__
+
+    def missing_sdk(name, *args, **kwargs):
+        if name == "pyzotero":
+            raise ModuleNotFoundError("SECRET provider detail", name=missing)
+        return original_import(name, *args, **kwargs)
+
+    queue_reference(
+        project, {"doi": "10.1234/test", "title": "Fixture"}, reason="read", sync=False
+    )
+    monkeypatch.setattr(builtins, "__import__", missing_sdk)
+    result = sync_references(project)
+    assert result["status"] == "blocked"
+    assert result["remaining"] == 1
+    assert "SECRET" not in str(result)
+    if missing == "pyzotero":
+        assert result["missing_dependency"] == "pyzotero"
+        assert "zotero" in result["hint"]
+    else:
+        assert "missing_dependency" not in result
+    assert reference_status(project)[0]["metadata_status"] == "queued"

@@ -42,14 +42,14 @@ def test_default_selection_reinstalls_only_previous_installs() -> None:
         reinstall_plugins.select_runtimes("auto", {"codex": None, "claude": None})
 
 
-def test_mcp_reinstall_uses_editable_source_with_mcp_extra(tmp_path: Path) -> None:
+def test_mcp_reinstall_uses_editable_source_with_mcp_and_zotero_extras(tmp_path: Path) -> None:
     assert reinstall_plugins.build_mcp_plan(tmp_path) == (
         (
             "uv",
             "tool",
             "install",
             "--editable",
-            f"{tmp_path.resolve()}[mcp]",
+            f"{tmp_path.resolve()}[mcp,zotero]",
             "--force",
         ),
     )
@@ -75,7 +75,7 @@ def test_dry_run_includes_mcp_reinstall(
 
     assert reinstall_plugins.main(["--runtime", "codex", "--dry-run"]) == 0
     assert (
-        f"Would run: uv tool install --editable {project_root}[mcp] --force"
+        f"Would run: uv tool install --editable {project_root}[mcp,zotero] --force"
         in capsys.readouterr().out
     )
 

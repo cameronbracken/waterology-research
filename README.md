@@ -232,7 +232,7 @@ pixi run reinstall-plugins --dry-run
 pixi run reinstall-plugins
 ```
 
-The script installs the source checkout as an isolated `uv` tool with the MCP extra. It then detects
+The script installs the source checkout as an isolated `uv` tool with the MCP and Zotero extras. It then detects
 Codex and Claude installations, preserves Claude's scope and persistent plugin data, and refreshes a
 stale local marketplace path. It uses a temporary development version to avoid stale plugin caches,
 then restores the tracked manifests. Use `--runtime codex`, `--runtime claude`, or `--runtime all`
