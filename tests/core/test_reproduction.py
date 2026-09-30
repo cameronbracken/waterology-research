@@ -362,3 +362,64 @@ def test_paused_statistical_validation_rejects_changed_inputs(source, tmp_path, 
     )
     assert result["state"] == "blocked", result
     assert "differs from archived evidence" in result["reason"]
+
+
+def test_yaml_metrics_archive_and_export_reproduce(source, tmp_path):
+    """Exercise collection, sealed YAML artifacts and fresh numeric replay together."""
+    from waterology.core.config import MetricExtractor, load_project_config
+
+    config = load_project_config(source / "waterology.toml")
+    original = config.workflows["simulate"]
+    workflow = original.model_copy(
+        update={
+            "outputs": ("results/value.yaml",),
+            "metrics": (
+                MetricExtractor(
+                    name="value", path="results/value.yaml", format="yaml", field="scores.value"
+                ),
+            ),
+        }
+    )
+    config = config.model_copy(update={"workflows": {"simulate": workflow}})
+    (source / "waterology.toml").write_text(project_config_toml(config))
+    (source / "model.py").write_text(
+        'from pathlib import Path\nPath("results").mkdir(exist_ok=True)\n'
+        'Path("results/value.yaml").write_text("scores: \\n  value: 2.0\\n")\n'
+    )
+    git(source, "add", ".")
+    git(source, "-c", "commit.gpgsign=false", "commit", "-m", "Add YAML output fixture")
+    gateway = LocalFixtureGateway()
+    run = run_workflow(source, "simulate", gateway=gateway)
+    completed = watch_workflow(source, run.run_id, gateway=gateway)
+    assert completed.terminal_state == "completed"
+    archive = source / ".waterology/runs" / run.run_id
+    assert json.loads((archive / "metrics.json").read_text())["value"] == 2.0
+    assert (archive / "artifacts/results/value.yaml").read_text() == "scores: \n  value: 2.0\n"
+    register_deliverable(
+        source,
+        "yaml-final",
+        DeliverableConfig(
+            workflow="simulate",
+            reference_run=run.run_id,
+            checks=(
+                {
+                    "path": "results/value.yaml",
+                    "mode": "numeric",
+                    "format": "yaml",
+                    "field": "scores.value",
+                    "atol": 0.001,
+                },
+            ),
+        ),
+    )
+    bundle = tmp_path / "yaml-export"
+    export_deliverable(source, "yaml-final", bundle)
+    source.rename(tmp_path / "unavailable-yaml-original")
+    result = reproduce_deliverable(
+        bundle, "yaml-final", tmp_path / "yaml-rerun", bundle=True, profile="local", gateway=gateway
+    )
+    assert result["state"] == "passed", result
+    assert result["run_id"] != run.run_id
+    assert json.loads((tmp_path / "yaml-rerun/reproduction.json").read_text())["checks"][0][
+        "passed"
+    ]

@@ -74,7 +74,7 @@ class MetricExtractor(BaseModel):
 
     name: str = Field(min_length=1)
     path: str
-    format: Literal["json"] = "json"
+    format: Literal["json", "yaml"] = "json"
     field: str = Field(min_length=1)
 
     _validate_path = field_validator("path")(_portable_project_path)
@@ -130,6 +130,7 @@ class OutputCheck(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     path: str
     mode: Literal["bytes", "numeric", "statistical"] = "bytes"
+    format: Literal["json", "yaml"] = "json"
     field: str | None = None
     atol: float = Field(default=0, ge=0, allow_inf_nan=False)
     rtol: float = Field(default=0, ge=0, allow_inf_nan=False)
@@ -139,7 +140,9 @@ class OutputCheck(BaseModel):
     @model_validator(mode="after")
     def validate_check(self):
         if self.mode == "numeric" and not self.field:
-            raise ValueError("Numeric checks require a JSON field")
+            raise ValueError("Numeric checks require a field")
+        if self.mode != "numeric" and self.format != "json":
+            raise ValueError("Document format applies only to numeric checks")
         if self.mode == "statistical" and not self.validator:
             raise ValueError("Statistical checks require a validator workflow")
         if self.mode != "numeric" and (self.field is not None or self.atol != 0 or self.rtol != 0):
@@ -147,6 +150,14 @@ class OutputCheck(BaseModel):
         if self.mode != "statistical" and self.validator:
             raise ValueError("validator applies only to statistical checks")
         return self
+
+    @model_serializer(mode="wrap")
+    def serialize_compatible(self, handler):
+        payload = handler(self)
+        # Preserve existing deliverable snapshots and reproduction fingerprints.
+        if self.format == "json":
+            payload.pop("format", None)
+        return payload
 
 
 class DeliverableConfig(BaseModel):

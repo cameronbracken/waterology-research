@@ -17,6 +17,7 @@ from waterology.core.config import DeliverableConfig, ProjectConfig
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import create_experiment, load_worktree
 from waterology.core.git import current_commit, git_output, is_clean
+from waterology.core.metric_documents import read_metric_value
 from waterology.core.profiles import machine_config_path
 from waterology.core.project import discover_project, initialize_project
 from waterology.core.registry import file_sha256, project_file, register_entry, resolve_workflow
@@ -171,10 +172,8 @@ def _compare(reference: Path, actual: Path, checks) -> list[dict]:
                 reason = "byte comparison"
             else:
                 try:
-                    expected = json.loads(expected_file.read_text())
-                    observed = json.loads(actual_file.read_text())
-                    for key in check.field.split("."):
-                        expected, observed = expected[key], observed[key]
+                    expected = read_metric_value(expected_file, check.field, check.format)
+                    observed = read_metric_value(actual_file, check.field, check.format)
                     if isinstance(expected, bool) or isinstance(observed, bool):
                         raise TypeError("Boolean values are not numeric results")
                     passed = (
@@ -183,7 +182,7 @@ def _compare(reference: Path, actual: Path, checks) -> list[dict]:
                         and math.isclose(observed, expected, rel_tol=check.rtol, abs_tol=check.atol)
                     )
                     reason = "numeric comparison"
-                except (ValueError, TypeError, KeyError):
+                except (OSError, UnicodeError, ValueError, TypeError, KeyError, OverflowError):
                     reason = "numeric output is missing, invalid or nonfinite"
         outcomes.append(
             {"path": check.path, "mode": check.mode, "passed": passed, "reason": reason}

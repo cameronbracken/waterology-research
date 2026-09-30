@@ -17,6 +17,7 @@ from waterology.core.experiments import (
     load_worktree,
 )
 from waterology.core.git import current_branch, current_commit, is_ancestor, is_clean
+from waterology.core.metric_documents import read_metric_value
 from waterology.core.project import Project, discover_project
 from waterology.core.records import ExperimentRecord, RunManifest
 
@@ -407,12 +408,8 @@ def _extract_metrics(
                 f"Metric source escapes the experiment worktree: {extractor.path}"
             ) from error
         try:
-            value: object = json.loads(path.read_text(encoding="utf-8"))
-            for component in extractor.field.split("."):
-                if not isinstance(value, dict) or component not in value:
-                    raise KeyError(component)
-                value = value[component]
-        except (OSError, UnicodeError, json.JSONDecodeError, KeyError) as error:
+            value = read_metric_value(path, extractor.field, extractor.format)
+        except (OSError, UnicodeError, ValueError, TypeError, KeyError) as error:
             if required:
                 raise MetricExtractionError(
                     f"Unable to extract metric {extractor.name} from {extractor.path}"

@@ -81,6 +81,26 @@ metrics:
         field: rmse
 ```
 
+Metric sources use JSON by default. For application outputs in YAML, set the
+extractor's `format: yaml` explicitly. Both `.yaml` and `.yml` paths work; the
+format setting selects the parser independently of the filename. For example:
+
+```nestedtext
+metrics:
+    -
+        name: rmse
+        path: results/metrics.yaml
+        format: yaml
+        field: scores.rmse
+```
+
+The field selects nested mapping keys separated by dots. YAML is loaded safely,
+without Python object tags, and duplicate mapping keys are rejected. A missing
+or malformed required metric prevents successful collection. Metrics selected
+for the archive must have JSON-compatible values; unrelated YAML metadata can
+retain its native types. Declared YAML artifacts retain their original bytes.
+Waterology's own sealed archive records continue to use JSON.
+
 Replace `command` with `torc_file: workflows/evaluate.yaml` to retain native TORC
 jobs and dependencies. Workflow paths are relative to the project root, including
 paths in native YAML. TORC validates the staged workflow before submission.
@@ -150,7 +170,26 @@ checks:
 
 The tolerance is illustrative, not a default recommendation. Choose a tolerance
 that matches the calculation. Use `mode: bytes` for exact file equality. Numeric
-checks compare finite scalar JSON values selected by a dotted field path.
+checks compare finite scalar JSON or YAML values selected by a dotted field path.
+Set `format: yaml` on a numeric check when its output is YAML:
+
+```nestedtext
+checks:
+    -
+        path: results/metrics.yaml
+        mode: numeric
+        format: yaml
+        field: scores.rmse
+        atol: 0.000001
+        rtol: 0
+```
+
+JSON remains the default, preserving existing deliverable contracts. Booleans,
+strings, nulls, collections and nonfinite numbers cannot pass numeric replay.
+Malformed YAML, duplicate keys and missing fields produce a failed check.
+The same declared format and tolerances apply to both reference and fresh output.
+Format selection applies only to numeric checks; byte and statistical checks keep
+their existing behavior.
 
 ```console
 waterology deliverable register final final.nt
