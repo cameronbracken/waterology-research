@@ -49,7 +49,7 @@ def test_configure_writes_canonical_hidden_settings_file(tmp_path):
 
     configure_zotero(tmp_path, {"library_id": "123", "collection_name": "Fixture"})
 
-    assert (tmp_path / ".zotero.nt").is_file()
+    assert (tmp_path / ".zotero.toml").is_file()
     assert not (tmp_path / "zotero.nt").exists()
 
 
@@ -78,7 +78,7 @@ def test_settings_prefer_canonical_file_over_legacy_file(tmp_path):
     }
     write_document(tmp_path / "zotero.nt", settings)
     write_document(
-        tmp_path / ".zotero.nt",
+        tmp_path / ".zotero.toml",
         {**settings, "library_id": "456", "collection_name": "Canonical fixture"},
     )
 
@@ -131,9 +131,9 @@ def test_library_change_blocks_before_remote_mutation(project):
     queue_reference(project, {"title": "Paper", "doi": "10.1234/test"}, reason="cited", sync=False)
     gateway = Gateway()
     sync_references(project, gateway=gateway)
-    settings = load_document(project / ".zotero.nt")
+    settings = load_document(project / ".zotero.toml")
     settings["library_id"] = "456"
-    write_document(project / ".zotero.nt", settings)
+    write_document(project / ".zotero.toml", settings)
     result = sync_references(project, gateway=gateway)
     assert result["status"] == "partial"
     assert result["references"][0]["status"] == "blocked"
@@ -277,7 +277,7 @@ def test_bounded_sync_reports_remaining_and_rotates_failed_records(project):
 def test_bad_optional_settings_preserve_search_result(project):
     from waterology.core.literature import search_literature
 
-    (project / ".zotero.nt").write_text("invalid: [broken\n")
+    (project / ".zotero.toml").write_text("invalid = [broken\n")
     result = search_literature(project, "fixture", fetcher=lambda *a, **kw: {"results": []})
     assert result["status"] == "complete"
     assert result["zotero"]["status"] == "blocked"
@@ -288,9 +288,9 @@ def test_one_bad_source_does_not_drop_later_capture(project, monkeypatch):
     from waterology.core import zotero
     from waterology.core.literature import search_literature
 
-    settings = load_document(project / ".zotero.nt")
+    settings = load_document(project / ".zotero.toml")
     settings["capture"] = "discovered"
-    write_document(project / ".zotero.nt", settings)
+    write_document(project / ".zotero.toml", settings)
     monkeypatch.setattr(zotero, "sync_references", lambda *a, **kw: {"status": "fixture"})
     payload = {
         "results": [

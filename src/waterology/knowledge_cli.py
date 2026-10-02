@@ -14,6 +14,7 @@ from waterology.core.learning import (
 )
 from waterology.core.zotero import (
     configure_zotero,
+    initialize_zotero,
     queue_reference,
     reference_status,
     settings_for,
@@ -55,6 +56,20 @@ def context(query: str, path: Path = _PATH):
 @learning.command("improve")
 def improve(document: Path, path: Path = _PATH):
     emit(propose_improvement(path, **load_document(document)))
+
+
+@zotero.command("init")
+def init_zotero(
+    collection_name: str,
+    group_id: str | None = typer.Option(None),
+    api_key_env: str = typer.Option("ZOTERO_API_KEY"),
+    path: Path = _PATH,
+):
+    """Create project TOML settings using the library associated with the API key."""
+    try:
+        emit(initialize_zotero(path, collection_name, group_id=group_id, api_key_env=api_key_env))
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
 
 
 @zotero.command("configure")

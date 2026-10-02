@@ -2,6 +2,7 @@
 
 import hashlib
 import ipaddress
+import json
 import os
 import re
 import socket
@@ -13,9 +14,10 @@ from urllib.parse import parse_qsl, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import uuid4
 
+import tomlkit
 from pydantic import BaseModel, ConfigDict, Field
 
-from waterology.core.atomic import exclusive_file_lock
+from waterology.core.atomic import exclusive_file_lock, write_text
 from waterology.core.config import _portable_project_path
 from waterology.core.formats import load_document, write_document
 from waterology.core.project import discover_project
@@ -32,8 +34,8 @@ class ZoteroSettings(BaseModel):
     download_pdfs: bool = True
 
 
-_SETTINGS_NAME = ".zotero.nt"
-_LEGACY_SETTINGS_NAME = "zotero.nt"
+_SETTINGS_NAME = ".zotero.toml"
+_LEGACY_SETTINGS_NAMES = (".zotero.nt", "zotero.nt")
 
 
 def _directory(start: Path) -> Path:
@@ -57,22 +59,129 @@ def configure_zotero(start: Path, settings: dict) -> dict:
     root = discover_project(start).root
     path = root / _SETTINGS_NAME
     with exclusive_file_lock(_directory(start) / "sync.lock"):
-        if path.exists() or (root / _LEGACY_SETTINGS_NAME).exists():
+        if any(
+            (root / name).exists() or (root / name).is_symlink()
+            for name in (_SETTINGS_NAME, *_LEGACY_SETTINGS_NAMES)
+        ):
             raise ValueError(
-                ".zotero.nt or zotero.nt exists; edit it deliberately to change library settings"
+                "Zotero settings exist; edit them deliberately to change library settings"
             )
         write_document(path, config.model_dump())
     return config.model_dump()
 
 
 def settings_for(start: Path) -> ZoteroSettings | None:
-    root = discover_project(start).root
-    path = root / _SETTINGS_NAME
-    if not path.exists():
-        path = root / _LEGACY_SETTINGS_NAME
+    project = discover_project(start)
+    root = project.root
+    configured = project.config.zotero
+    if configured:
+        path = root / configured.settings_file
+        if path.is_symlink():
+            raise ValueError("Zotero settings must not be a symlink")
+        if not path.is_file():
+            raise ValueError("Configured Zotero settings file is missing")
+        return ZoteroSettings.model_validate(load_document(path))
+    path = next(
+        (
+            root / name
+            for name in (_SETTINGS_NAME, *_LEGACY_SETTINGS_NAMES)
+            if (root / name).exists() or (root / name).is_symlink()
+        ),
+        root / _SETTINGS_NAME,
+    )
     if path.is_symlink():
         raise ValueError("Zotero settings must not be a symlink")
     return ZoteroSettings.model_validate(load_document(path)) if path.exists() else None
+
+
+def _library_from_key(api_key_env: str, group_id: str | None) -> tuple[str, str]:
+    key = os.environ.get(api_key_env)
+    if not key:
+        raise ValueError(f"{api_key_env} is not available; set it before Zotero init")
+    request = Request(
+        "https://api.zotero.org/keys/current",
+        headers={"Zotero-API-Key": key, "Zotero-API-Version": "3"},
+    )
+
+    # Never follow a redirect carrying the API credential.
+    class NoRedirect(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    try:
+        with build_opener(NoRedirect()).open(request, timeout=30) as response:
+            identity = json.load(response)
+        library_id = str(identity["userID"]) if group_id is None else group_id
+        access = identity.get("access", {})
+        permissions = (
+            access.get("user", {})
+            if group_id is None
+            else access.get("groups", {}).get(group_id, access.get("groups", {}).get("all", {}))
+        )
+        if not permissions.get("library") or not permissions.get("write"):
+            raise ValueError("permissions")
+        if not re.fullmatch(r"[0-9]+", library_id):
+            raise ValueError("identity")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        raise ValueError(
+            "Could not resolve a writable Zotero library; check API key, permissions and network"
+        ) from None
+    return library_id, "user" if group_id is None else "group"
+
+
+def _save_initialized_settings(root: Path, config: ZoteroSettings) -> None:
+    if (root / _SETTINGS_NAME).is_symlink():
+        raise ValueError("Zotero settings must not be a symlink")
+    project_file = root / "waterology.toml"
+    if project_file.is_symlink():
+        raise ValueError("Project configuration must not be a symlink")
+    with exclusive_file_lock(root / ".waterology" / "zotero-config.lock"):
+        document = tomlkit.parse(project_file.read_text(encoding="utf-8"))
+        document["zotero"] = {"settings_file": _SETTINGS_NAME}
+        settings_path = root / _SETTINGS_NAME
+        if settings_path.exists():
+            if ZoteroSettings.model_validate(load_document(settings_path)) != config:
+                raise ValueError("Canonical Zotero settings conflict with the configured destination")
+        else:
+            write_document(settings_path, config.model_dump())
+        write_text(project_file, tomlkit.dumps(document))
+
+
+def initialize_zotero(
+    start: Path,
+    collection_name: str,
+    *,
+    group_id: str | None = None,
+    api_key_env: str = "ZOTERO_API_KEY",
+) -> dict:
+    """Resolve the destination and save TOML settings without remote writes."""
+    if not collection_name.strip():
+        raise ValueError("Collection name must not be blank")
+    root = discover_project(start).root
+    with exclusive_file_lock(_directory(start) / "sync.lock"):
+        existing = settings_for(start)
+        if existing:
+            if (
+                existing.collection_name != collection_name
+                or (
+                    group_id is not None
+                    and (existing.library_type != "group" or existing.library_id != group_id)
+                )
+                or existing.api_key_env != api_key_env
+            ):
+                raise ValueError("Zotero settings exist for a different destination or collection")
+            _save_initialized_settings(root, existing)
+            return existing.model_dump()
+        library_id, library_type = _library_from_key(api_key_env, group_id)
+        config = ZoteroSettings(
+            library_id=library_id,
+            library_type=library_type,
+            collection_name=collection_name,
+            collection_key=_key(uuid4().hex),
+            api_key_env=api_key_env,
+        )
+        _save_initialized_settings(root, config)
+        return config.model_dump()
 
 
 def normalize_doi(value: str | None) -> str:

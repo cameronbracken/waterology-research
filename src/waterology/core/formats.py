@@ -5,6 +5,7 @@ import tomllib
 from pathlib import Path
 
 import nestedtext as nt
+import tomlkit
 
 from waterology.core.atomic import write_text
 
@@ -45,4 +46,4 @@ def readable(value) -> str:
 
 
 def write_document(path: Path, value: dict) -> None:
-    write_text(path, readable(value))
+    write_text(path, tomlkit.dumps(value) if path.suffix == ".toml" else readable(value))

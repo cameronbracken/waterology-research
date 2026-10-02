@@ -225,22 +225,40 @@ does not claim improved search recall or ranking accuracy.
 
 ### Automatic Zotero capture
 
-Configure the library once using a NestedText settings file:
+From an initialized project, run:
 
-```nestedtext
-library_type: user
-library_id: YOUR_NUMERIC_LIBRARY_ID
-collection_name: Project reference library
-capture: selected
-download_pdfs: true
+```bash
+waterology zotero init 'Project reference library'
 ```
 
-Replace the library ID with the selected personal or group library ID. Save this
-input outside `.zotero.nt`, then run `waterology zotero configure SETTINGS.nt`.
-This writes a project `.zotero.nt` with a stable collection key. Existing
-`zotero.nt` files remain readable. It makes no network request. The first sync
-creates that collection if absent. An API key with write access to the chosen
-library is required. Keys stay outside settings.
+The command reads `ZOTERO_API_KEY`, resolves its personal library ID and checks
+library write access. It creates `.zotero.toml` with a generated collection key
+and adds `[zotero] settings_file = ".zotero.toml"` to `waterology.toml`, preserving
+other project settings and comments. Keys stay in the environment. Init makes
+one read request and no remote writes. Sync creates the collection when there
+are queued references.
+
+For a shared library, use `--group-id YOUR_NUMERIC_GROUP_ID`. Use `--api-key-env`
+to select a different credential environment variable. Repeating init with the
+same collection preserves its library and collection key. A different name or
+explicit destination is rejected rather than redirecting queued references.
+Existing `.zotero.nt` and `zotero.nt` files remain readable. Init converts their
+settings to TOML while retaining the original file and saved identities.
+
+The generated settings include:
+
+```toml
+library_type = "user"
+library_id = "YOUR_NUMERIC_LIBRARY_ID"
+collection_name = "Project reference library"
+collection_key = "ABCDEFGH"
+api_key_env = "ZOTERO_API_KEY"
+capture = "selected"
+download_pdfs = true
+```
+
+For manual setup, `waterology zotero configure SETTINGS.toml` still accepts
+explicit library settings and generates a collection key when omitted.
 
 An included search result or a registered local/agency source is automatically
 queued and synchronized when configured. By default, unselected search hits

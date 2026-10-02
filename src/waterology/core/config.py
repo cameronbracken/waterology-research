@@ -168,9 +168,16 @@ class DeliverableConfig(BaseModel):
     description: str = ""
 
 
+class ProjectZoteroConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    settings_file: str = ".zotero.toml"
+    _path = field_validator("settings_file")(_portable_project_path)
+
+
 class ProjectConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    zotero: ProjectZoteroConfig | None = None
     schema_version: Literal[1] = 1
     name: str = Field(min_length=1, max_length=120)
     artifact_roots: tuple[str, ...] = ("artifacts",)
@@ -197,6 +204,7 @@ class ProjectConfig(BaseModel):
     def serialize_compatible(self, handler):
         payload = handler(self)
         for key in (
+            "zotero",
             "workflows",
             "deliverables",
             "study_contracts",
@@ -317,6 +325,7 @@ def project_config_toml(config: ProjectConfig) -> str:
 
     document = tomlkit.parse("\n".join(lines) + "\n")
     for key in (
+        "zotero",
         "workflows",
         "deliverables",
         "study_contracts",
