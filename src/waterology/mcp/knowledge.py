@@ -6,7 +6,7 @@ from pathlib import Path
 def register_knowledge_tools(server, bounded_tool):
     @bounded_tool(server)
     def research_access() -> dict:
-        """Check Zotero/OpenAlex environment credential presence; never expose values."""
+        """Check Zotero, OpenAlex and Semantic Scholar environment credential presence; never expose values."""
         from waterology.core.research_access import research_access as check
 
         return check()

@@ -111,13 +111,16 @@ def register_workflow_tools(server, bounded_tool):
     @bounded_tool(server)
     def literature_search(
         query: str,
+        provider: str = "openalex",
         after: str | None = None,
         before: str | None = None,
         limit: int = 20,
         project_path: str = ".",
     ) -> dict:
-        """Query OpenAlex once and retain queries, source identities and provider failures."""
-        return search_literature(Path(project_path), query, after=after, before=before, limit=limit)
+        """Query OpenAlex or Semantic Scholar once and retain queries, source identities and provider failures."""
+        return search_literature(
+            Path(project_path), query, after=after, before=before, limit=limit, provider=provider
+        )
 
     @bounded_tool(server)
     def literature_decision(

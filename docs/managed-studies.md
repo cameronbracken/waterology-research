@@ -200,7 +200,8 @@ Check provider access before starting a literature or deep-research task:
 waterology research-access
 ```
 
-The package reads `ZOTERO_API_KEY` and `OPENALEX_API_KEY` from the process
+The package reads `ZOTERO_API_KEY`, `OPENALEX_API_KEY` and
+`SEMANTIC_SCHOLAR_API_KEY` from the process
 environment. Missing keys produce warnings. The check reports presence only,
 never their values, and does not claim the keys are valid. Export them through
 your shell or approved environment manager. A running agent may need its
@@ -222,6 +223,28 @@ citation checks before writing scholarly claims.
 The client follows OpenAlex's [paging](https://help.openalex.org/api/paging/)
 and [filtering](https://help.openalex.org/api/filtering/) interfaces. This feature
 does not claim improved search recall or ranking accuracy.
+
+Semantic Scholar is available through the same recorded search interface:
+
+```bash
+waterology discover "reservoir operations" --provider semantic-scholar --limit 20
+```
+
+MCP `literature_search` accepts `provider="semantic-scholar"`. The default
+provider remains OpenAlex. Semantic Scholar uses its paper relevance search
+endpoint with the API key in the `x-api-key` header. Missing keys warn before
+trying public access. Each search makes one bounded request with no automatic
+retry. Provider errors remain unverified search records, including rate limits.
+
+Results retain paper IDs, DOI provenance, author names, dates and public PDF
+links. Source inclusion and configured Zotero capture work with either provider.
+Date bounds use a provider year filter followed by exact local date filtering.
+Papers without a complete publication date are excluded when date bounds are
+supplied. This can return fewer papers than the requested limit. A year alone
+is never converted to an invented publication day.
+
+See the [Semantic Scholar API tutorial](https://webflow.semanticscholar.org/product/api/tutorial)
+for search and authentication details.
 
 ### Automatic Zotero capture
 

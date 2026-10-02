@@ -43,8 +43,8 @@ def create(
 ):
     """Record already-given authorization and pin the TORC execution contract."""
     from waterology.core.workflows import create_registered_study
-    emit(create_registered_study(path, contract, profile=profile, authorized_by=authorized_by))
 
+    emit(create_registered_study(path, contract, profile=profile, authorized_by=authorized_by))
 
 
 @study_app.command("list")
@@ -216,6 +216,7 @@ def register_workflow_commands(app: typer.Typer):
     @app.command("discover")
     def discover(
         query: str,
+        provider: str = typer.Option("openalex"),
         after: str | None = typer.Option(None),
         before: str | None = typer.Option(None),
         limit: int = typer.Option(20, min=1, max=100),
@@ -223,7 +224,11 @@ def register_workflow_commands(app: typer.Typer):
     ):
         from waterology.core.literature import search_literature
 
-        emit(search_literature(path, query, after=after, before=before, limit=limit))
+        emit(
+            search_literature(
+                path, query, after=after, before=before, limit=limit, provider=provider
+            )
+        )
 
     @app.command("source-decision")
     def decision(

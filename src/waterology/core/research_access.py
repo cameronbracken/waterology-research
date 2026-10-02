@@ -4,7 +4,11 @@ import os
 
 
 def research_access() -> dict:
-    providers = {"zotero": "ZOTERO_API_KEY", "openalex": "OPENALEX_API_KEY"}
+    providers = {
+        "zotero": "ZOTERO_API_KEY",
+        "openalex": "OPENALEX_API_KEY",
+        "semantic-scholar": "SEMANTIC_SCHOLAR_API_KEY",
+    }
     return {
         "providers": {
             name: {

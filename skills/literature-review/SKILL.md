@@ -16,7 +16,7 @@ metadata:
 Use `writing-style` for the review and source synthesis.
 
 At entry, run `waterology research-access` or MCP `research_access`. Use
-`OPENALEX_API_KEY` and `ZOTERO_API_KEY` from the environment when present. Warn
+`OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY` and `ZOTERO_API_KEY` from the environment when present. Warn
 clearly when the relevant key is missing. Do not print keys, request them in
 chat, or treat their presence as verified provider access.
 
@@ -28,7 +28,9 @@ research trajectory. Briefly summarize the plan and continue unless the user
 asked to review it first.
 
 When working in an initialized Waterology project, record retrieval through
-`waterology discover "QUERY"` or MCP `literature_search`. Save explicit date
+`waterology discover "QUERY"` or MCP `literature_search`. Select Semantic Scholar
+with `--provider semantic-scholar` or MCP `provider="semantic-scholar"` for an
+additional search pass. OpenAlex remains the default. Save explicit date
 bounds only when the question calls for them. The service retains exact queries,
 provider failures and DOI provenance. Use `source-decision` to append inclusion
 or exclusion reasons, and `source-add` for agency reports or local sources.

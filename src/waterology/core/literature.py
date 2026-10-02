@@ -1,4 +1,4 @@
-"""Recorded OpenAlex discovery and explicit local source inclusion decisions."""
+"""Recorded scholarly discovery and explicit local source inclusion decisions."""
 
 import json
 import os
@@ -39,6 +39,85 @@ def fetch_openalex(query: str, *, after: str | None, before: str | None, limit: 
     if len(payload) > 4_000_000:
         raise ValueError("Provider response exceeds the bounded read limit")
     return json.loads(payload)
+
+
+def fetch_semantic_scholar(
+    query: str, *, after: str | None, before: str | None, limit: int
+) -> dict:
+    key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
+    if not key:
+        warnings.warn(
+            "SEMANTIC_SCHOLAR_API_KEY is not available; trying unauthenticated Semantic Scholar access",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    parameters = {
+        "query": query,
+        "limit": limit,
+        "fields": "title,externalIds,url,authors,venue,publicationDate,year,openAccessPdf,publicationTypes",
+    }
+    if after or before:
+        parameters["year"] = f"{after[:4] if after else ''}-{before[:4] if before else ''}"
+    headers = {"User-Agent": "Waterology literature discovery"}
+    if key:
+        headers["x-api-key"] = key
+    request = Request(
+        "https://api.semanticscholar.org/graph/v1/paper/search?" + urlencode(parameters),
+        headers=headers,
+    )
+    from urllib.request import HTTPRedirectHandler, build_opener
+
+    class NoRedirect(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    with build_opener(NoRedirect()).open(request, timeout=30) as response:
+        payload = response.read(4_000_001)
+    if len(payload) > 4_000_000:
+        raise ValueError("Provider response exceeds the bounded read limit")
+    return json.loads(payload)
+
+
+def normalize_semantic_scholar(results: list[dict], *, after=None, before=None) -> list[dict]:
+    converted = []
+    for item in results:
+        if not isinstance(item, dict):
+            raise TypeError("Provider result must be an object")
+        publication_date = item.get("publicationDate")
+        if publication_date:
+            date.fromisoformat(publication_date)
+        # Never invent a day for papers whose provider knows only the year.
+        if (after or before) and (
+            not publication_date
+            or (after and publication_date < after)
+            or (before and publication_date > before)
+        ):
+            continue
+        converted.append(
+            {
+                "id": item.get("paperId"),
+                "doi": (item.get("externalIds") or {}).get("DOI"),
+                "title": item.get("title"),
+                "publication_date": publication_date,
+                "authorships": [
+                    {"author": {"display_name": a.get("name")}} for a in (item.get("authors") or [])
+                ],
+                "primary_location": {
+                    "source": {"display_name": item.get("venue") or ""},
+                    "landing_page_url": item.get("url"),
+                },
+                "best_oa_location": {"pdf_url": (item.get("openAccessPdf") or {}).get("url")},
+                "type": "preprint"
+                if "Preprint" in (item.get("publicationTypes") or [])
+                else "article",
+            }
+        )
+    sources = normalize_sources(converted)
+    for source in sources:
+        source["provider"] = "semantic-scholar"
+        for provenance in source["provenance"]:
+            provenance["provider"] = "semantic-scholar"
+    return sources
 
 
 def _directory(start: Path) -> Path:
@@ -109,7 +188,10 @@ def search_literature(
     before: str | None = None,
     limit: int = 20,
     fetcher=None,
+    provider: str = "openalex",
 ) -> dict:
+    if provider not in {"openalex", "semantic-scholar"}:
+        raise ValueError("Provider must be openalex or semantic-scholar")
     if not query.strip() or not 1 <= limit <= 100:
         raise ValueError("Supply a query and limit between 1 and 100")
     if after:
@@ -121,7 +203,7 @@ def search_literature(
     record = {
         "schema_version": 1,
         "id": f"search-{uuid4().hex[:16]}",
-        "provider": "openalex",
+        "provider": provider,
         "query": query,
         "after": after,
         "before": before,
@@ -132,11 +214,18 @@ def search_literature(
         "error": None,
     }
     try:
-        payload = (fetcher or fetch_openalex)(query, after=after, before=before, limit=limit)
-        if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+        fetch = fetch_openalex if provider == "openalex" else fetch_semantic_scholar
+        payload = (fetcher or fetch)(query, after=after, before=before, limit=limit)
+        results_key = "results" if provider == "openalex" else "data"
+        if not isinstance(payload, dict) or not isinstance(payload.get(results_key), list):
             raise TypeError("Provider response lacks results")
-        record["sources"] = normalize_sources(payload["results"])
-    except (OSError, ValueError, TypeError) as error:
+        results = payload[results_key][:limit]
+        record["sources"] = (
+            normalize_sources(results)
+            if provider == "openalex"
+            else normalize_semantic_scholar(results, after=after, before=before)
+        )
+    except (OSError, ValueError, TypeError, AttributeError) as error:
         # HTTP exceptions can contain URLs with API keys. Never persist their message.
         record.update(status="unverified", error=type(error).__name__)
     with project_state_lock(start):
