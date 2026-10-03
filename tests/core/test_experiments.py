@@ -1,9 +1,9 @@
-import json
 import subprocess
 from pathlib import Path
 
 import pytest
 
+from waterology.core.atomic import read_record
 from waterology.core.database import open_database
 from waterology.core.experiments import (
     ExperimentConflictError,
@@ -58,8 +58,8 @@ def test_create_experiment_adds_worktree_durable_record_and_index(tmp_path: Path
     worktree = root / experiment.worktree
     assert worktree.is_dir()
     assert git(worktree, "branch", "--show-current") == experiment.branch
-    record_path = root / ".waterology" / "experiments" / experiment.id / "experiment.json"
-    assert json.loads(record_path.read_text(encoding="utf-8"))["hypothesis"] == (
+    record_path = root / ".waterology" / "experiments" / experiment.id / "experiment.yaml"
+    assert read_record(record_path)["hypothesis"] == (
         "A longer calibration window reduces RMSE."
     )
 
@@ -147,7 +147,7 @@ def test_experiment_notes_are_append_only_durable_records(tmp_path: Path) -> Non
     assert first.id != second.id
     assert first.text == "First observation."
     note_files = list(
-        (root / ".waterology" / "experiments" / experiment.id / "notes").glob("*.json")
+        (root / ".waterology" / "experiments" / experiment.id / "notes").glob("*.yaml")
     )
     assert len(note_files) == 2
 

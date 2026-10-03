@@ -40,7 +40,7 @@ Use existing bibliography validation for DOI checks before citation.
 Build the project Zotero collection as sources become relevant. An include
 decision and `source-add` automatically queue the source and sync when configured.
 For papers found through another search tool, call MCP `zotero_capture` or
-`waterology zotero capture source.nt` when reading or citing them. Supply DOI,
+`waterology zotero capture source.yaml` when reading or citing them. Supply DOI,
 title, authors, publication date, stable URL, and a lawful PDF URL or an existing
 project-relative PDF path when available. The configured library applies across
 iterations without further approval. Do not substitute a different library.

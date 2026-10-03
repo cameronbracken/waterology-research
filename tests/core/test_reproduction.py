@@ -1,4 +1,3 @@
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -6,6 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from waterology.core.atomic import read_record
 from waterology.core.config import (
     DeliverableConfig,
     ProjectConfig,
@@ -121,7 +121,7 @@ def test_named_baseline_and_export_reproduce_without_original_checkout(source, t
     )
     assert result["state"] == "passed", result
     assert result["run_id"] != run.run_id
-    assert json.loads((tmp_path / "rerun/reproduction.json").read_text())["checks"][0]["passed"]
+    assert read_record(tmp_path / "rerun/reproduction.yaml")["checks"][0]["passed"]
 
 
 def test_tampered_bundle_is_rejected(source, tmp_path):
@@ -393,7 +393,7 @@ def test_yaml_metrics_archive_and_export_reproduce(source, tmp_path):
     completed = watch_workflow(source, run.run_id, gateway=gateway)
     assert completed.terminal_state == "completed"
     archive = source / ".waterology/runs" / run.run_id
-    assert json.loads((archive / "metrics.json").read_text())["value"] == 2.0
+    assert read_record(archive / "metrics.yaml")["value"] == 2.0
     assert (archive / "artifacts/results/value.yaml").read_text() == "scores: \n  value: 2.0\n"
     register_deliverable(
         source,
@@ -420,6 +420,6 @@ def test_yaml_metrics_archive_and_export_reproduce(source, tmp_path):
     )
     assert result["state"] == "passed", result
     assert result["run_id"] != run.run_id
-    assert json.loads((tmp_path / "yaml-rerun/reproduction.json").read_text())["checks"][0][
+    assert read_record(tmp_path / "yaml-rerun/reproduction.yaml")["checks"][0][
         "passed"
     ]

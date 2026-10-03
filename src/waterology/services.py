@@ -11,6 +11,7 @@ from waterology.core.archive import (
     read_archive_logs,
 )
 from waterology.core.assessments import assess_run, list_assessments
+from waterology.core.atomic import read_record
 from waterology.core.config import load_project_config
 from waterology.core.database import open_database
 from waterology.core.errors import WaterologyError
@@ -161,7 +162,7 @@ def run_logs(path: Path, run_id: str) -> dict[str, str]:
 def run_metrics(path: Path, run_id: str) -> dict[str, object]:
     project = discover_project(path)
     load_archive(project.root, run_id)
-    value = json.loads((project.paths.runs / run_id / "metrics.json").read_text(encoding="utf-8"))
+    value = read_record(project.paths.runs / run_id / "metrics.yaml")
     if not isinstance(value, dict):
         raise TypeError(f"Run metrics are not a JSON object: {run_id}")
     return value
@@ -357,19 +358,19 @@ def _reconcile_direct_dashboard_state(
     root = project.root
     paths = project.paths
     run_id = str(record["run_id"])
-    if (paths.runs / run_id / "manifest.json").is_file():
+    if (paths.runs / run_id / "manifest.yaml").is_file():
         manifest = load_archive(root, run_id)
         record["operational_state"] = manifest.terminal_state
         record["last_observed_at"] = manifest.finished_at
         return
-    metadata_path = paths.staging / run_id / "execution.json"
+    metadata_path = paths.staging / run_id / "execution.yaml"
     if not metadata_path.is_file():
         record["operational_state"] = "unknown"
         record["inspection_error"] = "Direct run has no archive or execution record"
         return
     try:
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+        metadata = read_record(metadata_path)
+    except (OSError, ValueError) as error:
         record["operational_state"] = "unknown"
         record["inspection_error"] = f"Direct execution record is invalid: {error}"
         return

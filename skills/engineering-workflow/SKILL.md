@@ -21,7 +21,7 @@ work rather than duplicating its controller or evaluation. Register the project'
 qualification command as a named workflow with its outputs, metric extractors,
 environment restoration, and protected inputs.
 
-Use `waterology engineering init CONTRACT.nt` to draft a contract. It requires
+Use `waterology engineering init CONTRACT.yaml` to draft a contract. It requires
 `--objective`, `--workflow`, one or more `--allow-path`, `--max-iterations`, and
 `--max-seconds`. Edit the draft before creating the study:
 
@@ -43,7 +43,7 @@ runs. Ancestry is not acceptance.
 ## Execute within existing authority
 
 Save the contract, commit the qualification workflow and protected files, and use
-`waterology engineering create CONTRACT.nt --profile PROFILE --authorized-by TEXT`.
+`waterology engineering create CONTRACT.yaml --profile PROFILE --authorized-by TEXT`.
 TEXT records actual authorization already given. Missing material decisions need
 clarification; do not invent compute authority, targets, or budgets.
 

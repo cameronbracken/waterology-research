@@ -52,54 +52,40 @@ For a native TORC definition:
 waterology workflow register evaluate --torc workflows/evaluate.yaml
 ```
 
-Use a definition file to specify evidence and restoration, for example `workflow.nt`:
+Use a definition file to specify evidence and restoration, for example `workflow.yaml`:
 
-```nestedtext
+```yaml
 command:
     - pixi
     - run
     - --locked
     - evaluate
 outputs:
-    - results/metrics.json
+    - results/metrics.yaml
 environment_files:
     - pixi.toml
     - pixi.lock
 restore:
-    -
-        - pixi
-        - install
-        - --locked
+    - [pixi, install, --locked]
 environment_probe:
     - pixi
     - info
     - --json
 metrics:
-    -
-        name: rmse
-        path: results/metrics.json
-        field: rmse
+    - name: rmse
+      path: results/metrics.yaml
+      field: scores.rmse
 ```
 
-Metric sources use JSON by default. For application outputs in YAML, set the
-extractor's `format: yaml` explicitly. Both `.yaml` and `.yml` paths work; the
-format setting selects the parser independently of the filename. For example:
-
-```nestedtext
-metrics:
-    -
-        name: rmse
-        path: results/metrics.yaml
-        format: yaml
-        field: scores.rmse
-```
-
+Metric sources ending in `.yaml` or `.yml` are read as YAML. Other paths are read
+as JSON. Set `format: json` or `format: yaml` to override the filename.
 The field selects nested mapping keys separated by dots. YAML is loaded safely,
 without Python object tags, and duplicate mapping keys are rejected. A missing
 or malformed required metric prevents successful collection. Metrics selected
-for the archive must have JSON-compatible values; unrelated YAML metadata can
-retain its native types. Declared YAML artifacts retain their original bytes.
-Waterology's own sealed archive records continue to use JSON.
+for the archive must be plain numbers, strings, booleans, nulls, lists or
+mappings. Unrelated YAML metadata can retain its native types. Declared
+artifacts retain their original bytes. Waterology writes its own sealed archive
+records as YAML.
 
 Replace `command` with `torc_file: workflows/evaluate.yaml` to retain native TORC
 jobs and dependencies. Workflow paths are relative to the project root, including
@@ -110,7 +96,7 @@ are preserved in job logs. Configure a probe appropriate to the actual runtime,
 such as an R session inventory for an R workflow.
 
 ```console
-waterology workflow register evaluate --definition workflow.nt
+waterology workflow register evaluate --definition workflow.yaml
 ```
 
 Registration is idempotent. A conflicting definition is rejected. Edit a registered
@@ -143,7 +129,7 @@ candidate experiments. For manual candidates, use:
 
 ```console
 waterology experiment create "Candidate objective" --workflow evaluate
-waterology study create study-contract.nt --profile local --authorized-by "Recorded user authorization"
+waterology study create study-contract.yaml --profile local --authorized-by "Recorded user authorization"
 ```
 
 Supply the actual authorization and contract. Research mode retains scientific
@@ -154,37 +140,24 @@ does not modify the source or configuration of running candidate worktrees.
 
 ## Select and reproduce the final result
 
-Create `final.nt` after explicitly selecting a completed reference run:
+Create `final.yaml` after explicitly selecting a completed reference run:
 
-```nestedtext
+```yaml
 workflow: evaluate
 reference_run: run-REPLACE_WITH_ACTUAL_ID
 checks:
-    -
-        path: results/metrics.json
-        mode: numeric
-        field: rmse
-        atol: 0.000001
-        rtol: 0
+    - path: results/metrics.yaml
+      mode: numeric
+      field: scores.rmse
+      atol: 0.000001
+      rtol: 0
 ```
 
 The tolerance is illustrative, not a default recommendation. Choose a tolerance
 that matches the calculation. Use `mode: bytes` for exact file equality. Numeric
-checks compare finite scalar JSON or YAML values selected by a dotted field path.
-Set `format: yaml` on a numeric check when its output is YAML:
-
-```nestedtext
-checks:
-    -
-        path: results/metrics.yaml
-        mode: numeric
-        format: yaml
-        field: scores.rmse
-        atol: 0.000001
-        rtol: 0
-```
-
-JSON remains the default, preserving existing deliverable contracts. Booleans,
+checks compare finite scalar YAML or JSON values selected by a dotted field path.
+As with metrics, the parser follows the file suffix unless `format` is set.
+Booleans,
 strings, nulls, collections and nonfinite numbers cannot pass numeric replay.
 Malformed YAML, duplicate keys and missing fields produce a failed check.
 The same declared format and tolerances apply to both reference and fresh output.
@@ -192,7 +165,7 @@ Format selection applies only to numeric checks; byte and statistical checks kee
 their existing behavior.
 
 ```console
-waterology deliverable register final final.nt
+waterology deliverable register final final.yaml
 waterology reproduce final reproduction-check --profile local
 waterology deliverable export final deliverable-export
 ```
@@ -211,7 +184,7 @@ To reproduce an export with the original checkout unavailable:
 waterology reproduce final fresh-check --path deliverable-export --bundle --profile local
 ```
 
-`reproduction.json` retains execution IDs, validation outcomes and failure reasons.
+`reproduction.yaml` retains execution IDs, validation outcomes and failure reasons.
 Use `--resume` with the same destination after interruption. Missing prerequisites
 are `blocked`, output disagreement is `failed`, and all declared checks must pass
 for `passed`. Resume preserves source, reference and validation identity.

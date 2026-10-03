@@ -242,4 +242,4 @@ def _record_count(path: Path) -> int:
 def _assessment_count(path: Path) -> int:
     if not path.is_dir():
         return 0
-    return sum(1 for child in path.glob("run-*/assessment-*.json") if child.is_file())
+    return sum(1 for child in path.glob("run-*/assessment-*.yaml") if child.is_file())

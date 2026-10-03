@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from waterology.core.atomic import write_json
+from waterology.core.atomic import write_json, write_record
 from waterology.core.claims import list_claims, verify_claim
 from waterology.core.comparison import compare_runs
 from waterology.core.config import _portable_project_path
@@ -176,7 +176,7 @@ Install Waterology's reports extra for the interactive figure. The retained
 CSV and table provide a static fallback. `palette.json` records the light palette,
 its Chameleon-derived dark palette, and the transformation parameters. The bundle
 does not redistribute research inputs. Archive checksums and contracts are
-recorded in provenance.json. Re-export from the original project to refresh claim
+recorded in provenance.yaml. Re-export from the original project to refresh claim
 verification or the palette transformation.
 """)
         import sys
@@ -187,8 +187,8 @@ verification or the palette transformation.
             for p in staged.iterdir()
             if p.is_file()
         }
-        write_json(
-            staged / "provenance.json",
+        write_record(
+            staged / "provenance.yaml",
             {
                 "schema_version": 1,
                 "baseline": baseline,

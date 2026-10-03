@@ -116,7 +116,7 @@ def _version(value: bool) -> None:
 def main(
     ctx: typer.Context,
     output_format: str = typer.Option(
-        "nestedtext", "--output-format", help="Managed workflow output: nestedtext or json."
+        "yaml", "--output-format", help="Managed workflow output: yaml or json."
     ),
     version: bool = typer.Option(
         False,
@@ -127,8 +127,8 @@ def main(
     ),
 ) -> None:
     """Run Waterology commands."""
-    if output_format not in {"nestedtext", "json"}:
-        raise typer.BadParameter("Use nestedtext or json")
+    if output_format not in {"yaml", "json"}:
+        raise typer.BadParameter("Use yaml or json")
     from waterology.workflow_cli import WORKFLOW_OUTPUT_FORMAT
 
     WORKFLOW_OUTPUT_FORMAT.set(output_format)

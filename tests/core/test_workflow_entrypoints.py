@@ -80,7 +80,7 @@ def test_shared_study_creation_registers_contract_and_unchanged_baseline(tmp_pat
     machine = tmp_path / "machine.toml"
     machine.write_text('[profiles.local]\nmode="local"\napi_url="http://localhost:8080"\n')
     monkeypatch.setenv("WATEROLOGY_CONFIG", str(machine))
-    contract = tmp_path / "study.nt"
+    contract = tmp_path / "study.yaml"
     contract.write_text("""mode: engineering
 objective: Meet specification
 workflow: evaluate
@@ -89,10 +89,9 @@ allowed_paths:
 evaluation:
     benchmark: fixture
 acceptance:
-    -
-        name: error
-        unit: m
-        threshold: 0.1
+    - name: error
+      unit: m
+      threshold: 0.1
 max_iterations: 1
 max_seconds: 10
 """)
@@ -101,7 +100,7 @@ max_seconds: 10
     )
     assert load_experiment(tmp_path, record.contract.baseline_experiment).workflow == "evaluate"
     assert load_project_config(tmp_path / "waterology.toml").study_contracts == {
-        "study": "study.nt"
+        "study": "study.yaml"
     }
 
 

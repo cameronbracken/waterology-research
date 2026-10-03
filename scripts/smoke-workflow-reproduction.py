@@ -1,7 +1,6 @@
 """Qualify named TORC jobs and portable reproduction through the CLI on loopback."""
 
 import argparse
-import json
 import os
 import platform
 import socket
@@ -11,6 +10,7 @@ import time
 from pathlib import Path
 from urllib.request import urlopen
 
+from waterology.core.atomic import read_record, write_record
 from waterology.core.config import WorkflowConfig
 from waterology.core.project import initialize_project
 from waterology.core.registry import register_workflow
@@ -131,15 +131,14 @@ jobs:
             (root / "workflow.log").write_text(result.stdout)
             archives = list((project / ".waterology/runs").glob("run-*"))
             assert len(archives) == 1
-            definition = project / "deliverable.nt"
+            definition = project / "deliverable.yaml"
             definition.write_text(f"""workflow: evaluate
 reference_run: {archives[0].name}
 checks:
-    -
-        path: results/value.json
-        mode: numeric
-        field: value
-        atol: 0.000001
+    - path: results/value.json
+      mode: numeric
+      field: value
+      atol: 0.000001
 """)
             call(
                 [*cli, "deliverable", "register", "final", str(definition)],
@@ -169,12 +168,10 @@ checks:
                 environment=environment,
             )
             (root / "reproduction.log").write_text(result.stdout)
-            record = json.loads((root / "reproduction/reproduction.json").read_text())
+            record = read_record(root / "reproduction/reproduction.yaml")
             assert record["state"] == "passed", record
-            (root / "validation.json").write_text(
-                json.dumps({"state": "passed", "reproduction": record}, indent=2) + "\n"
-            )
-            print("Passed:", root / "validation.json", flush=True)
+            write_record(root / "validation.yaml", {"state": "passed", "reproduction": record})
+            print("Passed:", root / "validation.yaml", flush=True)
         except subprocess.CalledProcessError as error:
             (root / "failure.log").write_text(error.stdout + "\n" + error.stderr)
             raise

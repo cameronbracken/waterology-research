@@ -10,7 +10,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from waterology.core.archive import load_archive, verify_project_archive
-from waterology.core.atomic import write_json
+from waterology.core.atomic import load_record, read_record, write_record
 from waterology.core.config import _portable_project_path
 from waterology.core.errors import WaterologyError
 from waterology.core.project import discover_project, project_state_lock
@@ -63,6 +63,13 @@ def _member(start: Path, run_id: str, member: str) -> Path:
     return path
 
 
+def parse_member(member: str, payload: bytes) -> object:
+    """Parse an archive member by suffix. Waterology records are YAML; user outputs may be JSON."""
+    if member.endswith((".yaml", ".yml")):
+        return load_record(payload)
+    return json.loads(payload)
+
+
 def select_json(value: object, pointer: str) -> object:
     if not pointer:
         return value
@@ -88,7 +95,7 @@ def register_claim(
     *,
     claim: str,
     run_id: str,
-    member: str = "metrics.json",
+    member: str = "metrics.yaml",
     selector: str = "",
     kind: str = "observation",
     relation: str = "supports",
@@ -99,7 +106,7 @@ def register_claim(
             raise ValueError("Archive integrity failed")
         path = _member(start, run_id, member)
         payload = path.read_bytes()
-        value = select_json(json.loads(payload), selector)
+        value = select_json(parse_member(member, payload), selector)
         if related_claim is not None and related_claim not in {c.id for c in list_claims(start)}:
             raise ValueError("Related claim does not exist")
         record = ClaimRecord(
@@ -114,16 +121,16 @@ def register_claim(
             relation=relation,
             related_claim=related_claim,
         )
-        write_json(_claims_dir(start) / f"{record.id}.json", record.model_dump(mode="json"))
+        write_record(_claims_dir(start) / f"{record.id}.yaml", record.model_dump(mode="json"))
         return record
 
 
 def list_claims(start: Path) -> list[ClaimRecord]:
     records = []
-    for path in sorted(_claims_dir(start).glob("claim-*.json")):
+    for path in sorted(_claims_dir(start).glob("claim-*.yaml")):
         if path.is_symlink():
             raise ValueError("Claim record must not be a symlink")
-        record = ClaimRecord.model_validate_json(path.read_text())
+        record = ClaimRecord.model_validate(read_record(path))
         if record.id != path.stem:
             raise ValueError("Claim identity mismatch")
         records.append(record)
@@ -156,16 +163,16 @@ def register_anchor(
             resolved=resolved,
             context=context,
         )
-        write_json(_claims_dir(start) / f"{record.id}.json", record.model_dump(mode="json"))
+        write_record(_claims_dir(start) / f"{record.id}.yaml", record.model_dump(mode="json"))
         return record
 
 
 def list_anchors(start: Path) -> list[ManuscriptAnchor]:
     records = []
-    for path in sorted(_claims_dir(start).glob("anchor-*.json")):
+    for path in sorted(_claims_dir(start).glob("anchor-*.yaml")):
         if path.is_symlink():
             raise ValueError("Claim anchor must not be a symlink")
-        record = ManuscriptAnchor.model_validate_json(path.read_text())
+        record = ManuscriptAnchor.model_validate(read_record(path))
         if record.id != path.stem:
             raise ValueError("Claim anchor identity mismatch")
         records.append(record)
@@ -209,7 +216,7 @@ def conformance_ladder(start: Path) -> dict[str, object]:
     project = discover_project(start)
     for run_id in archives:
         archive = project.paths.runs / run_id
-        if not all((archive / name).is_file() for name in ("source.tar.zst", "environment.json", "command.json")):
+        if not all((archive / name).is_file() for name in ("source.tar.zst", "environment.yaml", "command.yaml")):
             blockers["replay"].append(f"{run_id} lacks replay source, environment or command evidence")
     if any(check["status"] not in {"PASS", "EXPLAINED"} for check in claim_checks):
         blockers["verify"].append("one or more claim assessments are missing or failing")
@@ -245,7 +252,7 @@ def assess_claim(start: Path, claim_id: str, *, status: str, author: str, note: 
             "note": note,
             "created_at": datetime.now(UTC).isoformat(),
         }
-        write_json(_claims_dir(start) / f"{record['id']}.json", record)
+        write_record(_claims_dir(start) / f"{record['id']}.yaml", record)
         return record
 
 
@@ -264,16 +271,16 @@ def verify_claim(start: Path, claim: ClaimRecord) -> dict[str, object]:
         ):
             reference_status = status = "STALE"
             reason = "Referenced archive changed"
-        elif select_json(json.loads(payload), claim.selector) != claim.value:
+        elif select_json(parse_member(claim.member, payload), claim.selector) != claim.value:
             reference_status = status = "FAIL"
             reason = "Selected value differs from registered observation"
         else:
             reference_status = "PASS"
             assessments = []
-            for path in _claims_dir(start).glob("assessment-*.json"):
+            for path in _claims_dir(start).glob("assessment-*.yaml"):
                 if path.is_symlink():
                     raise ValueError("Assessment record must not be a symlink")
-                item = json.loads(path.read_text())
+                item = read_record(path)
                 if item["claim_id"] == claim.id:
                     if (
                         item["status"] not in {"PASS", "FAIL", "EXPLAINED"}

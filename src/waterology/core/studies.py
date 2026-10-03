@@ -18,7 +18,7 @@ from pydantic import (
     model_validator,
 )
 
-from waterology.core.atomic import write_json
+from waterology.core.atomic import read_record, write_record
 from waterology.core.config import _portable_project_paths
 from waterology.core.errors import WaterologyError
 from waterology.core.execution import prepare_run_inputs
@@ -140,7 +140,7 @@ def _directory(start: Path) -> Path:
 def _path(start: Path, identifier: str) -> Path:
     if not re.fullmatch(r"study-[0-9a-f]{16}", identifier):
         raise StudyError("Invalid study identifier")
-    path = _directory(start) / f"{identifier}.json"
+    path = _directory(start) / f"{identifier}.yaml"
     if path.is_symlink():
         raise StudyError("Study record must not be a symlink")
     return path
@@ -149,12 +149,12 @@ def _path(start: Path, identifier: str) -> Path:
 def _save(start: Path, record: StudyRecord) -> StudyRecord:
     # Revalidate updates because pydantic model_copy does not validate them.
     record = StudyRecord.model_validate(record.model_dump())
-    write_json(_path(start, record.id), record.model_dump(mode="json"))
+    write_record(_path(start, record.id), record.model_dump(mode="json"))
     return record
 
 
 def load_study(start: Path, identifier: str) -> StudyRecord:
-    record = StudyRecord.model_validate_json(_path(start, identifier).read_text())
+    record = StudyRecord.model_validate(read_record(_path(start, identifier)))
     if (
         record.id != identifier
         or fingerprint(record.contract.model_dump(mode="json")) != record.contract_hash
@@ -164,7 +164,7 @@ def load_study(start: Path, identifier: str) -> StudyRecord:
 
 
 def list_studies(start: Path) -> list[StudyRecord]:
-    return [load_study(start, p.stem) for p in sorted(_directory(start).glob("study-*.json"))]
+    return [load_study(start, p.stem) for p in sorted(_directory(start).glob("study-*.yaml"))]
 
 
 def execution_identity(start: Path, experiment_id: str, profile_name: str) -> tuple[str, str]:
@@ -558,7 +558,7 @@ def stop_study(start: Path, identifier: str) -> StudyRecord:
     record = load_study(start, identifier)
     if record.state not in {"complete", "exhausted", "stopped"}:
         # Persist the stop before waiting for a controller holding the project lock.
-        write_json(_stop_path(start, identifier), {"requested_at": _now()})
+        write_record(_stop_path(start, identifier), {"requested_at": _now()})
     result = advance_study(start, identifier)
     if (_directory(start) / f"{identifier}.driver").is_file():
         from waterology.core.study_driver import drive_study
@@ -598,7 +598,7 @@ def guard_submission(start: Path, experiment_id: str, study_id: str | None = Non
         if driver_path.exists():
             if driver_path.is_symlink():
                 raise StudyError("Driver record must not be a symlink")
-            driver = json.loads(driver_path.read_text())
+            driver = read_record(driver_path)
             driver_owned = any(
                 p["experiment_id"] == experiment_id and p["state"] != "evaluating"
                 for p in driver["proposals"]

@@ -77,7 +77,7 @@ After reviewing the archive, record an assessment with evidence paths:
 
 ```console
 waterology run assess <run-id> answer "The evidence supports the hypothesis" \
-  --author cam --evidence .waterology/runs/<run-id>/metrics.json
+  --author cam --evidence .waterology/runs/<run-id>/metrics.yaml
 ```
 
 Use `direct` execution for the simplest setup. Use [TORC execution](torc.md) when a run needs managed

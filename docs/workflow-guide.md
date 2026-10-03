@@ -107,7 +107,7 @@ services without requiring a scientific hypothesis.
 ## From a project task to recorded evidence
 
 Suppose a reservoir model already has a Pixi task named `evaluate`. It reads fixed
-inputs and writes `results/metrics.json`. Start by making the evaluation contract
+inputs and writes `results/metrics.yaml`. Start by making the evaluation contract
 explicit: input identities, outputs, metric extraction, environment files,
 restoration command, and worker environment probe. The
 [workflow definition example](workflow-execution.md#register-and-run-an-evaluation)

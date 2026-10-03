@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from waterology.core.archive import ArchiveError, list_archives, verify_project_archive
 from waterology.core.assessments import AssessmentError, list_assessments
+from waterology.core.atomic import read_record
 from waterology.core.database import Database, open_database, validate_database_path
 from waterology.core.errors import WaterologyError
 from waterology.core.evidence import (
@@ -42,11 +43,11 @@ from waterology.core.sessions import (
 
 _EXPERIMENT_DIRECTORY = re.compile(r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
 _RUN_DIRECTORY = re.compile(r"^run-[a-z0-9][a-z0-9-]{0,62}$")
-_ASSESSMENT_FILE = re.compile(r"^assessment-[0-9a-f]{16}\.json$")
+_ASSESSMENT_FILE = re.compile(r"^assessment-[0-9a-f]{16}\.yaml$")
 _SESSION_DIRECTORY = re.compile(r"^session-[0-9a-f]{16}$")
 _ATTEMPT_DIRECTORY = re.compile(r"^attempt-[0-9]{3}$")
-_NOTE_FILE = re.compile(r"^note-[0-9a-f]{16}\.json$")
-_EVIDENCE_FILE = re.compile(r"^(?:evidence|artifact)-[0-9a-f]{16}\.json$")
+_NOTE_FILE = re.compile(r"^note-[0-9a-f]{16}\.yaml$")
+_EVIDENCE_FILE = re.compile(r"^(?:evidence|artifact)-[0-9a-f]{16}\.yaml$")
 _ATOMIC_STAGING_FILE = re.compile(r"^\..+\.waterology-stage-[A-Za-z0-9_-]+$")
 
 
@@ -149,8 +150,8 @@ def _repair_index_locked(project: Project) -> RepairResult:
 def _validate_durable_layout(project: Project) -> None:
     rejected = []
     for directory, pattern, required_file in (
-        (project.paths.experiments, _EXPERIMENT_DIRECTORY, "experiment.json"),
-        (project.paths.runs, _RUN_DIRECTORY, "manifest.json"),
+        (project.paths.experiments, _EXPERIMENT_DIRECTORY, "experiment.yaml"),
+        (project.paths.runs, _RUN_DIRECTORY, "manifest.yaml"),
     ):
         for child in directory.iterdir():
             if child.name == ".DS_Store":
@@ -188,7 +189,7 @@ def _validate_durable_layout(project: Project) -> None:
     for directory in project.paths.sessions.iterdir():
         if directory.name == ".DS_Store":
             continue
-        record = directory / "session.json"
+        record = directory / "session.yaml"
         task = directory / "task.md"
         if (
             directory.is_symlink()
@@ -202,12 +203,12 @@ def _validate_durable_layout(project: Project) -> None:
             rejected.append(directory.relative_to(project.root).as_posix())
             continue
         try:
-            payload = json.loads(record.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            payload = read_record(record)
+        except (OSError, ValueError):
             continue
         if not isinstance(payload, dict) or payload.get("id") != directory.name:
             rejected.append(record.relative_to(project.root).as_posix())
-        allowed_root_files = {".lock", "session.json", "task.md"}
+        allowed_root_files = {".lock", "session.yaml", "task.md"}
         for child in directory.iterdir():
             relative = child.relative_to(project.root).as_posix()
             if _is_atomic_staging_file(child):
@@ -228,8 +229,8 @@ def _validate_durable_layout(project: Project) -> None:
                         rejected.append(note.relative_to(project.root).as_posix())
                         continue
                     try:
-                        note_payload = json.loads(note.read_text(encoding="utf-8"))
-                    except (OSError, json.JSONDecodeError):
+                        note_payload = read_record(note)
+                    except (OSError, ValueError):
                         continue
                     if (
                         not isinstance(note_payload, dict)
@@ -241,9 +242,9 @@ def _validate_durable_layout(project: Project) -> None:
                 required = {"events.jsonl", "prompt.md", "stderr.log"}
                 optional = {
                     "launch.ready",
-                    "process.json",
-                    "result.json",
-                    "runtime-starting.json",
+                    "process.yaml",
+                    "result.yaml",
+                    "runtime-starting.yaml",
                 }
                 items = tuple(
                     item for item in child.iterdir() if not _is_atomic_staging_file(item)
@@ -256,13 +257,13 @@ def _validate_durable_layout(project: Project) -> None:
                         rejected.append(item.relative_to(project.root).as_posix())
                         continue
                     record_type = {
-                        "process.json": AgentProcessRecord,
-                        "result.json": AgentResultRecord,
-                        "runtime-starting.json": AgentStartingRecord,
+                        "process.yaml": AgentProcessRecord,
+                        "result.yaml": AgentResultRecord,
+                        "runtime-starting.yaml": AgentStartingRecord,
                     }.get(item.name)
                     if record_type is not None:
                         try:
-                            record_type.model_validate_json(item.read_text(encoding="utf-8"))
+                            record_type.model_validate(read_record(item))
                         except (OSError, ValueError):
                             rejected.append(item.relative_to(project.root).as_posix())
             else:
@@ -281,8 +282,8 @@ def _validate_durable_layout(project: Project) -> None:
             rejected.append(record.relative_to(project.root).as_posix())
             continue
         try:
-            payload = json.loads(record.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            payload = read_record(record)
+        except (OSError, ValueError):
             continue
         if not isinstance(payload, dict) or payload.get("id") != record.stem:
             rejected.append(record.relative_to(project.root).as_posix())

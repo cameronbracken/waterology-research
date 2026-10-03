@@ -8,7 +8,7 @@ from waterology.core.studies import StudyContract
 
 
 def test_engineering_init_is_bounded_and_does_not_start_execution(tmp_path):
-    destination = tmp_path / "engineering.nt"
+    destination = tmp_path / "engineering.yaml"
     result = CliRunner().invoke(
         app,
         [
@@ -60,7 +60,7 @@ def test_engineering_init_is_bounded_and_does_not_start_execution(tmp_path):
 
 
 def test_engineering_optimization_keeps_correctness_gate(tmp_path):
-    destination = tmp_path / "optimize.nt"
+    destination = tmp_path / "optimize.yaml"
     result = CliRunner().invoke(
         app,
         [

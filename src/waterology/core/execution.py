@@ -1,4 +1,3 @@
-import json
 import re
 import sqlite3
 import subprocess
@@ -8,6 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from waterology.core.archive import build_run_archive, load_archive
+from waterology.core.atomic import dump_record
 from waterology.core.config import ProjectConfig, load_project_config
 from waterology.core.database import Database, open_database
 from waterology.core.errors import WaterologyError
@@ -330,9 +330,9 @@ def _write_execution_metadata(
         "started_at": started_at,
         "state": state,
     }
-    destination = staging / "execution.json"
-    temporary = staging / ".execution.json.tmp"
-    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    destination = staging / "execution.yaml"
+    temporary = staging / ".execution.yaml.tmp"
+    temporary.write_text(dump_record(payload), encoding="utf-8")
     temporary.replace(destination)
 
 

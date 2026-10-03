@@ -12,7 +12,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from waterology.core.config import _portable_project_path
-from waterology.core.formats import load_document, write_document
+from waterology.core.formats import load_document, migrate_nestedtext, write_document
 from waterology.core.project import discover_project, project_state_lock
 
 
@@ -21,6 +21,13 @@ def _directory(start: Path) -> Path:
     if path.is_symlink():
         raise ValueError("Learning directory must not be a symlink")
     path.mkdir(exist_ok=True)
+    if hashes := migrate_nestedtext(path):
+        # Conversion changes lesson bytes, so carry existing assessments forward.
+        for review in path.glob("*.review-*.yaml"):
+            record = load_document(review)
+            if record.get("lesson_sha256") in hashes:
+                record["lesson_sha256"] = hashes[record["lesson_sha256"]]
+                write_document(review, record)
     return path
 
 
@@ -52,7 +59,7 @@ def remember(
         raise ValueError("A lesson needs a trigger, action, observed outcome and evidence")
     with project_state_lock(start):
         identifier = _id(identifier or f"lesson-{uuid4().hex[:16]}")
-        path = _directory(start) / f"{identifier}.nt"
+        path = _directory(start) / f"{identifier}.yaml"
         if path.exists():
             previous = load_document(path)
             expected = {
@@ -81,12 +88,12 @@ def remember(
 
 
 def inspect_lesson(start: Path, identifier: str) -> dict:
-    path = _directory(start) / f"{_id(identifier)}.nt"
+    path = _directory(start) / f"{_id(identifier)}.yaml"
     if path.is_symlink():
         raise ValueError("Lesson must not be a symlink")
     lesson = load_document(path)
     reviews = []
-    for p in sorted(_directory(start).glob(f"{identifier}.review-*.nt")):
+    for p in sorted(_directory(start).glob(f"{identifier}.review-*.yaml")):
         if p.is_symlink():
             raise ValueError("Lesson review must not be a symlink")
         reviews.append(load_document(p))
@@ -121,18 +128,18 @@ def assess_lesson(start: Path, identifier: str, *, status: str, author: str, not
             "author": author,
             "note": note,
             "lesson_sha256": hashlib.sha256(
-                (_directory(start) / f"{identifier}.nt").read_bytes()
+                (_directory(start) / f"{identifier}.yaml").read_bytes()
             ).hexdigest(),
             "created_at": datetime.now(UTC).isoformat(),
         }
-        write_document(_directory(start) / f"{identifier}.review-{uuid4().hex}.nt", record)
+        write_document(_directory(start) / f"{identifier}.review-{uuid4().hex}.yaml", record)
         return inspect_lesson(start, identifier)
 
 
 def list_lessons(start: Path) -> list[dict]:
     return [
         inspect_lesson(start, p.stem)
-        for p in sorted(_directory(start).glob("lesson-*.nt"))
+        for p in sorted(_directory(start).glob("lesson-*.yaml"))
         if ".review-" not in p.name
     ]
 
@@ -173,7 +180,7 @@ def propose_improvement(
             "validation": validation,
             "created_at": datetime.now(UTC).isoformat(),
         }
-        write_document(_directory(start) / f"{record['id']}.nt", record)
+        write_document(_directory(start) / f"{record['id']}.yaml", record)
         return record
 
 
@@ -188,7 +195,7 @@ def capture_study_outcomes(start: Path, study) -> None:
             identifier=identifier,
             trigger=f"{study.contract.mode} {study.contract.objective}",
             action="Inspect this archived outcome before repeating the candidate",
-            evidence=[f".waterology/runs/{attempt.run_id}/manifest.json"],
+            evidence=[f".waterology/runs/{attempt.run_id}/manifest.yaml"],
             outcome=f"{attempt.run_id}: {attempt.state}; numerical result is not a scientific conclusion",
             tags=["study", study.contract.mode],
         )
@@ -199,7 +206,7 @@ def learning_warning(start: Path, error: Exception) -> None:
     message = f"Project learning unavailable: {type(error).__name__}; execution state is preserved"
     try:
         write_document(
-            discover_project(start).paths.state / "learning-warning.nt", {"warning": message}
+            discover_project(start).paths.state / "learning-warning.yaml", {"warning": message}
         )
     except (OSError, ValueError):
         warnings.warn(message, RuntimeWarning, stacklevel=2)

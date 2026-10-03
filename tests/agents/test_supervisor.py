@@ -395,7 +395,7 @@ def test_interrupt_waits_for_runtime_child_after_supervisor_exits(tmp_path: Path
     root, session_id = make_session(tmp_path)
     current = begin_attempt(root, session_id, prompt="Wait for the child.", supervisor_pid=4242)
     attempt_directory = (root / current.attempts[-1].events_path).parent
-    (attempt_directory / "process.json").write_text(
+    (attempt_directory / "process.yaml").write_text(
         json.dumps(
             {
                 "pid": 4343,
@@ -430,7 +430,7 @@ def test_interrupt_releases_contained_runtime_after_process_tree_stops(tmp_path:
     root, session_id = make_session(tmp_path)
     current = begin_attempt(root, session_id, prompt="Publish the child PID.", supervisor_pid=4242)
     attempt_directory = (root / current.attempts[-1].events_path).parent
-    (attempt_directory / "runtime-starting.json").write_text(
+    (attempt_directory / "runtime-starting.yaml").write_text(
         json.dumps(
             {
                 "containment": "process_group",
@@ -459,7 +459,7 @@ def test_reconcile_marks_stale_contained_starting_marker_lost(tmp_path: Path) ->
         root, session_id, prompt="Publish the child PID.", supervisor_pid=999999
     )
     attempt_directory = (root / current.attempts[-1].events_path).parent
-    (attempt_directory / "runtime-starting.json").write_text(
+    (attempt_directory / "runtime-starting.yaml").write_text(
         json.dumps(
             {
                 "containment": "process_group",
@@ -501,14 +501,14 @@ def test_runtime_creation_permission_failure_seals_attempt(
 
     assert exit_code == 127
     assert failed.state == "failed"
-    assert not ((root / failed.attempts[-1].events_path).parent / "runtime-starting.json").exists()
+    assert not ((root / failed.attempts[-1].events_path).parent / "runtime-starting.yaml").exists()
 
 
 def test_reconcile_rejects_symlinked_terminal_result(tmp_path: Path) -> None:
     root, session_id = make_session(tmp_path)
     current = begin_attempt(root, session_id, prompt="Reject a linked result.", supervisor_pid=4242)
     attempt_directory = (root / current.attempts[-1].events_path).parent
-    outside = tmp_path / "result.json"
+    outside = tmp_path / "result.yaml"
     outside.write_text(
         json.dumps(
             {
@@ -523,7 +523,7 @@ def test_reconcile_rejects_symlinked_terminal_result(tmp_path: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
-    (attempt_directory / "result.json").symlink_to(outside)
+    (attempt_directory / "result.yaml").symlink_to(outside)
 
     with pytest.raises(SessionConflictError, match="symlinked session file"):
         reconcile_session(root, session_id)

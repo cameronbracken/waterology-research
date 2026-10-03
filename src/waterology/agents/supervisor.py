@@ -10,7 +10,7 @@ from pathlib import Path
 
 from waterology.agents import get_adapter
 from waterology.agents.base import AdapterError, RuntimeLaunch
-from waterology.core.atomic import write_json, write_text
+from waterology.core.atomic import read_record, write_record, write_text
 from waterology.core.database import open_database
 from waterology.core.project import discover_project, project_state_lock
 from waterology.core.records import (
@@ -240,9 +240,9 @@ def run_supervised_attempt(
         )
     )
     directory = _attempt_directory(project.root, session, attempt)
-    starting_path = directory / "runtime-starting.json"
-    process_path = directory / "process.json"
-    result_path = directory / "result.json"
+    starting_path = directory / "runtime-starting.yaml"
+    process_path = directory / "process.yaml"
+    result_path = directory / "result.yaml"
     native_id = session.native_session_id
     process_pid = None
     stderr_path = resolve_session_file(project.root, session.id, attempt.stderr_path)
@@ -257,7 +257,7 @@ def run_supervised_attempt(
     else:
         with stderr_path.open("a", encoding="utf-8") as stderr:
             containment = "windows_job" if os.name == "nt" else "process_group"
-            _write_json(
+            _write_record(
                 starting_path,
                 {"containment": containment, "started_at": _utc_now()},
             )
@@ -277,7 +277,7 @@ def run_supervised_attempt(
                 exit_code = 127
             else:
                 process_pid = process.pid
-                _write_json(
+                _write_record(
                     process_path,
                     {
                         "pid": process.pid,
@@ -298,7 +298,7 @@ def run_supervised_attempt(
                             stderr.flush()
                             continue
                         native_id = adapter.native_session_id(event) or native_id
-                        _write_json(
+                        _write_record(
                             process_path,
                             {
                                 "pid": process.pid,
@@ -308,7 +308,7 @@ def run_supervised_attempt(
                         )
                 exit_code = process.wait()
     resulting_commit = _git_commit(project.root / session.worktree)
-    _write_json(
+    _write_record(
         result_path,
         {
             "exit_code": exit_code,
@@ -354,12 +354,12 @@ def _reconcile_session_locked(
     result_path = resolve_optional_session_file(
         project.root,
         current.id,
-        (attempt_relative / "result.json").as_posix(),
+        (attempt_relative / "result.yaml").as_posix(),
     )
     process_path = resolve_optional_session_file(
         project.root,
         current.id,
-        (attempt_relative / "process.json").as_posix(),
+        (attempt_relative / "process.yaml").as_posix(),
     )
     _, starting_containment = _runtime_process_state(
         project.root,
@@ -368,7 +368,7 @@ def _reconcile_session_locked(
         fallback_pid=current.process_pid,
     )
     if result_path is not None:
-        result = AgentResultRecord.model_validate_json(result_path.read_text(encoding="utf-8"))
+        result = AgentResultRecord.model_validate(read_record(result_path))
         native_id = result.native_session_id or current.native_session_id
         completed_attempt = attempt.model_copy(
             update={
@@ -401,7 +401,7 @@ def _reconcile_session_locked(
             expected_updated_at=current.updated_at,
         )
     if process_path is not None:
-        process = AgentProcessRecord.model_validate_json(process_path.read_text(encoding="utf-8"))
+        process = AgentProcessRecord.model_validate(read_record(process_path))
         native_id = process.native_session_id or current.native_session_id
         if process.pid:
             previous_updated_at = current.updated_at
@@ -538,7 +538,7 @@ def interrupt_session(
         result_path = resolve_optional_session_file(
             project.root,
             current.id,
-            (attempt_directory.relative_to(project.root) / "result.json").as_posix(),
+            (attempt_directory.relative_to(project.root) / "result.yaml").as_posix(),
         )
         if result_path is not None:
             result = _reconcile_session_locked(project.root, session_id)
@@ -605,24 +605,20 @@ def _runtime_process_state(
     process_path = resolve_optional_session_file(
         root,
         session_id,
-        (attempt_relative / "process.json").as_posix(),
+        (attempt_relative / "process.yaml").as_posix(),
     )
     starting_path = resolve_optional_session_file(
         root,
         session_id,
-        (attempt_relative / "runtime-starting.json").as_posix(),
+        (attempt_relative / "runtime-starting.yaml").as_posix(),
     )
     runtime_pid = fallback_pid
     if process_path is not None:
-        process_record = AgentProcessRecord.model_validate_json(
-            process_path.read_text(encoding="utf-8")
-        )
+        process_record = AgentProcessRecord.model_validate(read_record(process_path))
         runtime_pid = process_record.pid
     starting_containment = None
     if starting_path is not None:
-        starting = AgentStartingRecord.model_validate_json(
-            starting_path.read_text(encoding="utf-8")
-        )
+        starting = AgentStartingRecord.model_validate(read_record(starting_path))
         starting_containment = starting.containment
     return runtime_pid, starting_containment
 
@@ -806,8 +802,8 @@ def _ensure_windows_job() -> None:
     _WINDOWS_JOB_HANDLE = handle
 
 
-def _write_json(path: Path, payload: dict[str, object]) -> None:
-    write_json(path, payload)
+def _write_record(path: Path, payload: dict[str, object]) -> None:
+    write_record(path, payload)
 
 
 def _utc_now() -> str:

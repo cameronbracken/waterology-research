@@ -147,7 +147,7 @@ class TorcProvider:
         )
         import re
 
-        from waterology.core.atomic import write_json
+        from waterology.core.atomic import write_record
         logs = {}
         total = 0
         for path in sorted(output.rglob("*")) if output.is_dir() else []:
@@ -164,7 +164,7 @@ class TorcProvider:
             for pattern in self.config.archive.log_redactions:
                 text = re.sub(pattern, "[REDACTED]", text)
             logs[path.relative_to(output).as_posix()] = {"text": text}
-        write_json(self.staging / "job-logs.json", logs)
+        write_record(self.staging / "job-logs.yaml", logs)
         metrics = {"resource_metrics": metrics, "results": results}
         if terminal_state not in {"completed", "failed", "cancelled", "lost"}:
             raise RuntimeError(f"Invalid terminal TORC state: {terminal_state}")

@@ -273,7 +273,7 @@ assessments require a decision before further repair:
 
 ```console
 pixi run waterology run assess <run-id> answer "The evidence supports the hypothesis" \
-  --author cam --evidence .waterology/runs/<run-id>/metrics.json
+  --author cam --evidence .waterology/runs/<run-id>/metrics.yaml
 ```
 
 SQLite is a rebuildable index. Durable experiment records, run archives, and

@@ -141,7 +141,7 @@ def test_dashboard_snapshot_marks_dead_direct_process_unknown(
         )
     staging = root / ".waterology/staging/run-direct-dashboard"
     staging.mkdir()
-    (staging / "execution.json").write_text(
+    (staging / "execution.yaml").write_text(
         json.dumps({"state": "running", "process_id": 987654321}), encoding="utf-8"
     )
     monkeypatch.setattr(services, "_process_alive", lambda _pid: False)  # type: ignore[attr-defined]
@@ -155,7 +155,7 @@ def test_dashboard_snapshot_marks_dead_direct_process_unknown(
     assert run["operational_state"] == "unknown"
     assert "no longer running" in run["inspection_error"]
 
-    (staging / "execution.json").write_text(
+    (staging / "execution.yaml").write_text(
         json.dumps({"state": "completed", "process_id": 987654321}), encoding="utf-8"
     )
     collecting = services.dashboard_snapshot(root)["managed_runs"][0]  # type: ignore[index]

@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from waterology.core.atomic import exclusive_file_lock, write_text
 from waterology.core.config import _portable_project_path
-from waterology.core.formats import load_document, write_document
+from waterology.core.formats import load_document, migrate_nestedtext, write_document
 from waterology.core.project import discover_project
 
 
@@ -43,6 +43,7 @@ def _directory(start: Path) -> Path:
     if path.is_symlink():
         raise ValueError("Reference state must not be a symlink")
     path.mkdir(exist_ok=True)
+    migrate_nestedtext(path)
     return path
 
 
@@ -257,7 +258,7 @@ def queue_reference(start: Path, source: dict, *, reason: str, sync: bool = True
     with exclusive_file_lock(directory / "sync.lock"):
         aliases = _source_aliases(source)
         matches = []
-        for existing in directory.glob("ref-*.nt"):
+        for existing in directory.glob("ref-*.yaml"):
             if existing.is_symlink():
                 raise ValueError("Reference record must not be a symlink")
             previous = load_document(existing)
@@ -267,7 +268,7 @@ def queue_reference(start: Path, source: dict, *, reason: str, sync: bool = True
             raise ValueError("Reference aliases identify conflicting queue entries; reconcile them")
         if matches:
             identifier = matches[0]["id"]
-        path = directory / f"ref-{identifier}.nt"
+        path = directory / f"ref-{identifier}.yaml"
         if path.is_symlink():
             raise ValueError("Reference record must not be a symlink")
         if path.exists():
@@ -542,7 +543,7 @@ def sync_references(
     directory = _directory(start)
     results = []
     with exclusive_file_lock(directory / "sync.lock"):
-        paths = sorted(directory.glob("ref-*.nt"))
+        paths = sorted(directory.glob("ref-*.yaml"))
         if identifiers is not None:
             paths = [p for p in paths if p.stem[4:] in identifiers]
         target = f"{settings.library_type}:{settings.library_id}:{settings.collection_key}"
@@ -677,7 +678,7 @@ def sync_references(
 
 def reference_status(start: Path) -> list[dict]:
     results = []
-    for path in sorted(_directory(start).glob("ref-*.nt")):
+    for path in sorted(_directory(start).glob("ref-*.yaml")):
         if path.is_symlink():
             raise ValueError("Reference record must not be a symlink")
         results.append(load_document(path))

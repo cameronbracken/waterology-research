@@ -63,19 +63,19 @@ The automatic crate and manual export have the same structure:
 ```text
 exports/run-crate/
   ro-crate-metadata.json       JSON-LD description of the run and its evidence
-  ro-crate-validation.json     validation result, including skipped or failed
+  ro-crate-validation.yaml     validation result, including skipped or failed
   run/                        copy of the sealed Waterology archive
-    manifest.json             run identity, commit, status, and artifact inventory
-    command.json              executed argument list
-    execution-config.json     saved execution configuration
-    environment.json          recorded environment evidence
-    metrics.json              extracted measurements
+    manifest.yaml             run identity, commit, status, and artifact inventory
+    command.yaml              executed argument list
+    execution-config.yaml     saved execution configuration
+    environment.yaml          recorded environment evidence
+    metrics.yaml              extracted measurements
     stdout.log
     stderr.log
     source.tar.zst            source at the recorded commit
     source-commit.txt         original commit object
     checksums.sha256          payload checksums
-    seal.json                 seal record
+    seal.yaml                 seal record
     artifacts/                collected declared outputs, when present
 ```
 
@@ -93,7 +93,7 @@ It does not provide a separate checksum seal for the entire wrapper.
 | Submitted TORC definition | A file typed as `ComputationalWorkflow` and referenced by the action | Identify the executed workflow, including the generated Slurm definition |
 | Declared input file hashes | Separate identity values linked by `waterology:inputIdentities` | Identify expected inputs; these are not included input bytes or parameter bindings |
 | Collected outputs | File entities linked from the action's results | Locate the archived artifacts |
-| Metrics | `PropertyValue` entries on `run/metrics.json` | Inspect values and configured extraction fields |
+| Metrics | `PropertyValue` entries on `run/metrics.yaml` | Inspect values and configured extraction fields |
 | Environment and checksums | References to the corresponding archive files | Inspect environment evidence and verify payload integrity |
 
 Metadata uses the sealed manifest and archived execution configuration. It never
@@ -147,7 +147,7 @@ may require network access. Network failures do not count as conformance passes.
 | `failed` | Validation rejected the export or did not return a successful structured report. Inspect the saved diagnostics. |
 | `error` | Unsupported validator version, timeout, or launch failure. Resolve the environment and export to a new destination. |
 
-Manual export writes `ro-crate-validation.json` before returning an error for
+Manual export writes `ro-crate-validation.yaml` before returning an error for
 failed validation. The copied payload and metadata remain available for inspection.
 An export refuses an existing destination, symlinked paths, and repository control
 state. Use a new destination after fixing the cause.

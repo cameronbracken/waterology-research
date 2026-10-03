@@ -21,7 +21,7 @@ storage cost.
 Initialize project records with `waterology init`, then inspect native tasks with
 `waterology config refresh --check`. Register the selected simulation task with
 `waterology workflow register simulate --task TASK`, or register a command or TORC YAML with
-`waterology workflow register simulate --definition workflow.nt`. Declare raw
+`waterology workflow register simulate --definition workflow.yaml`. Declare raw
 replication outputs, metric extractors, environment files and input identities.
 Keep the DGP settings in the simulation's existing configuration.
 
@@ -32,7 +32,7 @@ collection with `waterology workflow watch RUN_ID` after interruption. Use a
 managed study through `autoresearch` only when iterating candidate changes under
 a saved objective and budget.
 
-Select the final run with `waterology deliverable register final definition.nt`.
+Select the final run with `waterology deliverable register final definition.yaml`.
 Use `waterology reproduce final NEW_DIRECTORY --profile PROFILE` to restore and
 validate that deliverable. Statistical acceptance must use a declared validator
 workflow and retain its evidence. A process exit alone does not establish Monte

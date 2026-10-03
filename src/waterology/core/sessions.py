@@ -11,7 +11,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from waterology.core.atomic import exclusive_file_lock, write_json
+from waterology.core.atomic import exclusive_file_lock, read_record, write_record
 from waterology.core.database import Database, open_database
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import ensure_experiment_index, load_experiment
@@ -116,7 +116,7 @@ def _create_session_locked(
             _insert_session(database, record)
             directory.mkdir()
             (directory / "task.md").write_text(task + "\n", encoding="utf-8")
-            _write_session(directory / "session.json", record)
+            _write_session(directory / "session.yaml", record)
         except sqlite3.IntegrityError as error:
             owner = _active_owner(database, experiment.worktree)
             database.append_observation(
@@ -144,11 +144,11 @@ def _create_session_locked(
 def load_session(start: Path, session_id: str) -> AgentSessionRecord:
     _validate_session_id(session_id)
     project = discover_project(start)
-    path = project.paths.sessions / session_id / "session.json"
+    path = project.paths.sessions / session_id / "session.yaml"
     if path.parent.is_symlink() or path.is_symlink() or not path.is_file():
         raise SessionNotFoundError(f"Session does not exist: {session_id}")
     try:
-        record = AgentSessionRecord.model_validate_json(path.read_text(encoding="utf-8"))
+        record = AgentSessionRecord.model_validate(read_record(path))
     except (OSError, ValidationError) as error:
         raise ValueError(f"Invalid session record: {path}") from error
     _validate_loaded_session(project, record, expected_id=session_id)
@@ -158,11 +158,11 @@ def load_session(start: Path, session_id: str) -> AgentSessionRecord:
 def list_sessions(start: Path) -> tuple[AgentSessionRecord, ...]:
     project = discover_project(start)
     records = []
-    for path in project.paths.sessions.glob("session-*/session.json"):
+    for path in project.paths.sessions.glob("session-*/session.yaml"):
         if path.parent.is_symlink() or path.is_symlink():
             raise ValueError(f"Invalid session record path: {path}")
         try:
-            record = AgentSessionRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            record = AgentSessionRecord.model_validate(read_record(path))
         except (OSError, ValidationError) as error:
             raise ValueError(f"Invalid session record: {path}") from error
         _validate_loaded_session(project, record, expected_id=path.parent.name)
@@ -289,8 +289,8 @@ def _add_session_note_locked(
     if directory.is_symlink():
         raise SessionConflictError(f"Invalid symlinked session notes directory: {session_id}")
     directory.mkdir(exist_ok=True)
-    destination = directory / f"{note.id}.json"
-    _write_json(destination, note.model_dump(mode="json"))
+    destination = directory / f"{note.id}.yaml"
+    _write_record(destination, note.model_dump(mode="json"))
     try:
         with open_database(project.paths.database) as database, database.connection:
             database.connection.execute(
@@ -315,11 +315,11 @@ def list_session_notes(start: Path, session_id: str) -> tuple[SessionNoteRecord,
     if not directory.is_dir():
         return ()
     notes = []
-    for path in directory.glob("note-*.json"):
+    for path in directory.glob("note-*.yaml"):
         if path.is_symlink():
             raise SessionConflictError(f"Invalid symlinked session note: {path.name}")
         try:
-            notes.append(SessionNoteRecord.model_validate_json(path.read_text(encoding="utf-8")))
+            notes.append(SessionNoteRecord.model_validate(read_record(path)))
         except (OSError, ValidationError) as error:
             raise ValueError(f"Invalid session note record: {path}") from error
     return tuple(sorted(notes, key=lambda note: (note.created_at, note.id)))
@@ -441,7 +441,7 @@ def persist_session_locked(
         )
     if current.experiment_id != record.experiment_id or current.worktree != record.worktree:
         raise SessionConflictError("Session identity fields cannot be changed")
-    destination = project.paths.sessions / record.id / "session.json"
+    destination = project.paths.sessions / record.id / "session.yaml"
     try:
         with open_database(project.paths.database) as database:
             owner = _active_owner(database, record.worktree)
@@ -614,11 +614,11 @@ def _git_commit(worktree: Path) -> str:
 
 
 def _write_session(path: Path, record: AgentSessionRecord) -> None:
-    _write_json(path, record.model_dump(mode="json"))
+    _write_record(path, record.model_dump(mode="json"))
 
 
-def _write_json(path: Path, payload: dict[str, object]) -> None:
-    write_json(path, payload)
+def _write_record(path: Path, payload: dict[str, object]) -> None:
+    write_record(path, payload)
 
 
 def _validate_session_id(session_id: str) -> None:

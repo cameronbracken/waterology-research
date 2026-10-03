@@ -30,9 +30,9 @@ For local input files, record SHA-256 identities in `input_files`. For external
 or restricted inputs, put immutable accession/version identifiers and access
 limitations in `evaluation`. Those declarations do not prove remote input access.
 
-Save a NestedText contract as `study-contract.nt`, for example:
+Save a YAML contract as `study-contract.yaml`, for example:
 
-```nestedtext
+```yaml
 mode: engineering
 objective: Reduce model runtime while preserving numerical parity
 baseline_experiment: exp-baseline
@@ -43,16 +43,14 @@ evaluation:
     seed: 42
     prediction_task: not applicable, implementation parity
 acceptance:
-    -
-        name: max_error
-        unit: m
-        direction: minimize
-        threshold: 0.000001
-    -
-        name: elapsed
-        unit: s
-        direction: minimize
-        threshold: 30
+    - name: max_error
+      unit: m
+      direction: minimize
+      threshold: 0.000001
+    - name: elapsed
+      unit: s
+      direction: minimize
+      threshold: 30
 promotion_metric: elapsed
 promotion_margin: 0.5
 max_iterations: 10
@@ -81,7 +79,7 @@ machine-enforced.
 ## Start and resume
 
 ```bash
-waterology study create study-contract.nt --profile local --authorized-by "user approved the saved contract"
+waterology study create study-contract.yaml --profile local --authorized-by "user approved the saved contract"
 waterology study show STUDY_ID
 waterology study enqueue STUDY_ID EXPERIMENT_ID
 waterology study advance STUDY_ID
@@ -93,9 +91,9 @@ invent approval. Creating a study queues the baseline. `advance` performs one
 controller tick. `watch` repeatedly reconciles evaluations and submits queued
 candidates. It waits for additional candidates while the study remains within
 budget. Both reload durable state and can resume without another approval.
-Managed workflow commands emit NestedText by default. Use the global
+Managed workflow commands emit YAML by default. Use the global
 `--output-format json` option for scripts that require JSON. MCP responses
-and sealed archives retain their machine format.
+remain JSON.
 
 Candidate proposals can come from the active agent or an explicitly configured
 bounded runtime driver:
@@ -154,8 +152,9 @@ legacy, failed and incompatible runs remain visible with reasons. No uncertainty
 interval is inferred from point estimates. The declared uncertainty method and
 archived metrics remain available for a domain-specific analysis.
 
-A claim references an archived JSON member and JSON pointer, with the selected
-value and content hash. Array pointers support table rows encoded as JSON.
+A claim references an archived YAML or JSON member and a JSON Pointer
+(RFC 6901), with the selected value and content hash. Array pointers select
+table rows.
 Reference integrity and claim support are separate: an intact file does not
 prove its attached prose. Claim assessments append author, disposition and note.
 Contradictory records are retained. Missing evidence remains UNVERIFIED and
@@ -289,7 +288,7 @@ remain discovery records. Use `capture: discovered` to collect every returned
 record instead. Deep-research, literature-review and the researcher agent also
 capture consulted sources found with other search tools:
 
-```nestedtext
+```yaml
 title: Title verified from the source
 doi: 10.1234/example
 authors:
@@ -300,7 +299,7 @@ pdf_url: https://example.org/article.pdf
 ```
 
 These are placeholders, not actual bibliography entries. Use
-`waterology zotero capture source.nt` when a source is read or cited. For a PDF
+`waterology zotero capture source.yaml` when a source is read or cited. For a PDF
 already in the project, replace `pdf_url` with `pdf_path: papers/article.pdf`.
 The reference retains metadata even when a lawful public PDF cannot be found.
 Local locators are kept locally and are not sent as Zotero URL fields.
@@ -310,7 +309,7 @@ waterology zotero status
 waterology zotero sync --limit 20
 ```
 
-Queue records live in `.waterology/references/*.nt`. PDF bytes are retained under
+Queue records live in `.waterology/references/*.yaml`. PDF bytes are retained under
 its `pdfs/` directory with SHA-256 identities and uploaded as child attachments.
 PDFs must be at most 30 MB and pass a PDF signature check. No authenticated
 publisher session is used. Paywalls, quotas, offline services and failed uploads
@@ -340,37 +339,62 @@ lessons. Candidate sessions receive matching verified lessons automatically.
 
 The `project-learning` skill records supported corrections, failed approaches
 and verified fixes at checkpoints. A lesson contains a trigger, action, outcome,
-tags and project-relative evidence paths. Save it in `.nt` format and run
-`waterology learning remember lesson.nt`. Assess support with
+tags and project-relative evidence paths. Save it as YAML and run
+`waterology learning remember lesson.yaml`. Assess support with
 `waterology learning assess LESSON_ID verified --author NAME --note RATIONALE`.
 Verification is an explicit evidence judgment, not a frequency-based confidence
 score. Changes to either the lesson or its evidence invalidate that judgment.
 
 Use rejected or superseded assessments without erasing history. Shared behavior
 changes are proposals with verified lesson identifiers, a concrete change and a
-validation plan, created by `waterology learning improve improvement.nt`.
+validation plan, created by `waterology learning improve improvement.yaml`.
 They do not automatically edit shared skills, global preferences, permissions
 or frozen scientific protocols. Session-log remains the narrative handoff.
 
 Learning records are local project state under `.waterology/learning/` and are
 not committed automatically. Preserve selected records alongside their evidence
 when archiving or handing off a project. Optional learning errors are recorded
-in `.waterology/learning-warning.nt` without blocking compute reconciliation.
+in `.waterology/learning-warning.yaml` without blocking compute reconciliation.
 
 ## Human-readable formats
 
-NestedText is the default for authored study contracts, lessons, reference
-manifests and the new workflow command output. Known schema fields such as
-thresholds and iteration limits are validated and converted to their intended
-types. Arbitrary domain metadata stays as strings, so station `00123` retains
-its leading zeros. Changing metadata representation changes evaluation identity;
-do not convert a frozen running study's contract in place.
+Waterology uses TOML for settings people edit, such as `waterology.toml` and
+`.zotero.toml`. YAML holds configuration and ledgers that both people and tools
+read:
 
-Existing TOML project/environment settings remain supported. `.nt`, `.toml` and
-legacy `.json` study contracts are accepted. JSON remains at API boundaries and
-inside existing immutable archives. Human-readable displays are not a lossless
-serialization for arbitrary machine values: absent mapping fields are omitted.
-Use `waterology --output-format json ...` for typed machine round trips.
+- authored study contracts, workflow and deliverable definitions, and lessons
+- run archives (`manifest.yaml`, `metrics.yaml`, `environment.yaml`, `seal.yaml`
+  and the other run records)
+- experiment, session, study, claim, evidence, literature and reference records
+- workflow command output
+
+JSON remains only where another tool or specification fixes the format: MCP
+messages, `ro-crate-metadata.json`, TORC and agent CLI payloads, agent event
+streams (`events.jsonl`) and the report render inputs. Waterology also uses
+compact JSON internally for SQLite columns and content hashes, which are not
+files people open.
+
+Authored documents load without implicit typing. Every scalar loads as a
+string, then known schema fields such as thresholds and iteration limits are
+validated and converted to their intended types. Arbitrary domain metadata stays
+as strings, so station `00123` keeps its leading zeros and `NO` stays a country
+code. Changing metadata representation changes evaluation identity. Do not
+convert a frozen running study's contract in place.
+
+Records that Waterology writes keep their types. The writer quotes any string
+that could load as another type, rejects NaN and infinite values, and sorts keys
+so identical content produces identical bytes.
+
+Releases before 0.7 wrote NestedText (`.nt`) documents and JSON run records.
+Lesson and reference records under `.waterology/` convert to YAML automatically
+on first use, and existing lesson assessments carry forward. Legacy `.nt`
+contracts, definitions and Zotero settings remain readable. Run archives,
+experiments, sessions and studies written by earlier releases are not converted
+and are not readable by 0.7.
+
+Workflow command output omits absent fields, so it is not a lossless
+serialization. Use `waterology --output-format json ...` for typed machine round
+trips.
 
 ## Validation boundaries
 
@@ -410,7 +434,7 @@ The controller holds the project lock, checks the study deadline and stop state,
 and verifies the candidate, input files, profile, saved workflow, and original
 output signatures. It launches the same saved run ID and execution snapshot.
 The attempt count and model retry budget stay unchanged. Original rejection
-metadata and the inventory are retained in `submission-recovery.json`, alongside
+metadata and the inventory are retained in `submission-recovery.yaml`, alongside
 an event audit. A durable marker allows only one recovery attempt, so a crash or
 another launch failure requires reconciliation before any further action.
 Recovery currently supports local and remote profiles. It does not support

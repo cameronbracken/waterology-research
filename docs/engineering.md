@@ -44,13 +44,13 @@ Waterology does not infer coverage or correctness from a test suite's name.
 Draft the contract without starting execution:
 
 ```console
-waterology engineering init engineering.nt \
+waterology engineering init engineering.yaml \
   --objective "Implement the parser specification" \
   --workflow qualify --allow-path src/parser \
   --max-iterations 8 --max-seconds 1800
 ```
 
-Inspect the generated `.nt` file. Replace its evaluation notes with the actual
+Inspect the generated YAML file. Replace its evaluation notes with the actual
 specification, test suite identity, and uncertainty treatment. Add separate
 acceptance rules where an aggregate count would hide a required distinction.
 Commit the workflow, environment locks, specification, and protected checks.
@@ -68,7 +68,7 @@ does not count as acceptance or permit changing protected evaluation files.
 Add a performance target when drafting the contract:
 
 ```console
-waterology engineering init optimization.nt \
+waterology engineering init optimization.yaml \
   --objective "Reduce runtime while preserving parser behavior" \
   --workflow benchmark --allow-path src/parser \
   --target-seconds 2.5 --max-iterations 10 --max-seconds 3600
@@ -98,7 +98,7 @@ Configure a TORC profile, including for local evaluation. Record the user's actu
 authorization when creating the study:
 
 ```console
-waterology engineering create engineering.nt --profile local \
+waterology engineering create engineering.yaml --profile local \
   --authorized-by "Reference to the user's bounded authorization"
 waterology engineering show STUDY_ID
 ```

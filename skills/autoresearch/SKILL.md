@@ -27,7 +27,7 @@ process. Work the gates in order and name the one you are on:
 1. __Managed project.__ `waterology init` when the project is uninitialized.
 2. __Registered workflow.__ `waterology workflow register NAME` so the evaluation
    command, outputs and metrics are committed rather than improvised per run.
-3. __Saved contract.__ A NestedText contract with objective, mode, acceptance
+3. __Saved contract.__ A YAML contract with objective, mode, acceptance
    rule, budgets and `workflow: NAME`, then `waterology study create`.
 4. __Managed evaluation.__ `study enqueue` and `study advance` against the study's
    pinned TORC profile, for local compute too.
@@ -126,11 +126,11 @@ user. Ask only for missing decisions or an action outside that authority.
 Do not request permission again for each iteration, an allowed retry, or an
 unchanged resume. Host trust and bounded study authorization are separate.
 
-Write the contract as NestedText (`.nt`), then use the installed Waterology CLI or equivalent
+Write the contract as YAML (`.yaml`), then use the installed Waterology CLI or equivalent
 MCP study tools:
 
 ```bash
-waterology study create study-contract.nt --profile local --authorized-by "user approved this contract"
+waterology study create study-contract.yaml --profile local --authorized-by "user approved this contract"
 waterology study show STUDY_ID
 waterology study enqueue STUDY_ID EXPERIMENT_ID
 waterology study advance STUDY_ID
@@ -150,9 +150,10 @@ sessions plus the TORC controller. Choose the runtime and proposal cap from the
 existing authorization. Driver configuration does not grant runtime permissions.
 A failed or ambiguous submission remains blocked until its identity is resolved.
 
-Human-facing managed commands emit NestedText. Automation can request
-`waterology --output-format json ...`; MCP and archived evidence retain their
-typed machine format. Existing JSON contracts remain readable.
+Human-facing managed commands emit YAML. Automation can request
+`waterology --output-format json ...`. MCP responses remain JSON. Archived
+run records are typed YAML. Existing JSON and NestedText contracts remain
+readable.
 
 If these commands are unavailable, report the missing Waterology capability.
 Do not replace managed execution with a shell loop or ad hoc remote commands.

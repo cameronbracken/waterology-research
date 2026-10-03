@@ -13,6 +13,8 @@ from waterology.core.zotero import (
     sync_references,
 )
 
+LEGACY_SETTINGS = "library_id: 123\ncollection_name: Legacy fixture\ncollection_key: ABCDEFGH\n"
+
 
 @pytest.fixture
 def project(tmp_path):
@@ -56,14 +58,7 @@ def test_configure_writes_canonical_hidden_settings_file(tmp_path):
 def test_settings_read_legacy_file_when_canonical_file_is_absent(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     initialize_project(tmp_path)
-    write_document(
-        tmp_path / "zotero.nt",
-        {
-            "library_id": "123",
-            "collection_name": "Legacy fixture",
-            "collection_key": "ABCDEFGH",
-        },
-    )
+    (tmp_path / "zotero.nt").write_text(LEGACY_SETTINGS)
 
     assert settings_for(tmp_path).collection_name == "Legacy fixture"
 
@@ -76,7 +71,7 @@ def test_settings_prefer_canonical_file_over_legacy_file(tmp_path):
         "collection_name": "Legacy fixture",
         "collection_key": "ABCDEFGH",
     }
-    write_document(tmp_path / "zotero.nt", settings)
+    (tmp_path / "zotero.nt").write_text(LEGACY_SETTINGS)
     write_document(
         tmp_path / ".zotero.toml",
         {**settings, "library_id": "456", "collection_name": "Canonical fixture"},
@@ -281,7 +276,7 @@ def test_bad_optional_settings_preserve_search_result(project):
     result = search_literature(project, "fixture", fetcher=lambda *a, **kw: {"results": []})
     assert result["status"] == "complete"
     assert result["zotero"]["status"] == "blocked"
-    assert (project / ".waterology/literature" / f"{result['id']}.json").is_file()
+    assert (project / ".waterology/literature" / f"{result['id']}.yaml").is_file()
 
 
 def test_one_bad_source_does_not_drop_later_capture(project, monkeypatch):

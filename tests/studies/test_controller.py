@@ -3,6 +3,7 @@ import subprocess
 import pytest
 
 from waterology.core import studies
+from waterology.core.atomic import load_record, read_record, write_record
 from waterology.core.config import ProjectConfig, project_config_toml
 from waterology.core.experiments import create_experiment
 from waterology.core.project import initialize_project
@@ -111,7 +112,7 @@ def test_once_authorized_resume_collects_without_resubmitting(study_project, mon
     assert result.best_run == calls[0]
     assert studies.advance_study(root, record.id) == result
     assert len(calls) == 1
-    assert (root / ".waterology/runs" / calls[0] / "study.json").is_file()
+    assert (root / ".waterology/runs" / calls[0] / "study.yaml").is_file()
 
 
 def test_ambiguous_submission_never_retries_and_blocks_repair(study_project, monkeypatch):
@@ -228,13 +229,13 @@ def test_archive_comparison_keeps_missing_and_incompatible_runs(sealed_run):
     directory = root / ".waterology/runs"
     shutil.copytree(directory / run_id, directory / "run-other")
     other = directory / "run-other"
-    manifest = json.loads((other / "manifest.json").read_text())
+    manifest = read_record(other / "manifest.yaml")
     manifest["run_id"] = "run-other"
-    (other / "manifest.json").write_text(json.dumps(manifest))
-    context = json.loads((other / "study.json").read_text())
+    (other / "manifest.yaml").write_text(json.dumps(manifest))
+    context = read_record(other / "study.yaml")
     context["contract"]["acceptance"][0]["unit"] = "ft"
     context["contract_hash"] = studies.fingerprint(context["contract"])
-    (other / "study.json").write_text(json.dumps(context))
+    (other / "study.yaml").write_text(json.dumps(context))
     _write_checksums(other)
     result = compare_runs(root, [run_id, "run-other", "run-missing"], baseline=run_id)
     assert [r["status"] for r in result["rows"]] == ["verified", "incomparable", "unverified"]
@@ -283,8 +284,8 @@ def test_claims_preserve_conflicts_and_detect_archive_changes(sealed_run):
     with pytest.raises(KeyError):
         register_claim(root, claim="Missing", run_id=run_id, selector="/absent")
     with pytest.raises(ValueError):
-        register_claim(root, claim="Escape", run_id=run_id, member="../metrics.json")
-    (root / ".waterology/runs" / run_id / "metrics.json").write_text('{"error":99}')
+        register_claim(root, claim="Escape", run_id=run_id, member="../metrics.yaml")
+    (root / ".waterology/runs" / run_id / "metrics.yaml").write_text('{"error":99}')
     assert verify_claim(root, first)["status"] == "STALE"
 
 
@@ -315,7 +316,7 @@ def test_report_retains_incomplete_run_and_reproduces_table(sealed_run):
     render_script = (report / "render.py").read_text()
     assert "plotly_dark" in render_script
     assert "customdata=color_indices" in render_script
-    manifest = json.loads((report / "provenance.json").read_text())
+    manifest = read_record(report / "provenance.yaml")
     assert manifest["sources"][0]["archive_hash"]
     with pytest.raises(ValueError):
         export_report(root, [run_id], baseline=run_id, destination="reports/test")
@@ -697,9 +698,9 @@ def test_comparison_cli_mcp_and_dashboard_share_sealed_evidence(sealed_run):
         changes = client.get(f"/changes/{run_id}")
         assert changes.status_code == 200
         assert "print(2)" in changes.text
-        artifact = client.get(f"/artifacts/{run_id}/metrics.json")
+        artifact = client.get(f"/artifacts/{run_id}/metrics.yaml")
         assert artifact.status_code == 200
-        assert artifact.json()["error"] == 0.5
+        assert load_record(artifact.text)["error"] == 0.5
         assert client.get(f"/artifacts/{run_id}/missing.json").status_code == 404
 
 
@@ -709,7 +710,6 @@ def test_comparison_cli_mcp_and_dashboard_share_sealed_evidence(sealed_run):
     {"relation": "contradicts"},
 ])
 def test_claim_content_change_invalidates_assessment(sealed_run, changes):
-    import json
 
     from waterology.core.claims import assess_claim, list_claims, register_claim, verify_claim
 
@@ -717,8 +717,8 @@ def test_claim_content_change_invalidates_assessment(sealed_run, changes):
     claim = register_claim(root, claim="The measured fixture error is 0.5 m",
                            run_id=run_id, selector="/error")
     assess_claim(root, claim.id, status="PASS", author="reviewer", note="Checked claim")
-    path = root / ".waterology/claims" / f"{claim.id}.json"
-    path.write_text(json.dumps({**claim.model_dump(mode="json"), **changes}))
+    path = root / ".waterology/claims" / f"{claim.id}.yaml"
+    write_record(path, {**claim.model_dump(mode="json"), **changes})
     changed = next(c for c in list_claims(root) if c.id == claim.id)
     result = verify_claim(root, changed)
     assert result["reference_status"] == "PASS"
@@ -728,7 +728,6 @@ def test_claim_content_change_invalidates_assessment(sealed_run, changes):
 
 
 def test_legacy_claim_assessment_requires_fresh_review(sealed_run):
-    import json
 
     from waterology.core.claims import assess_claim, register_claim, verify_claim
 
@@ -736,8 +735,8 @@ def test_legacy_claim_assessment_requires_fresh_review(sealed_run):
     claim = register_claim(root, claim="Observed value", run_id=run_id, selector="/error")
     assessment = assess_claim(root, claim.id, status="PASS", author="reviewer", note="Checked")
     assessment.pop("claim_sha256")
-    path = root / ".waterology/claims" / f"{assessment['id']}.json"
-    path.write_text(json.dumps(assessment))
+    path = root / ".waterology/claims" / f"{assessment['id']}.yaml"
+    write_record(path, assessment)
     assert verify_claim(root, claim)["status"] == "STALE"
 
 
@@ -778,11 +777,11 @@ def test_recover_rejected_submission_preserves_attempt(study_project, monkeypatc
     blocked = blocked_submission(study_project, monkeypatch)
     attempt = blocked.attempts[0]
     staging = root / ".waterology/staging" / attempt.run_id
-    originals = {name: (staging / name).read_bytes() for name in ("execution-config.json", "torc-workflow.yaml", "study.json")}
+    originals = {name: (staging / name).read_bytes() for name in ("execution-config.yaml", "torc-workflow.yaml", "study.yaml")}
     gateway = RecoveryGateway()
     recovered = studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
     assert all((staging / name).read_bytes() == content for name, content in originals.items())
-    assert (staging / "submission-recovery.json").is_file()
+    assert (staging / "submission-recovery.yaml").is_file()
     assert recovered.state == "running"
     assert len(recovered.attempts) == 1
     assert recovered.attempts[0].run_id == attempt.run_id
@@ -799,7 +798,7 @@ def test_recover_rejected_submission_preserves_attempt(study_project, monkeypatc
     from waterology.core.archive import verify_archive
     from waterology.torc.runs import inspect_torc_run
 
-    evidence = (staging / "submission-recovery.json").read_bytes()
+    evidence = (staging / "submission-recovery.yaml").read_bytes()
     _, worktree, machine, _ = study_project
     (worktree / "results").mkdir(exist_ok=True)
     (worktree / "results/metrics.json").write_text('{"error":0.5}')
@@ -815,10 +814,10 @@ def test_recover_rejected_submission_preserves_attempt(study_project, monkeypatc
     assert completed.best_run == attempt.run_id
     assert gateway.launches == 1
     archive = root / ".waterology/runs" / attempt.run_id
-    assert (archive / "submission-recovery.json").read_bytes() == evidence
+    assert (archive / "submission-recovery.yaml").read_bytes() == evidence
     assert verify_archive(archive).valid
-    (archive / "submission-recovery.json").write_text("tampered")
-    assert "submission-recovery.json" in verify_archive(archive).changed
+    (archive / "submission-recovery.yaml").write_text("tampered")
+    assert "submission-recovery.yaml" in verify_archive(archive).changed
 
 
 @pytest.mark.parametrize("reason", ["found", "ambiguous", "inventory_error", "interrupted"])
@@ -835,8 +834,8 @@ def test_recovery_refuses_uncertain_submission(study_project, monkeypatch, reaso
     if reason == "found":
         gateway.items = ({"id": 42, "metadata": {"waterology_run_id": attempt.run_id}},)
     elif reason == "ambiguous":
-        path = staging / "torc.json"
-        payload = json.loads(path.read_text())
+        path = staging / "torc.yaml"
+        payload = read_record(path)
         payload["error"] = "connection timed out after 401 retries"
         path.write_text(json.dumps(payload))
     elif reason == "inventory_error":
@@ -844,7 +843,7 @@ def test_recovery_refuses_uncertain_submission(study_project, monkeypatch, reaso
             raise TorcUnavailableError("401 unauthorized")
         gateway.workflow_inventory = unavailable
     else:
-        (staging / "submission-recovery.json").write_text('{"state":"launching"}')
+        (staging / "submission-recovery.yaml").write_text('{"state":"launching"}')
     with pytest.raises((studies.StudyError, TorcUnavailableError)):
         studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway)
     assert gateway.launches == 0
@@ -954,15 +953,14 @@ def test_stop_during_inventory_prevents_recovery(study_project, monkeypatch):
 
 
 def test_recovery_accepts_explicit_forbidden_create(study_project, monkeypatch):
-    import json
 
     root, _, _, _ = study_project
     blocked = blocked_submission(study_project, monkeypatch)
     attempt = blocked.attempts[0]
-    metadata = root / ".waterology/staging" / attempt.run_id / "torc.json"
-    payload = json.loads(metadata.read_text())
+    metadata = root / ".waterology/staging" / attempt.run_id / "torc.yaml"
+    payload = read_record(metadata)
     payload["error"] = payload["error"].replace("401", "403").replace("Unauthorized", "Forbidden")
-    metadata.write_text(json.dumps(payload))
+    write_record(metadata, payload)
     gateway = RecoveryGateway()
     assert studies.retry_submission(root, blocked.id, attempt.run_id, gateway=gateway).state == "running"
     assert gateway.launches == 1
@@ -1010,12 +1008,12 @@ def test_engineering_cli_mcp_status_checks_current_archive(sealed_run):
     assert cli.exit_code == 0, cli.output
     assert json.loads(cli.stdout) == status
     directory = root / ".waterology/runs" / run_id
-    (directory / "metrics.json").write_text('{"error": 99}')
+    (directory / "metrics.yaml").write_text('{"error": 99}')
     assert engineering_status(root, record.id)["accepted_runs"] == []
     digest = _write_checksums(directory)
-    seal = json.loads((directory / "seal.json").read_text())
+    seal = read_record(directory / "seal.yaml")
     seal["checksums_sha256"] = digest
-    (directory / "seal.json").write_text(json.dumps(seal))
+    (directory / "seal.yaml").write_text(json.dumps(seal))
     changed = engineering_status(root, record.id)
     assert changed["attempts"][0]["archive_valid"]
     assert not changed["attempts"][0]["assessment_current"]

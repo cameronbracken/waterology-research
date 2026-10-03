@@ -47,7 +47,7 @@ def test_register_and_list_note_evidence(tmp_path: Path) -> None:
     )
 
     assert list_evidence(root, experiment_id=experiment_id) == (evidence,)
-    assert (root / ".waterology" / "evidence" / f"{evidence.id}.json").is_file()
+    assert (root / ".waterology" / "evidence" / f"{evidence.id}.yaml").is_file()
 
 
 def test_register_artifact_requires_existing_file_inside_experiment_worktree(

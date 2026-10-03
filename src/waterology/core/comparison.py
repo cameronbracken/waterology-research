@@ -1,10 +1,10 @@
 """Comparable measurements from sealed archives; missing evidence stays visible."""
 
-import json
 import math
 from pathlib import Path
 
 from waterology.core.archive import load_archive, verify_project_archive
+from waterology.core.atomic import read_record
 from waterology.core.errors import WaterologyError
 from waterology.core.project import discover_project
 from waterology.core.studies import StudyContract, fingerprint
@@ -37,9 +37,9 @@ def compare_runs(start: Path, run_ids: list[str], *, baseline: str) -> dict[str,
                 raise ValueError("Archive integrity failed")
             directory = project.paths.runs / run_id
             row["source_hash"] = fingerprint((directory / "checksums.sha256").read_text())
-            if not (directory / "study.json").is_file():
+            if not (directory / "study.yaml").is_file():
                 raise ValueError("Legacy run has no verified comparison contract")
-            context = json.loads((directory / "study.json").read_text())
+            context = read_record(directory / "study.yaml")
             contract = StudyContract.model_validate(context["contract"])
             if fingerprint(contract.model_dump(mode="json")) != context["contract_hash"]:
                 raise ValueError("Study contract hash mismatch")
@@ -53,7 +53,7 @@ def compare_runs(start: Path, run_ids: list[str], *, baseline: str) -> dict[str,
                 "uncertainty": contract.uncertainty,
             }
             row["contract_hash"] = fingerprint(row["contract"])
-            metrics = json.loads((directory / "metrics.json").read_text())
+            metrics = read_record(directory / "metrics.yaml")
             row["metrics"] = {
                 r.name: metrics.get(r.name)
                 if type(metrics.get(r.name)) in (int, float) and math.isfinite(metrics[r.name])
@@ -112,13 +112,13 @@ def _artifact_hashes(archive: Path) -> dict[str, str]:
 
 
 def _movement(baseline: Path, candidate: Path) -> dict[str, bool]:
-    base_manifest = json.loads((baseline / "manifest.json").read_text(encoding="utf-8"))
-    candidate_manifest = json.loads((candidate / "manifest.json").read_text(encoding="utf-8"))
-    base_metrics = json.loads((baseline / "metrics.json").read_text(encoding="utf-8"))
-    candidate_metrics = json.loads((candidate / "metrics.json").read_text(encoding="utf-8"))
+    base_manifest = read_record(baseline / "manifest.yaml")
+    candidate_manifest = read_record(candidate / "manifest.yaml")
+    base_metrics = read_record(baseline / "metrics.yaml")
+    candidate_metrics = read_record(candidate / "metrics.yaml")
     return {
         "code": base_manifest.get("commit_sha") != candidate_manifest.get("commit_sha"),
-        "environment": _sha256(baseline / "environment.json") != _sha256(candidate / "environment.json"),
+        "environment": _sha256(baseline / "environment.yaml") != _sha256(candidate / "environment.yaml"),
         "data": _artifact_hashes(baseline) != _artifact_hashes(candidate),
         "seed": base_metrics.get("seed") != candidate_metrics.get("seed"),
     }

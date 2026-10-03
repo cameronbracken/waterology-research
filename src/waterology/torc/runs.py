@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from waterology.core.archive import ArchiveNotFoundError, build_run_archive, load_archive
+from waterology.core.atomic import dump_record
 from waterology.core.config import load_project_config
 from waterology.core.database import Database, open_database
 from waterology.core.errors import WaterologyError
@@ -97,9 +98,9 @@ def start_torc_run(
             started_at=started_at,
         )
         if study_context is not None:
-            from waterology.core.atomic import write_json
+            from waterology.core.atomic import write_record
 
-            write_json(staging / "study.json", study_context)
+            write_record(staging / "study.yaml", study_context)
         save_snapshot(
             staging,
             inputs.worktree,
@@ -494,9 +495,9 @@ def _write_torc_metadata(
         "state": state,
         "updated_at": _utc_now(),
     }
-    destination = staging / "torc.json"
-    temporary = staging / ".torc.json.tmp"
-    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    destination = staging / "torc.yaml"
+    temporary = staging / ".torc.yaml.tmp"
+    temporary.write_text(dump_record(payload), encoding="utf-8")
     temporary.replace(destination)
 
 

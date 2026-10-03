@@ -11,6 +11,7 @@ import waterology.core.repair as repair_module
 from waterology.cli import app
 from waterology.core.archive import ArchiveError, verify_project_archive
 from waterology.core.assessments import assess_run
+from waterology.core.atomic import read_record
 from waterology.core.config import ProjectConfig, project_config_toml
 from waterology.core.database import DatabasePathError, open_database
 from waterology.core.evidence import (
@@ -153,9 +154,9 @@ def test_repair_rejects_assessment_that_does_not_match_run_manifest(tmp_path: Pa
     database_path = root / ".waterology" / "state.sqlite"
     before = database_path.read_bytes()
     assessment_path = next(
-        (root / ".waterology" / "assessments" / run_id).glob("assessment-*.json")
+        (root / ".waterology" / "assessments" / run_id).glob("assessment-*.yaml")
     )
-    payload = json.loads(assessment_path.read_text(encoding="utf-8"))
+    payload = read_record(assessment_path)
     payload["commit_sha"] = "0" * 40
     assessment_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
@@ -198,8 +199,8 @@ def test_repair_restores_database_sidecars_when_atomic_replace_fails(
 @pytest.mark.parametrize(
     ("area", "directory", "record"),
     [
-        ("experiments", "invalid-experiment", "experiment.json"),
-        ("runs", "invalid-run", "manifest.json"),
+        ("experiments", "invalid-experiment", "experiment.yaml"),
+        ("runs", "invalid-run", "manifest.yaml"),
         ("assessments", "invalid-assessment", "assessment-0000000000000000.json"),
     ],
 )
@@ -327,7 +328,7 @@ def test_repair_rejects_unrecognized_note_and_symlink_below_session(tmp_path: Pa
     notes.mkdir()
     outside = tmp_path / "outside.json"
     outside.write_text("{}\n", encoding="utf-8")
-    (notes / "unexpected.json").symlink_to(outside)
+    (notes / "unexpected.yaml").symlink_to(outside)
 
     with pytest.raises(RepairRecordError, match="malformed durable record"):
         repair_index(root)
@@ -353,8 +354,8 @@ def test_repair_rejects_inconsistent_session_relationships(
         task="Check relationships.",
         session_id="session-5555555555555555",
     )
-    record = root / ".waterology" / "sessions" / session.id / "session.json"
-    payload = json.loads(record.read_text(encoding="utf-8"))
+    record = root / ".waterology" / "sessions" / session.id / "session.yaml"
+    payload = read_record(record)
     payload[field] = value
     record.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
@@ -387,7 +388,7 @@ def test_repair_ignores_regular_atomic_write_crash_remnants(tmp_path: Path) -> N
 
 def test_evidence_archive_path_must_match_record_experiment_and_run(tmp_path: Path) -> None:
     root, experiment_id, run_id = make_assessed_run(tmp_path / "study")
-    assessment = next((root / ".waterology/assessments" / run_id).glob("assessment-*.json"))
+    assessment = next((root / ".waterology/assessments" / run_id).glob("assessment-*.yaml"))
     assessment.unlink()
     worktree = root / ".waterology/worktrees" / experiment_id
     subprocess.run(["git", "-C", str(worktree), "add", "artifacts"], check=True)

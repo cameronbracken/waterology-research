@@ -1,4 +1,3 @@
-import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -6,6 +5,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
+from waterology.core.atomic import dump_record, read_record
 from waterology.core.database import Database, open_database
 from waterology.core.errors import WaterologyError
 from waterology.core.git import add_worktree, branch_exists, commit_contains, resolve_commit
@@ -112,7 +112,7 @@ def create_experiment(
 def load_experiment(start: Path, experiment_id: str) -> ExperimentRecord:
     _validate_identifier(experiment_id)
     project = discover_project(start)
-    path = project.paths.experiments / experiment_id / "experiment.json"
+    path = project.paths.experiments / experiment_id / "experiment.yaml"
     if path.parent.is_symlink() or path.is_symlink():
         raise ExperimentNotFoundError(
             f"Experiment record path must not be a symlink: {experiment_id}"
@@ -128,7 +128,7 @@ def list_experiments(start: Path) -> tuple[ExperimentRecord, ...]:
         return ()
     records = [
         _derive_experiment_state(project, _read_experiment_record(path))
-        for path in project.paths.experiments.glob("exp-*/experiment.json")
+        for path in project.paths.experiments.glob("exp-*/experiment.yaml")
     ]
     return tuple(sorted(records, key=lambda record: (record.created_at, record.id)))
 
@@ -164,7 +164,7 @@ def add_experiment_note(
         )
         try:
             notes_directory.mkdir(exist_ok=True)
-            _write_json_record(notes_directory / f"{note.id}.json", note)
+            _write_record(notes_directory / f"{note.id}.yaml", note)
         except BaseException as error:
             database.append_observation(
                 intent.id,
@@ -184,7 +184,7 @@ def list_experiment_notes(start: Path, experiment_id: str) -> tuple[ExperimentNo
     notes_directory = project.paths.experiments / experiment_id / "notes"
     if not notes_directory.is_dir():
         return ()
-    notes = [_read_note_record(path) for path in notes_directory.glob("note-*.json")]
+    notes = [_read_note_record(path) for path in notes_directory.glob("note-*.yaml")]
     return tuple(sorted(notes, key=lambda note: (note.created_at, note.id)))
 
 
@@ -264,16 +264,16 @@ def _index_experiment(database: Database, record: ExperimentRecord) -> None:
 
 def _write_experiment_record(directory: Path, record: ExperimentRecord) -> None:
     directory.mkdir()
-    _write_json_record(directory / "experiment.json", record)
+    _write_record(directory / "experiment.yaml", record)
 
 
-def _write_json_record(
+def _write_record(
     destination: Path,
     record: ExperimentRecord | ExperimentNoteRecord,
 ) -> None:
     staged = destination.with_name(f".{destination.name}.tmp")
     staged.write_text(
-        json.dumps(record.model_dump(mode="json"), indent=2, sort_keys=True) + "\n",
+        dump_record(record.model_dump(mode="json")),
         encoding="utf-8",
     )
     staged.replace(destination)
@@ -281,14 +281,14 @@ def _write_json_record(
 
 def _read_experiment_record(path: Path) -> ExperimentRecord:
     try:
-        return ExperimentRecord.model_validate_json(path.read_text(encoding="utf-8"))
+        return ExperimentRecord.model_validate(read_record(path))
     except (OSError, ValidationError) as error:
         raise ValueError(f"Invalid experiment record: {path}") from error
 
 
 def _read_note_record(path: Path) -> ExperimentNoteRecord:
     try:
-        return ExperimentNoteRecord.model_validate_json(path.read_text(encoding="utf-8"))
+        return ExperimentNoteRecord.model_validate(read_record(path))
     except (OSError, ValidationError) as error:
         raise ValueError(f"Invalid experiment note record: {path}") from error
 
@@ -330,14 +330,14 @@ def _experiment_assessments(
     experiment_id: str,
 ) -> tuple[AssessmentRecord, ...]:
     records = []
-    for path in project.paths.assessments.glob("run-*/assessment-*.json"):
+    for path in project.paths.assessments.glob("run-*/assessment-*.yaml"):
         if path.parent.is_symlink() or path.is_symlink():
             raise ValueError(f"Assessment record path must not be a symlink: {path}")
         try:
-            assessment = AssessmentRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            assessment = AssessmentRecord.model_validate(read_record(path))
             run_id = path.parent.name
-            manifest_path = project.paths.runs / run_id / "manifest.json"
-            manifest = RunManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+            manifest_path = project.paths.runs / run_id / "manifest.yaml"
+            manifest = RunManifest.model_validate(read_record(manifest_path))
         except (OSError, ValidationError) as error:
             raise ValueError(f"Invalid assessment record: {path}") from error
         if assessment.run_id != run_id or manifest.run_id != run_id:

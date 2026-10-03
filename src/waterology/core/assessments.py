@@ -7,6 +7,7 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from waterology.core.archive import load_archive
+from waterology.core.atomic import dump_record, read_record
 from waterology.core.database import Database, open_database
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import ensure_experiment_index, load_experiment
@@ -61,7 +62,7 @@ def assess_run(
         created_at=_utc_now(),
     )
     directory = _validated_assessment_directory(project, run.run_id, create=True)
-    destination = directory / f"{assessment.id}.json"
+    destination = directory / f"{assessment.id}.yaml"
     with open_database(project.paths.database) as database:
         ensure_experiment_index(database, project, experiment)
         _ensure_run_index(database, run)
@@ -97,9 +98,9 @@ def list_assessments(start: Path, run_id: str) -> tuple[AssessmentRecord, ...]:
         return ()
     directory = _validated_assessment_directory(project, run_id, create=False)
     records = []
-    for path in directory.glob("assessment-*.json"):
+    for path in directory.glob("assessment-*.yaml"):
         try:
-            assessment = AssessmentRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            assessment = AssessmentRecord.model_validate(read_record(path))
         except (OSError, ValidationError) as error:
             raise AssessmentError(f"Invalid assessment record: {path}") from error
         if assessment.run_id != run_id:
@@ -211,7 +212,7 @@ def _write_assessment(path: Path, assessment: AssessmentRecord) -> None:
         raise AssessmentError(f"Assessment record path already exists: {path}")
     with staged.open("x", encoding="utf-8") as stream:
         stream.write(
-            json.dumps(assessment.model_dump(mode="json"), indent=2, sort_keys=True) + "\n"
+            dump_record(assessment.model_dump(mode="json"))
         )
     staged.replace(path)
 

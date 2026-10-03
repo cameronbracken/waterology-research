@@ -21,6 +21,7 @@ from waterology.core.archive import (
     load_archive,
     verify_archive,
 )
+from waterology.core.atomic import read_record
 from waterology.core.config import (
     ArchiveConfig,
     ProjectConfig,
@@ -99,8 +100,10 @@ def test_build_and_verify_run_archive(tmp_path: Path) -> None:
     with tarfile.open(fileobj=io.BytesIO(source_tar)) as source:
         assert {"model.py", "waterology.toml"} <= set(source.getnames())
     assert (archive / "artifacts" / "artifacts" / "result.json").is_file()
-    environment = json.loads((archive / "environment.json").read_text(encoding="utf-8"))
+    environment = read_record(archive / "environment.yaml")
     assert environment["tool_versions"]["git"].startswith("git version ")
+    assert not list(archive.glob("*.json"))
+    assert (archive / "metrics.yaml").read_text() == "rmse: 1.25\n"
     assert environment["tool_versions"]["waterology"]
     verification = verify_archive(archive)
     assert verification.valid is True
@@ -133,7 +136,7 @@ def test_export_verified_archive_without_overwrite(
     exported = export_project_archive(root, "run-export", "exports/run-export.tar.gz")
 
     with tarfile.open(exported, mode="r:gz") as archive:
-        assert "run-export/manifest.json" in archive.getnames()
+        assert "run-export/manifest.yaml" in archive.getnames()
     with open_database(root / ".waterology" / "state.sqlite") as database:
         export_events = [
             event for event in database.list_events() if event.kind == "archive.export"
@@ -211,7 +214,7 @@ def test_torc_archive_preserves_executor_reference_and_workflow(tmp_path: Path) 
     )
 
     manifest = load_archive(root, "run-torc")
-    environment = json.loads((archive / "environment.json").read_text(encoding="utf-8"))
+    environment = read_record(archive / "environment.yaml")
     assert manifest.executor == "torc"
     assert manifest.executor_reference == reference
     assert environment["compute_profile"] == "cluster"
@@ -390,9 +393,9 @@ def test_load_archive_rejects_manifest_identifier_mismatch(tmp_path: Path) -> No
         stderr="",
         metrics={},
     )
-    manifest = json.loads((archive / "manifest.json").read_text(encoding="utf-8"))
+    manifest = read_record(archive / "manifest.yaml")
     manifest["run_id"] = "run-other"
-    (archive / "manifest.json").write_text(
+    (archive / "manifest.yaml").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
 
@@ -460,7 +463,7 @@ def test_archive_hashes_artifacts_named_like_internal_staging_files(tmp_path: Pa
     worktree = root / ".waterology" / "worktrees" / experiment_id
     artifacts = worktree / "artifacts"
     artifacts.mkdir()
-    for name in ("execution.json", ".execution.json.tmp", "checksums.sha256"):
+    for name in ("execution.yaml", ".execution.yaml.tmp", "checksums.sha256"):
         (artifacts / name).write_text(f"artifact {name}\n", encoding="utf-8")
 
     archive = build_run_archive(
@@ -479,8 +482,8 @@ def test_archive_hashes_artifacts_named_like_internal_staging_files(tmp_path: Pa
     )
 
     checksums = (archive / "checksums.sha256").read_text(encoding="utf-8")
-    assert "artifacts/artifacts/execution.json" in checksums
-    assert "artifacts/artifacts/.execution.json.tmp" in checksums
+    assert "artifacts/artifacts/execution.yaml" in checksums
+    assert "artifacts/artifacts/.execution.yaml.tmp" in checksums
     assert "artifacts/artifacts/checksums.sha256" in checksums
     assert verify_archive(archive).valid is True
 
@@ -653,7 +656,7 @@ def test_stdout_metric_markers_seal_state_and_ro_crate_export(tmp_path: Path, mo
         metrics={"rmse": 9.0},
     )
 
-    assert json.loads((archive / "metrics.json").read_text(encoding="utf-8")) == {"rmse": 1.0, "seed": 7}
+    assert read_record(archive / "metrics.yaml") == {"rmse": 1.0, "seed": 7}
     verification = verify_archive(archive)
     assert verification.valid is True
     assert verification.seal_state == "clean"
@@ -671,8 +674,8 @@ def test_stdout_metric_markers_seal_state_and_ro_crate_export(tmp_path: Path, mo
     auto_crate = root / ".waterology" / "ro-crates" / "run-marker"
     assert (auto_crate / "ro-crate-metadata.json").is_file()
     crate = export_run_crate(root, "run-marker", "exports/run-marker-crate")
-    metadata = json.loads((crate / "ro-crate-metadata.json").read_text(encoding="utf-8"))
-    validation = json.loads((crate / "ro-crate-validation.json").read_text(encoding="utf-8"))
+    metadata = json.loads((crate / "ro-crate-metadata.json").read_text())
+    validation = read_record(crate / "ro-crate-validation.yaml")
     assert (crate / "run" / "checksums.sha256").is_file()
     assert validation["status"] == "skipped"
     assert any(node.get("@id") == "#run" for node in metadata["@graph"])
@@ -719,13 +722,13 @@ def test_named_command_crate_preserves_metrics_without_claiming_native_workflow(
     )
 
     crate = root / ".waterology" / "ro-crates" / "run-workflow-crate"
-    metadata = json.loads((crate / "ro-crate-metadata.json").read_text(encoding="utf-8"))
-    validation = json.loads((crate / "ro-crate-validation.json").read_text(encoding="utf-8"))
+    metadata = json.loads((crate / "ro-crate-metadata.json").read_text())
+    validation = read_record(crate / "ro-crate-validation.yaml")
     root_node = next(node for node in metadata["@graph"] if node.get("@id") == "./")
     action = next(node for node in metadata["@graph"] if node.get("@id") == "#run")
     assert {"@id": "https://w3id.org/ro/wfrun/process/0.5"} in root_node["conformsTo"]
     assert action["instrument"] == {"@id": "#tool"}
-    metrics_node = next(node for node in metadata["@graph"] if node.get("@id") == "run/metrics.json")
+    metrics_node = next(node for node in metadata["@graph"] if node.get("@id") == "run/metrics.yaml")
     metric_id = metrics_node["variableMeasured"][0]["@id"]
     metric = next(node for node in metadata["@graph"] if node["@id"] == metric_id)
     assert metric["name"] == "rmse"

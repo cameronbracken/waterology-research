@@ -151,8 +151,8 @@ def test_project_status_counts_assessment_records_not_run_directories(tmp_path: 
     initialize_project(root)
     assessments = root / ".waterology" / "assessments" / "run-one"
     assessments.mkdir()
-    (assessments / "assessment-one.json").write_text("{}\n", encoding="utf-8")
-    (assessments / "assessment-two.json").write_text("{}\n", encoding="utf-8")
+    (assessments / "assessment-one.yaml").write_text("{}\n", encoding="utf-8")
+    (assessments / "assessment-two.yaml").write_text("{}\n", encoding="utf-8")
 
     status = inspect_project(root)
 

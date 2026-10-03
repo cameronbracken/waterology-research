@@ -32,7 +32,7 @@ replace the selected source, reference output or tolerance to obtain a pass.
 For a new replication, initialize records with `waterology init`, inspect native tasks with
 `waterology config refresh --check`, and register the selected task or evaluation definition with
 `waterology workflow register replicate --task TASK` or
-`waterology workflow register replicate --definition workflow.nt`. Commit the
+`waterology workflow register replicate --definition workflow.yaml`. Commit the
 execution configuration and source before `waterology workflow run replicate`.
 TORC owns compute and dependencies; Waterology automatically collects run evidence.
 Select the resulting deliverable explicitly with `waterology deliverable register`

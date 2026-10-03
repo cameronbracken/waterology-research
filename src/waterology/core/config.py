@@ -69,6 +69,17 @@ class ArchiveConfig(BaseModel):
         return values
 
 
+def _format_from_suffix(data: object) -> object:
+    """Read .yaml and .yml documents as YAML unless a format is declared."""
+    if (
+        isinstance(data, dict)
+        and "format" not in data
+        and str(data.get("path", "")).endswith((".yaml", ".yml"))
+    ):
+        return {**data, "format": "yaml"}
+    return data
+
+
 class MetricExtractor(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -78,6 +89,7 @@ class MetricExtractor(BaseModel):
     field: str = Field(min_length=1)
 
     _validate_path = field_validator("path")(_portable_project_path)
+    _infer_format = model_validator(mode="before")(_format_from_suffix)
 
 
 class WorkflowConfig(BaseModel):
@@ -136,6 +148,13 @@ class OutputCheck(BaseModel):
     rtol: float = Field(default=0, ge=0, allow_inf_nan=False)
     validator: str | None = None
     _path = field_validator("path")(_portable_project_path)
+
+    @model_validator(mode="before")
+    @classmethod
+    def infer_format(cls, data):
+        if isinstance(data, dict) and data.get("mode") == "numeric":
+            return _format_from_suffix(data)
+        return data
 
     @model_validator(mode="after")
     def validate_check(self):

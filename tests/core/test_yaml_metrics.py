@@ -35,11 +35,18 @@ def test_yaml_metric_and_replay_config_round_trip(tmp_path):
     assert OutputCheck.model_validate(check.model_dump()).format == "yaml"
 
 
-def test_json_defaults_preserve_existing_output_check_serialization():
-    check = OutputCheck(path="metrics.json", mode="numeric", field="scores.rmse")
-    assert check.format == "json"
-    assert "format" not in check.model_dump(mode="json")
+def test_format_defaults_follow_the_file_suffix():
+    check = OutputCheck(path="metrics.yaml", mode="numeric", field="scores.rmse")
+    assert check.format == "yaml"
+    assert check.model_dump(mode="json")["format"] == "yaml"
+    legacy = OutputCheck(path="metrics.json", mode="numeric", field="scores.rmse")
+    assert legacy.format == "json"
+    assert "format" not in legacy.model_dump(mode="json")
+    assert OutputCheck(path="metrics.yaml").format == "json"
+    assert MetricExtractor(name="value", path="metrics.yml", field="value").format == "yaml"
     assert MetricExtractor(name="value", path="metrics.json", field="value").format == "json"
+    explicit = MetricExtractor(name="value", path="metrics.yaml", format="json", field="value")
+    assert explicit.format == "json"
 
 
 @pytest.mark.parametrize("mode", ["bytes", "statistical"])

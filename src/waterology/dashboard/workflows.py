@@ -49,7 +49,7 @@ def workflow_routes(root: Path, templates):
             return HTMLResponse("Artifact unavailable", status_code=404)
         # Active formats are downloads. They never execute with dashboard origin privileges.
         media = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-        inline = path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".txt", ".csv", ".json"}
+        inline = path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".txt", ".csv", ".json", ".yaml", ".yml"}
         return FileResponse(
             path,
             media_type=media if inline else "application/octet-stream",

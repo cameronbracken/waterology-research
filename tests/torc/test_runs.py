@@ -607,7 +607,7 @@ def test_launch_failure_preserves_queryable_staging_record(tmp_path: Path) -> No
     assert status.operational_state == "unknown"
     assert status.reference is None
     staging = root / ".waterology/staging/run-rejected"
-    assert (staging / "torc.json").is_file()
+    assert (staging / "torc.yaml").is_file()
     assert (staging / "torc-workflow.yaml").is_file()
 
 

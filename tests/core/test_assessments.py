@@ -74,7 +74,7 @@ def test_answer_assessment_freezes_experiment_and_supplies_child_commit(tmp_path
         kind="answer",
         conclusion="The variant answers the hypothesis.",
         author="cam",
-        evidence=(f".waterology/runs/{run.run_id}/metrics.json",),
+        evidence=(f".waterology/runs/{run.run_id}/metrics.yaml",),
     )
     frozen = load_experiment(root, experiment_id)
     child = create_experiment(
@@ -133,7 +133,7 @@ def test_first_answer_keeps_frozen_commit_stable(tmp_path: Path) -> None:
         kind="answer",
         conclusion="The first run answers the experiment.",
         author="cam",
-        evidence=(f".waterology/runs/{first.run_id}/metrics.json",),
+        evidence=(f".waterology/runs/{first.run_id}/metrics.yaml",),
     )
 
     with pytest.raises(AssessmentError, match="is frozen"):
@@ -143,7 +143,7 @@ def test_first_answer_keeps_frozen_commit_stable(tmp_path: Path) -> None:
             kind="answer",
             conclusion="A later run must not move the answer.",
             author="cam",
-            evidence=(f".waterology/runs/{second.run_id}/metrics.json",),
+            evidence=(f".waterology/runs/{second.run_id}/metrics.yaml",),
         )
 
     child = create_experiment(
@@ -192,7 +192,7 @@ def test_assessment_rejects_symlinked_run_directory_without_writing_target(
             kind="answer",
             conclusion="Do not write through the symlink.",
             author="cam",
-            evidence=(f".waterology/runs/{run.run_id}/metrics.json",),
+            evidence=(f".waterology/runs/{run.run_id}/metrics.yaml",),
         )
 
     assert list(outside.iterdir()) == []
@@ -202,7 +202,7 @@ def test_run_assess_cli_writes_structured_assessment(tmp_path: Path) -> None:
     root, experiment_id, worktree = make_experiment(tmp_path / "study")
     commit_working_model(worktree, "cli")
     run = start_direct_run(root, experiment_id, run_id="run-cli-assess")
-    evidence = f".waterology/runs/{run.run_id}/metrics.json"
+    evidence = f".waterology/runs/{run.run_id}/metrics.yaml"
 
     result = runner.invoke(
         app,

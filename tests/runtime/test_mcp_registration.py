@@ -13,8 +13,8 @@ runner = CliRunner()
 
 
 def test_claude_and_codex_plugins_share_stdio_registration() -> None:
-    registration = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
-    codex = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    registration = json.loads((ROOT / ".mcp.json").read_text())
+    codex = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text())
     codex_project = (ROOT / ".codex" / "config.toml").read_text(encoding="utf-8")
 
     assert registration == {"mcpServers": {"waterology": {"command": "waterology-mcp"}}}
@@ -23,7 +23,7 @@ def test_claude_and_codex_plugins_share_stdio_registration() -> None:
 
 
 def test_opencode_project_config_uses_current_v2_shape() -> None:
-    config = json.loads((ROOT / "opencode.json").read_text(encoding="utf-8"))
+    config = json.loads((ROOT / "opencode.json").read_text())
 
     assert config["mcp"]["waterology"] == {
         "type": "local",

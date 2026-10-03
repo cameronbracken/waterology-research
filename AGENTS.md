@@ -33,6 +33,15 @@ Use `research-software-quality` for testing, debugging, verification, review,
 and worktree decisions. Prefer a failing test first for clear behavior changes.
 Match completion claims to fresh evidence.
 
+## File formats
+
+Follow the format table in `skills/project-conventions/SKILL.md`. Authored
+contracts and definitions are YAML, loaded through `waterology.core.formats` so
+scalars stay strings until schema validation. Records Waterology writes, such as
+run archives and state ledgers, are typed YAML through `write_record` and
+`read_record` in `waterology.core.atomic`. Settings are TOML. Use `write_json`
+only for files another tool or specification fixes, such as RO-Crate metadata.
+
 ## Skill edits
 
 Use `writing-style` for prose. Treat skill and agent instruction edits as

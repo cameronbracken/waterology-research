@@ -1,7 +1,6 @@
 """Portable source snapshots and separately recorded fresh reproduction attempts."""
 
 import io
-import json
 import math
 import shutil
 import subprocess
@@ -12,7 +11,7 @@ from uuid import uuid4
 import zstandard
 
 from waterology.core.archive import load_archive, verify_archive
-from waterology.core.atomic import exclusive_file_lock, write_json
+from waterology.core.atomic import exclusive_file_lock, read_record, write_record
 from waterology.core.config import DeliverableConfig, ProjectConfig
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import create_experiment, load_worktree
@@ -37,12 +36,12 @@ def register_deliverable(start: Path, name: str, definition: DeliverableConfig) 
     _verified(archive)
     if reference.terminal_state != "completed":
         raise ValueError("A deliverable requires a completed reference run")
-    snapshot = archive / "execution-config.json"
+    snapshot = archive / "execution-config.yaml"
     if not snapshot.is_file():
         raise ValueError(
             "Reference run lacks an execution snapshot; execute the named workflow first"
         )
-    config = ProjectConfig.model_validate(json.loads(snapshot.read_text())["config"])
+    config = ProjectConfig.model_validate(read_record(snapshot)["config"])
     if definition.workflow not in config.workflows:
         raise ValueError("Reference run does not contain the selected workflow")
     selected = config.workflows[definition.workflow]
@@ -78,13 +77,13 @@ def export_deliverable(start: Path, name: str, destination: Path) -> dict:
         raise ValueError("Export destination cannot be inside project control state")
     destination.mkdir(parents=True, exist_ok=False)
     shutil.copytree(source, destination / "reference", symlinks=False)
-    write_json(destination / "deliverable.json", definition.model_dump(mode="json"))
+    write_record(destination / "deliverable.yaml", definition.model_dump(mode="json"))
     payloads = {
         p.relative_to(destination).as_posix(): file_sha256(p)
         for p in sorted(destination.rglob("*"))
         if p.is_file()
     }
-    write_json(destination / "bundle-checksums.json", payloads)
+    write_record(destination / "bundle-checksums.yaml", payloads)
     return {
         "destination": str(destination),
         "name": name,
@@ -93,11 +92,11 @@ def export_deliverable(start: Path, name: str, destination: Path) -> dict:
 
 
 def _verify_bundle(bundle: Path) -> DeliverableConfig:
-    expected = json.loads((bundle / "bundle-checksums.json").read_text())
+    expected = read_record(bundle / "bundle-checksums.yaml")
     actual = {
         p.relative_to(bundle).as_posix()
         for p in bundle.rglob("*")
-        if p.is_file() and p != bundle / "bundle-checksums.json"
+        if p.is_file() and p != bundle / "bundle-checksums.yaml"
     }
     if set(expected) != actual:
         raise ValueError("Bundle files differ from the export manifest")
@@ -106,7 +105,7 @@ def _verify_bundle(bundle: Path) -> DeliverableConfig:
         if file_sha256(path) != digest:
             raise ValueError(f"Bundle file changed: {relative}")
     _verified(bundle / "reference")
-    return DeliverableConfig.model_validate_json((bundle / "deliverable.json").read_text())
+    return DeliverableConfig.model_validate(read_record(bundle / "deliverable.yaml"))
 
 
 def _restore_source(archive: Path, destination: Path) -> None:
@@ -147,7 +146,7 @@ def _restore_source(archive: Path, destination: Path) -> None:
         check=True,
     )
     commit = result.stdout.decode().strip()
-    expected = json.loads((archive / "manifest.json").read_text())["commit_sha"]
+    expected = read_record(archive / "manifest.yaml")["commit_sha"]
     if commit != expected:
         raise ValueError("Source commit object does not match the reference")
     if b"\nparent " in raw:
@@ -220,16 +219,16 @@ def reproduce_deliverable(
             "run_id": None,
             "validator_runs": {},
         }
-        write_json(destination / "reproduction.json", record)
+        write_record(destination / "reproduction.yaml", record)
     with exclusive_file_lock(destination / ".reproduction.lock"):
-        record = json.loads((destination / "reproduction.json").read_text())
+        record = read_record(destination / "reproduction.yaml")
         definition = _verify_bundle(destination / "bundle")
         reference = destination / "bundle" / "reference"
         source = destination / "project"
         if record["state"] in {"passed", "failed"}:
             seal = destination / "reproduction-checksum.txt"
             if not seal.is_file() or seal.read_text().strip() != file_sha256(
-                destination / "reproduction.json"
+                destination / "reproduction.yaml"
             ):
                 raise ValueError("Reproduction record integrity check failed")
             if record["state"] == "passed":
@@ -244,11 +243,11 @@ def reproduce_deliverable(
                     {"from": record["profile"], "to": profile}
                 )
                 record["profile"] = profile
-                write_json(destination / "reproduction.json", record)
+                write_record(destination / "reproduction.yaml", record)
             if not source.exists():
                 staged_source = destination / f"source-stage-{uuid4().hex[:12]}"
                 record.setdefault("source_stages", []).append(staged_source.name)
-                write_json(destination / "reproduction.json", record)
+                write_record(destination / "reproduction.yaml", record)
                 _restore_source(reference, staged_source)
                 staged_source.replace(source)
             if record.get("experiment_id") is None:
@@ -256,7 +255,7 @@ def reproduce_deliverable(
                     source, hypothesis=f"Reproduce {name}", workflow=definition.workflow
                 )
                 record["experiment_id"] = experiment.id
-                write_json(destination / "reproduction.json", record)
+                write_record(destination / "reproduction.yaml", record)
             worktree = Path(load_worktree(source, record["experiment_id"]).path)
             # Inputs are explicitly supplied, hashed and copied; never harvested from the original checkout.
             source_config = discover_project(source).config
@@ -269,12 +268,12 @@ def reproduce_deliverable(
                         raise ValueError(f"Supplied input does not match its identity: {relative}")
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(supplied, target)
-            expected_commit = json.loads((reference / "manifest.json").read_text())["commit_sha"]
+            expected_commit = read_record(reference / "manifest.yaml")["commit_sha"]
             if current_commit(worktree) != expected_commit or not is_clean(worktree):
                 raise ValueError("Reproduction source changed; restore the exact selected commit")
             config = resolve_workflow(worktree, definition.workflow)
             pinned_config = ProjectConfig.model_validate(
-                json.loads((reference / "execution-config.json").read_text())["config"]
+                read_record(reference / "execution-config.yaml")["config"]
             )
             if config != pinned_config:
                 raise ValueError("Reproduction execution configuration differs from the reference")
@@ -292,7 +291,7 @@ def reproduce_deliverable(
             if not record["run_id"]:
                 record["run_id"] = f"run-{uuid4().hex[:12]}"
                 record["state"] = "submitting"
-                write_json(destination / "reproduction.json", record)
+                write_record(destination / "reproduction.yaml", record)
             if not _reserved(source, record["run_id"]):
                 for relative in config.outputs:
                     if project_file(worktree, relative).exists():
@@ -310,7 +309,7 @@ def reproduce_deliverable(
                     confirm_remote=confirm_remote,
                 )
             record["state"] = "running"
-            write_json(destination / "reproduction.json", record)
+            write_record(destination / "reproduction.yaml", record)
             result = (
                 watch_workflow(source, record["run_id"], gateway=gateway, progress=progress)
                 if wait
@@ -338,7 +337,7 @@ def reproduce_deliverable(
                 _verified(actual)
                 if result.commit_sha != expected_commit:
                     raise ValueError("Fresh run used a different source commit")
-                logs = json.loads((actual / "job-logs.json").read_text())
+                logs = read_record(actual / "job-logs.yaml")
                 evidence = [
                     entry.get("text", "").split("WATEROLOGY_WORKER_ENVIRONMENT", 1)[1].strip()
                     for entry in logs.values()
@@ -346,7 +345,7 @@ def reproduce_deliverable(
                 ]
                 if not any(evidence):
                     raise ValueError("Worker environment probe evidence is missing")
-                record["worker_environment_evidence"] = "job-logs.json"
+                record["worker_environment_evidence"] = "job-logs.yaml"
                 outcomes = _compare(reference, actual, definition.checks)
                 for check in definition.checks:
                     if check.mode != "statistical":
@@ -376,13 +375,13 @@ def reproduce_deliverable(
                             stream.write("\n.waterology-reference/\n")
                         shutil.copytree(reference / "artifacts", reference_target)
                         record["reference_staged"] = True
-                        write_json(destination / "reproduction.json", record)
+                        write_record(destination / "reproduction.yaml", record)
                     _verify_validation_inputs(reference, actual, worktree)
                     validation_config = resolve_workflow(worktree, validator)
                     if validator not in record["validator_runs"]:
                         identifier = f"run-{uuid4().hex[:12]}"
                         record["validator_runs"][validator] = identifier
-                        write_json(destination / "reproduction.json", record)
+                        write_record(destination / "reproduction.yaml", record)
                     if not _reserved(source, record["validator_runs"][validator]):
                         identifier = record["validator_runs"][validator]
                         start_torc_run(
@@ -428,7 +427,7 @@ def reproduce_deliverable(
                     if getattr(validation, "terminal_state", None) is None:
                         if not wait:
                             record["state"] = "validating"
-                            write_json(destination / "reproduction.json", record)
+                            write_record(destination / "reproduction.yaml", record)
                             return record
                         raise ValueError(
                             "Validator execution remains unresolved; resume this reproduction"
@@ -438,7 +437,7 @@ def reproduce_deliverable(
                     if validation.commit_sha != expected_commit:
                         raise ValueError("Validator source differs from the selected commit")
                     saved_validator = ProjectConfig.model_validate(
-                        json.loads((validator_archive / "execution-config.json").read_text())[
+                        read_record(validator_archive / "execution-config.yaml")[
                             "config"
                         ]
                     )
@@ -473,13 +472,13 @@ def reproduce_deliverable(
                 for identifier in identifiers
             ):
                 record["state"] = "failed"
-        write_json(destination / "reproduction.json", record)
+        write_record(destination / "reproduction.yaml", record)
         if record["state"] in {"passed", "failed"}:
             from waterology.core.atomic import write_text
 
             write_text(
                 destination / "reproduction-checksum.txt",
-                file_sha256(destination / "reproduction.json") + "\n",
+                file_sha256(destination / "reproduction.yaml") + "\n",
             )
         return record
 

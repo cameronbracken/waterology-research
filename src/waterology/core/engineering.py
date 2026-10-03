@@ -2,9 +2,7 @@
 
 from pathlib import Path
 
-import nestedtext
-
-from waterology.core.formats import load_document
+from waterology.core.formats import YAML_SUFFIXES, load_document, readable
 from waterology.core.studies import StudyError, evaluate_metrics, load_study
 
 
@@ -20,8 +18,8 @@ def scaffold_contract(
 ) -> dict:
     from waterology.core.studies import StudyContract
 
-    if destination.suffix != ".nt":
-        raise ValueError("Engineering draft contracts must use the .nt extension")
+    if destination.suffix not in YAML_SUFFIXES:
+        raise ValueError("Engineering draft contracts must use the .yaml extension")
     acceptance = [
         {"name": "failed_checks", "unit": "count", "direction": "minimize", "threshold": 0}
     ]
@@ -54,7 +52,7 @@ def scaffold_contract(
     # Validate without reserving a baseline, registering a workflow, or granting authority.
     StudyContract.model_validate({**data, "baseline_experiment": "exp-placeholder"})
     with destination.open("x", encoding="utf-8") as stream:
-        stream.write(nestedtext.dumps(data, default=str) + "\n")
+        stream.write(readable(data))
     return {"contract": str(destination), "mode": "engineering", "status": "draft"}
 
 

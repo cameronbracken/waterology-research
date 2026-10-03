@@ -1,4 +1,3 @@
-import json
 import subprocess
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlparse
@@ -8,6 +7,7 @@ from typer.testing import CliRunner
 
 from waterology.cli import app
 from waterology.core import literature
+from waterology.core.atomic import read_record
 from waterology.core.project import initialize_project
 from waterology.core.zotero import reference_status
 
@@ -89,7 +89,7 @@ def test_recorded_search_provenance_and_zotero_inclusion(project):
     assert not source["full_text_read"]
     assert len(source["provenance"]) == 2
     assert all(p["provider"] == "semantic-scholar" for p in source["provenance"])
-    saved = json.loads((project / ".waterology/literature" / f"{result['id']}.json").read_text())
+    saved = read_record(project / ".waterology/literature" / f"{result['id']}.yaml")
     assert saved == result
     literature.record_source_decision(
         project, result["id"], "abc", decision="include", note="Relevant method"

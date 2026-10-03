@@ -27,7 +27,7 @@ In an initialized Waterology project, build the reference library while
 researching. Use `literature_search`/`waterology discover` for recorded searches.
 Mark relevant consulted sources included with `source-decision`; this queues
 them for the configured Zotero project collection. For sources found through
-other search tools, use MCP `zotero_capture` or `waterology zotero capture source.nt`
+other search tools, use MCP `zotero_capture` or `waterology zotero capture source.yaml`
 as soon as they are read or cited. Include DOI, title, authors, publication date,
 stable URL and a lawful PDF URL or existing project-relative PDF path when known.
 Metadata-only inspection is not full-text reading.

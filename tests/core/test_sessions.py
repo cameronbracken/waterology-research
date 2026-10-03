@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from waterology.core.atomic import read_record
 from waterology.core.database import open_database
 from waterology.core.experiments import create_experiment
 from waterology.core.project import initialize_project
@@ -58,7 +59,7 @@ def test_create_session_writes_durable_record_and_acquires_worktree(tmp_path: Pa
     assert session.attempts == ()
     session_directory = root / ".waterology" / "sessions" / session.id
     assert (session_directory / "task.md").read_text(encoding="utf-8").endswith("result.\n")
-    assert json.loads((session_directory / "session.json").read_text(encoding="utf-8"))["id"] == (
+    assert read_record(session_directory / "session.yaml")["id"] == (
         session.id
     )
     assert load_session(root, session.id) == session
@@ -173,8 +174,8 @@ def test_load_session_rejects_record_identifier_that_does_not_match_directory(
         task="Validate live identity.",
         session_id="session-cccccccccccccccc",
     )
-    record = root / ".waterology" / "sessions" / session.id / "session.json"
-    payload = json.loads(record.read_text(encoding="utf-8"))
+    record = root / ".waterology" / "sessions" / session.id / "session.yaml"
+    payload = read_record(record)
     payload["id"] = "session-dddddddddddddddd"
     record.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 

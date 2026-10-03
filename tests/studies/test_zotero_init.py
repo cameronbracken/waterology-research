@@ -9,7 +9,6 @@ from typer.testing import CliRunner
 from waterology.cli import app
 from waterology.core import zotero
 from waterology.core.config import load_project_config, project_config_toml
-from waterology.core.formats import write_document
 from waterology.core.project import initialize_project
 
 
@@ -68,8 +67,9 @@ def test_cli_init_resolves_library_and_updates_project(project, monkeypatch):
 
 @pytest.mark.parametrize("legacy", [".zotero.nt", "zotero.nt"])
 def test_init_migrates_legacy_without_changing_identity(project, legacy):
-    settings = {"library_id": "00123", "collection_name": "Legacy", "collection_key": "ABCDEFGH"}
-    write_document(project / legacy, settings)
+    (project / legacy).write_text(
+        "library_id: 00123\ncollection_name: Legacy\ncollection_key: ABCDEFGH\n"
+    )
     result = zotero.initialize_zotero(project, "Legacy")
     assert result["library_id"] == "00123"
     assert result["collection_key"] == "ABCDEFGH"

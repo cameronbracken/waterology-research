@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
-from waterology.core.atomic import write_json
+from waterology.core.atomic import read_record, write_record
 from waterology.core.project import discover_project, project_state_lock
 
 
@@ -229,7 +229,7 @@ def search_literature(
         # HTTP exceptions can contain URLs with API keys. Never persist their message.
         record.update(status="unverified", error=type(error).__name__)
     with project_state_lock(start):
-        write_json(_directory(start) / f"{record['id']}.json", record)
+        write_record(_directory(start) / f"{record['id']}.yaml", record)
     from waterology.core.zotero import queue_reference, settings_for, sync_references
 
     try:
@@ -267,10 +267,10 @@ def record_source_decision(
     ):
         raise ValueError("Invalid search identifier")
     with project_state_lock(start):
-        path = _directory(start) / f"{search_id}.json"
+        path = _directory(start) / f"{search_id}.yaml"
         if path.is_symlink():
             raise ValueError("Search record must not be a symlink")
-        search = json.loads(path.read_text())
+        search = read_record(path)
         if not any(source_id in (s["id"], s["doi"]) for s in search["sources"]):
             raise ValueError("Source was not in this retrieval")
         record = {
@@ -281,7 +281,7 @@ def record_source_decision(
             "note": note,
             "recorded_at": datetime.now(UTC).isoformat(),
         }
-        write_json(_directory(start) / f"{record['id']}.json", record)
+        write_record(_directory(start) / f"{record['id']}.yaml", record)
     if decision == "include":
         from waterology.core.zotero import queue_reference
 
@@ -306,7 +306,7 @@ def register_local_source(start: Path, *, title: str, locator: str, note: str) -
         "recorded_at": datetime.now(UTC).isoformat(),
     }
     with project_state_lock(start):
-        write_json(_directory(start) / f"{record['id']}.json", record)
+        write_record(_directory(start) / f"{record['id']}.yaml", record)
     from waterology.core.zotero import queue_reference
 
     try:

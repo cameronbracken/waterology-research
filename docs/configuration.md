@@ -22,7 +22,7 @@ name = "flood-study"
 artifact_roots = ["artifacts", "results"]
 command = ["pixi", "run", "analysis"]
 environment_files = ["pixi.toml", "pixi.lock"]
-outputs = ["results/metrics.json"]
+outputs = ["results/metrics.yaml"]
 default_compute_profile = "direct"
 
 [archive]
@@ -32,8 +32,8 @@ log_redactions = ["token=[^\\s]+"]
 
 [[metrics]]
 name = "rmse"
-path = "results/metrics.json"
-format = "json"
+path = "results/metrics.yaml"
+format = "yaml"
 field = "rmse"
 ```
 

@@ -24,12 +24,12 @@ acceptance criterion or a higher-priority instruction.
 
 After a user correction, verified fix, failed approach or completed evaluation,
 record one actionable lesson with its trigger, observed outcome, project-relative
-evidence files and applicability tags. Use `waterology learning remember lesson.nt`
+evidence files and applicability tags. Use `waterology learning remember lesson.yaml`
 or MCP `learning_remember`. Keep the reason an approach failed, not just the
 successful replacement. Do not copy raw transcripts, credentials or private
 source contents into a lesson. Do not infer a universal preference from one task.
 
-```nestedtext
+```yaml
 trigger: Launching a TORC worker
 action: Use the tested noninteractive worker wrapper
 outcome: The wrapper exposed the required environment and command
@@ -58,7 +58,7 @@ lessons. Other runtimes follow this skill at task start and verification
 checkpoints; do not claim every tool call is observed.
 
 For an improvement to shared Waterology behavior, use
-`waterology learning improve improvement.nt` or MCP `learning_improve` with
+`waterology learning improve improvement.yaml` or MCP `learning_improve` with
 verified lesson identifiers, a concrete change, and a regression-check plan.
 The command saves a proposal. Review its scope and overlap with existing skills
 before implementing the shared change in an isolated worktree. Keep global

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from waterology.core.atomic import exclusive_file_lock, write_json
+from waterology.core.atomic import exclusive_file_lock, read_record, write_record
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import create_experiment, load_experiment
 from waterology.core.project import project_state_lock
@@ -27,7 +27,7 @@ def _driver_path(start: Path, study_id: str) -> Path:
 
 
 def _save_driver(start: Path, study_id: str, state: dict) -> None:
-    write_json(_driver_path(start, study_id), state)
+    write_record(_driver_path(start, study_id), state)
 
 
 def configure_driver(start: Path, study_id: str, *, runtime: str, max_proposals: int) -> dict:
@@ -67,7 +67,7 @@ def _drive_study(start: Path, study_id: str) -> dict:
     path = _driver_path(start, study_id)
     if path.is_symlink():
         raise StudyError("Driver record must not be a symlink")
-    driver = json.loads(path.read_text())
+    driver = read_record(path)
     if driver["study_id"] != study_id:
         raise StudyError("Driver identity mismatch")
     if study.state in {"complete", "stopped", "exhausted", "blocked", "stopping"}:
@@ -148,7 +148,7 @@ def _drive_study(start: Path, study_id: str) -> dict:
         return {"study": study.model_dump(mode="json"), "driver": driver}
     with project_state_lock(start):
         # Reserve names before repository and process mutations outside the lock.
-        current = json.loads(path.read_text())
+        current = read_record(path)
         if current != driver:
             raise StudyError("Another driver advanced this study; reload")
         if _stop_path(start, study_id).exists():

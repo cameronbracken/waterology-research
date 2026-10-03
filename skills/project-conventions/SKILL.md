@@ -28,6 +28,24 @@ source credit, or visual design, read
 `waterology config context project-conventions` to include the current user's
 identity and optional local guidance. No personal defaults ship with the package.
 
+## File formats
+
+Choose a format by who reads and edits the file:
+
+| Content | Format |
+|---------|--------|
+| Settings people edit by hand | TOML |
+| Configuration and ledgers read by people and tools | YAML |
+| Notes, skills, agent definitions and other plain text an LLM may read | Markdown |
+| Written reports | LaTeX, with TikZ for diagrams |
+| Reports that need interactive graphics | Quarto |
+| Output exchanged only between programs | JSON or JSONL |
+
+Use JSON only when a protocol, specification or existing tool requires it. When a
+program writes output a person may open, prefer YAML. Do not introduce NestedText
+or other niche formats. Follow an established project format until the user
+approves a migration.
+
 ## How it works
 
 ### 1. Load the matching convention

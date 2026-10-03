@@ -15,6 +15,7 @@ from typing import BinaryIO, Literal, cast
 from pydantic import ValidationError
 
 from waterology import __version__
+from waterology.core.atomic import dump_record, read_record
 from waterology.core.config import ProjectConfig, load_project_config
 from waterology.core.database import open_database
 from waterology.core.errors import WaterologyError
@@ -28,28 +29,28 @@ _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 _CHECKSUM_LINE = re.compile(r"^(?P<sha256>[0-9a-f]{64})  (?P<path>.+)$")
 _STAGING_PAYLOADS = {
     "artifacts",
-    "assessment.json",
+    "assessment.yaml",
     "checksums.sha256",
-    "command.json",
-    "environment.json",
-    "execution.json",
-    ".execution.json.tmp",
-    "manifest.json",
-    "metrics.json",
-    "study.json",
-    "submission-recovery.json",
-    "job-logs.json",
-    "execution-config.json",
+    "command.yaml",
+    "environment.yaml",
+    "execution.yaml",
+    ".execution.yaml.tmp",
+    "manifest.yaml",
+    "metrics.yaml",
+    "study.yaml",
+    "submission-recovery.yaml",
+    "job-logs.yaml",
+    "execution-config.yaml",
     "result.md",
     "source.tar.zst",
     "source-commit.txt",
-    "seal.json",
+    "seal.yaml",
     "post-seal-edits.jsonl",
     "stderr.log",
     "stdout.log",
     "torc-output",
     "torc-slurm-workflow.yaml",
-    "torc.json",
+    "torc.yaml",
     "torc-workflow.yaml",
 }
 
@@ -151,15 +152,15 @@ def build_run_archive(
         collected_artifacts=collected,
         missing_artifacts=missing,
     )
-    _write_json(staging / "manifest.json", manifest.model_dump(mode="json"))
-    _write_json(staging / "command.json", {"arguments": list(command), "shell": False})
-    _write_json(
-        staging / "environment.json",
+    _write_record(staging / "manifest.yaml", manifest.model_dump(mode="json"))
+    _write_record(staging / "command.yaml", {"arguments": list(command), "shell": False})
+    _write_record(
+        staging / "environment.yaml",
         _environment_payload(project, worktree, compute_profile=compute_profile),
     )
-    _write_json(staging / "metrics.json", _merge_stdout_metrics(metrics, stdout))
-    _write_json(
-        staging / "assessment.json",
+    _write_record(staging / "metrics.yaml", _merge_stdout_metrics(metrics, stdout))
+    _write_record(
+        staging / "assessment.yaml",
         {"assessment": "unassessed", "schema_version": 1},
     )
     (staging / "stdout.log").write_text(_redact_log(project, stdout), encoding="utf-8")
@@ -168,17 +169,17 @@ def build_run_archive(
         f"# Run {run_id}\n\nOperational state: {terminal_state}\n",
         encoding="utf-8",
     )
-    if not (staging / "execution-config.json").is_file():
-        _write_json(
-            staging / "execution-config.json",
+    if not (staging / "execution-config.yaml").is_file():
+        _write_record(
+            staging / "execution-config.yaml",
             {"schema_version": 1, "config": project.config.model_dump(mode="json")},
         )
     _write_source_archive(project.root, commit_sha, staging / "source.tar.zst")
     commit_object = subprocess.run(["git", "-C", str(project.root), "cat-file", "commit", commit_sha], capture_output=True, check=True)
     (staging / "source-commit.txt").write_bytes(commit_object.stdout)
     seal_hash = _write_checksums(staging)
-    _write_json(
-        staging / "seal.json",
+    _write_record(
+        staging / "seal.yaml",
         {
             "schema_version": 1,
             "algorithm": "sha256",
@@ -187,8 +188,8 @@ def build_run_archive(
             "post_seal_edits": "post-seal-edits.jsonl",
         },
     )
-    (staging / "execution.json").unlink(missing_ok=True)
-    (staging / ".execution.json.tmp").unlink(missing_ok=True)
+    (staging / "execution.yaml").unlink(missing_ok=True)
+    (staging / ".execution.yaml.tmp").unlink(missing_ok=True)
     staging.replace(destination)
     auto_export_run_crate(project.root, run_id)
     return destination
@@ -197,7 +198,7 @@ def build_run_archive(
 def verify_archive(path: Path) -> ArchiveVerification:
     checksums_path = path / "checksums.sha256"
     expected = _read_checksums(checksums_path)
-    sidecars = {"seal.json", "post-seal-edits.jsonl"}
+    sidecars = {"seal.yaml", "post-seal-edits.jsonl"}
     payloads = tuple(child for child in path.rglob("*") if child != checksums_path)
     symlinks = {child.relative_to(path).as_posix() for child in payloads if child.is_symlink()}
     actual_paths = {
@@ -220,10 +221,10 @@ def verify_archive(path: Path) -> ArchiveVerification:
     )
     seal_hash = None
     seal_state = "unlocked"
-    seal_path = path / "seal.json"
+    seal_path = path / "seal.yaml"
     if seal_path.is_file() and not seal_path.is_symlink():
         try:
-            seal = json.loads(seal_path.read_text(encoding="utf-8"))
+            seal = read_record(seal_path)
             seal_hash = seal.get("checksums_sha256")
             if not isinstance(seal_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", seal_hash):
                 raise ValueError("Invalid seal hash")
@@ -234,7 +235,7 @@ def verify_archive(path: Path) -> ArchiveVerification:
                 seal_state = "revised"
             else:
                 seal_state = "clean"
-        except (OSError, json.JSONDecodeError, ValueError):
+        except (OSError, ValueError):
             seal_state = "tampered"
     valid = not missing and not changed and not unexpected and seal_state in {"clean", "revised"}
     return ArchiveVerification(
@@ -254,11 +255,11 @@ def load_archive(start: Path, run_id: str) -> RunManifest:
     directory = project.paths.runs / run_id
     if directory.is_symlink():
         raise ArchivePathError(f"Run archive directory must not be a symlink: {run_id}")
-    path = directory / "manifest.json"
+    path = directory / "manifest.yaml"
     if not path.is_file():
         raise ArchiveNotFoundError(f"Run archive does not exist: {run_id}")
     try:
-        manifest = RunManifest.model_validate_json(path.read_text(encoding="utf-8"))
+        manifest = RunManifest.model_validate(read_record(path))
     except (OSError, ValidationError) as error:
         raise ArchiveError(f"Invalid run archive manifest: {path}") from error
     if manifest.run_id != run_id:
@@ -272,7 +273,7 @@ def list_archives(start: Path) -> tuple[RunManifest, ...]:
         return ()
     manifests = [
         load_archive(project.root, path.parent.name)
-        for path in project.paths.runs.glob("run-*/manifest.json")
+        for path in project.paths.runs.glob("run-*/manifest.yaml")
     ]
     return tuple(sorted(manifests, key=lambda manifest: (manifest.started_at, manifest.run_id)))
 
@@ -336,7 +337,7 @@ def export_project_archive(start: Path, run_id: str, destination: str) -> Path:
         checksum_payload = (source / "checksums.sha256").read_bytes()
         sidecar_payloads = {
             relative: (source / relative).read_bytes()
-            for relative in ("seal.json", "post-seal-edits.jsonl")
+            for relative in ("seal.yaml", "post-seal-edits.jsonl")
             if (source / relative).is_file()
         }
         current = project.root
@@ -532,14 +533,14 @@ def _prepare_staging(staging: Path) -> None:
         if (
             child.name
             in {
-                "execution.json",
-                "study.json",
-                "submission-recovery.json",
-                "job-logs.json",
-                "execution-config.json",
+                "execution.yaml",
+                "study.yaml",
+                "submission-recovery.yaml",
+                "job-logs.yaml",
+                "execution-config.yaml",
                 "stdout.log",
                 "stderr.log",
-                "torc.json",
+                "torc.yaml",
                 "torc-slurm-workflow.yaml",
                 "torc-workflow.yaml",
             }
@@ -645,9 +646,9 @@ def _zstd_compress(data: bytes) -> bytes:
 def _write_checksums(directory: Path) -> str:
     excluded = {
         "checksums.sha256",
-        "execution.json",
-        ".execution.json.tmp",
-        "seal.json",
+        "execution.yaml",
+        ".execution.yaml.tmp",
+        "seal.yaml",
         "post-seal-edits.jsonl",
     }
     paths = sorted(
@@ -659,9 +660,9 @@ def _write_checksums(directory: Path) -> str:
     checksums = directory / "checksums.sha256"
     checksums.write_text("\n".join(lines) + "\n", encoding="utf-8")
     seal_hash = hashlib.sha256(checksums.read_bytes()).hexdigest()
-    seal = directory / "seal.json"
+    seal = directory / "seal.yaml"
     if seal.is_file() and not seal.is_symlink():
-        _write_json(
+        _write_record(
             seal,
             {
                 "schema_version": 1,
@@ -712,8 +713,8 @@ def _merge_stdout_metrics(metrics: dict[str, object], stdout: str) -> dict[str, 
     return merged
 
 
-def _write_json(path: Path, payload: object) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def _write_record(path: Path, payload: object) -> None:
+    path.write_text(dump_record(payload), encoding="utf-8")
 
 
 def _sha256(path: Path) -> str:

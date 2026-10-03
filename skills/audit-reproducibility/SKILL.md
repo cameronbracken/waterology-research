@@ -122,7 +122,7 @@ Write `quality_reports/reproducibility-audit-<paper-slug>.md` with:
 
 In passport mode, update each audited claim's status, `last_verified_on`, and
 `last_verified_by`. Update claim anchor coverage and the conformance ladder.
-When claims reference archived runs, prefer the archive's `seal.json`,
+When claims reference archived runs, prefer the archive's `seal.yaml`,
 `checksums.sha256`, and derived RO-Crate metadata over ad hoc path notes. Update
 `paper.last_audit`. Do not delete claims that
 disappear from the manuscript. Leave them `STALE` for a person to retract or

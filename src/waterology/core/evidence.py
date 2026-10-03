@@ -6,7 +6,7 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from waterology.core.archive import load_archive
-from waterology.core.atomic import write_json
+from waterology.core.atomic import read_record, write_record
 from waterology.core.database import open_database
 from waterology.core.errors import WaterologyError
 from waterology.core.experiments import ensure_experiment_index, load_experiment
@@ -82,7 +82,7 @@ def _register_evidence_locked(
         session_id=session_id,
         created_at=_utc_now(),
     )
-    destination = project.paths.evidence / f"{record.id}.json"
+    destination = project.paths.evidence / f"{record.id}.yaml"
     if destination.exists() or destination.is_symlink():
         raise ValueError(f"Evidence record already exists: {record.id}")
     _write_record(destination, record.model_dump(mode="json"))
@@ -159,7 +159,7 @@ def _register_artifact_reference_locked(
         session_id=session_id,
         created_at=_utc_now(),
     )
-    destination = project.paths.evidence / f"{record.id}.json"
+    destination = project.paths.evidence / f"{record.id}.yaml"
     if destination.exists() or destination.is_symlink():
         raise ValueError(f"Artifact reference already exists: {record.id}")
     _write_record(destination, record.model_dump(mode="json"))
@@ -196,11 +196,11 @@ def list_evidence(
 ) -> tuple[EvidenceRecord, ...]:
     project = discover_project(start)
     records = []
-    for path in project.paths.evidence.glob("evidence-*.json"):
+    for path in project.paths.evidence.glob("evidence-*.yaml"):
         if path.is_symlink():
             raise EvidencePathError(f"Evidence record must not be a symlink: {path}")
         try:
-            record = EvidenceRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            record = EvidenceRecord.model_validate(read_record(path))
         except (OSError, ValidationError) as error:
             raise ValueError(f"Invalid evidence record: {path}") from error
         if experiment_id is None or record.experiment_id == experiment_id:
@@ -215,11 +215,11 @@ def list_artifact_references(
 ) -> tuple[ArtifactReferenceRecord, ...]:
     project = discover_project(start)
     records = []
-    for path in project.paths.evidence.glob("artifact-*.json"):
+    for path in project.paths.evidence.glob("artifact-*.yaml"):
         if path.is_symlink():
             raise EvidencePathError(f"Artifact record must not be a symlink: {path}")
         try:
-            record = ArtifactReferenceRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            record = ArtifactReferenceRecord.model_validate(read_record(path))
         except (OSError, ValidationError) as error:
             raise ValueError(f"Invalid artifact reference: {path}") from error
         if experiment_id is None or record.experiment_id == experiment_id:
@@ -309,7 +309,7 @@ def _is_within(path: Path, root: Path) -> bool:
 
 
 def _write_record(path: Path, payload: dict[str, object]) -> None:
-    write_json(path, payload)
+    write_record(path, payload)
 
 
 def _utc_now() -> str:

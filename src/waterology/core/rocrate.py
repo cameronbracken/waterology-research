@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
-from waterology.core.atomic import write_json
+from waterology.core.atomic import read_record, write_json, write_record
 
 VALIDATOR_VERSION = "0.11.4"
 PROCESS_PROFILE = "https://w3id.org/ro/wfrun/process/0.5"
@@ -75,10 +75,10 @@ def export_crate(start, run_id, destination, *, validate=True, automatic=False):
             "profile": profile,
         }
     )
-    write_json(output / "ro-crate-validation.json", result)
+    write_record(output / "ro-crate-validation.yaml", result)
     if result["status"] in {"failed", "error"}:
         raise ArchiveExportError(
-            f"RO-Crate validation {result['status']}; inspect {relative}/ro-crate-validation.json"
+            f"RO-Crate validation {result['status']}; inspect {relative}/ro-crate-validation.yaml"
         )
     return output
 
@@ -103,8 +103,8 @@ def automatic_crate(start, run_id):
             if warning.is_symlink():
                 raise ValueError("RO-Crate error directory must not be a symlink")
             warning.mkdir(parents=True, exist_ok=True)
-            write_json(
-                warning / f"{run_id}.json",
+            write_record(
+                warning / f"{run_id}.yaml",
                 {
                     "run_id": run_id,
                     "status": "error",
@@ -196,17 +196,19 @@ def run_metadata(source, manifest, verification):
         entity = {"@id": _file_id(relative), "@type": "File", "name": relative}
         if relative.endswith(".json"):
             entity["encodingFormat"] = "application/json"
-        if relative in {"stdout.log", "stderr.log", "environment.json"}:
+        elif relative.endswith((".yaml", ".yml")):
+            entity["encodingFormat"] = "application/yaml"
+        if relative in {"stdout.log", "stderr.log", "environment.yaml"}:
             entity["about"] = {"@id": "#run"}
         graph.append(entity)
         entities[relative] = entity
-    metrics = json.loads((source / "metrics.json").read_text())
-    snapshot = source / "execution-config.json"
+    metrics = read_record(source / "metrics.yaml")
+    snapshot = source / "execution-config.yaml"
     workflow = None
     if snapshot.is_file():
         from waterology.core.config import ProjectConfig
 
-        saved = ProjectConfig.model_validate(json.loads(snapshot.read_text())["config"])
+        saved = ProjectConfig.model_validate(read_record(snapshot)["config"])
         matches = [
             w
             for w in saved.workflows.values()
@@ -229,7 +231,7 @@ def run_metadata(source, manifest, verification):
                 **({"propertyID": selectors[name]} if name in selectors else {}),
             }
         )
-    entities["metrics.json"]["variableMeasured"] = measurements
+    entities["metrics.yaml"]["variableMeasured"] = measurements
     identities = []
     for name, digest in workflow.input_files.items() if workflow else []:
         identifier = "#input-identity-" + quote(name, safe="")
@@ -280,7 +282,7 @@ def run_metadata(source, manifest, verification):
             "waterology:inputIdentities": identities,
             "object": [{"@id": "run/source.tar.zst"}],
             "result": [{"@id": _file_id(f"artifacts/{p}")} for p in manifest.collected_artifacts]
-            + [{"@id": "run/metrics.json"}],
+            + [{"@id": "run/metrics.yaml"}],
             "startTime": manifest.started_at,
             "endTime": manifest.finished_at,
             "actionStatus": {

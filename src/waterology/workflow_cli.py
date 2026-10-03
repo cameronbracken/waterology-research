@@ -17,7 +17,7 @@ from waterology.core.studies import (
 )
 
 _PATH_OPTION = typer.Option(Path("."))
-WORKFLOW_OUTPUT_FORMAT = ContextVar("workflow_output_format", default="nestedtext")
+WORKFLOW_OUTPUT_FORMAT = ContextVar("workflow_output_format", default="yaml")
 
 study_app = typer.Typer(help="Bounded autonomous research and engineering through TORC.")
 
@@ -180,7 +180,7 @@ def register_workflow_commands(app: typer.Typer):
         text: str,
         run_id: str,
         selector: str = typer.Option(""),
-        member: str = typer.Option("metrics.json"),
+        member: str = typer.Option("metrics.yaml"),
         kind: str = typer.Option("observation"),
         relation: str = typer.Option("supports"),
         related_claim: str | None = typer.Option(None),

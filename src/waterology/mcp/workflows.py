@@ -84,7 +84,7 @@ def register_workflow_tools(server, bounded_tool):
     def claim_register(
         claim: str,
         run_id: str,
-        member: str = "metrics.json",
+        member: str = "metrics.yaml",
         selector: str = "",
         kind: str = "observation",
         relation: str = "supports",

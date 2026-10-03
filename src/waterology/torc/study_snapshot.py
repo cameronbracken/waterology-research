@@ -1,10 +1,9 @@
 """Capture managed run settings and reject stale output collection."""
 
 import hashlib
-import json
 from pathlib import Path
 
-from waterology.core.atomic import write_json
+from waterology.core.atomic import read_record, write_record
 from waterology.core.config import ProjectConfig
 from waterology.core.git import current_commit, is_clean
 from waterology.core.profiles import ComputeProfile
@@ -31,8 +30,8 @@ def output_signatures(worktree: Path, config: ProjectConfig) -> dict:
 def save_snapshot(
     staging: Path, worktree: Path, config: ProjectConfig, profile: ComputeProfile, commit: str, *, fresh: bool = True
 ) -> None:
-    write_json(
-        staging / "execution-config.json",
+    write_record(
+        staging / "execution-config.yaml",
         {
             "config": config.model_dump(mode="json"),
             "profile": profile.model_dump(mode="json", exclude={"trusted"}),
@@ -44,22 +43,22 @@ def save_snapshot(
 
 
 def load_snapshot(staging: Path) -> tuple[ProjectConfig, ComputeProfile] | None:
-    path = staging / "execution-config.json"
+    path = staging / "execution-config.yaml"
     if not path.exists():
         return None
     if path.is_symlink():
         raise ValueError("Execution snapshot must not be a symlink")
-    saved = json.loads(path.read_text())
+    saved = read_record(path)
     return ProjectConfig.model_validate(saved["config"]), ComputeProfile.model_validate(
         saved["profile"]
     )
 
 
 def verify_fresh_outputs(staging: Path, worktree: Path, config: ProjectConfig) -> None:
-    path = staging / "execution-config.json"
+    path = staging / "execution-config.yaml"
     if not path.exists():
         return
-    saved = json.loads(path.read_text())
+    saved = read_record(path)
     if current_commit(worktree) != saved["commit_sha"] or not is_clean(worktree):
         raise ValueError("Candidate commit changed during execution")
     if not saved.get("fresh", True):

@@ -5,6 +5,7 @@ import pytest
 from test_archive import git, make_experiment
 
 from waterology.core import archive
+from waterology.core.atomic import read_record
 
 
 @pytest.fixture
@@ -38,7 +39,7 @@ def test_metadata_uses_archived_evidence_without_private_repository_uri(sealed_r
     graph = {n["@id"]: n for n in metadata["@graph"]}
     assert "file://" not in json.dumps(metadata)
     assert graph["#run"]["instrument"]["@id"] in graph
-    for name in ("manifest.json", "source.tar.zst", "metrics.json", "checksums.sha256"):
+    for name in ("manifest.yaml", "source.tar.zst", "metrics.yaml", "checksums.sha256"):
         assert (crate / "run" / name).read_bytes() == (source / name).read_bytes()
     assert graph["./"]["conformsTo"] == [{"@id": "https://w3id.org/ro/wfrun/process/0.5"}]
 
@@ -76,7 +77,7 @@ def test_rejected_validator_retains_diagnostics_and_original_seal(sealed_run, mo
     )
     with pytest.raises(archive.ArchiveExportError):
         archive.export_run_crate(root, source.name, "exports/rejected")
-    result = json.loads((root / "exports/rejected/ro-crate-validation.json").read_text())
+    result = read_record(root / "exports/rejected/ro-crate-validation.yaml")
     assert result["status"] == "failed"
     assert result["stderr"] == "invalid fixture"
     assert archive.verify_archive(source).valid
@@ -121,7 +122,7 @@ def test_real_validator_accepts_export_and_rejects_broken_graph(sealed_run, monk
         (source / "torc-workflow.yaml").write_text(
             json.dumps({"name": "fixture", "jobs": [{"name": "evaluate", "command": "echo done"}]})
         )
-        manifest = json.loads((source / "manifest.json").read_text())
+        manifest = read_record(source / "manifest.yaml")
         manifest.update(
             executor="torc",
             executor_reference={
@@ -133,16 +134,16 @@ def test_real_validator_accepts_export_and_rejects_broken_graph(sealed_run, monk
                 "torc_version": "0.40.0",
             },
         )
-        (source / "manifest.json").write_text(json.dumps(manifest))
+        (source / "manifest.yaml").write_text(json.dumps(manifest))
         digest = archive._write_checksums(source)
-        seal = json.loads((source / "seal.json").read_text())
+        seal = read_record(source / "seal.yaml")
         seal["checksums_sha256"] = digest
-        (source / "seal.json").write_text(json.dumps(seal))
+        (source / "seal.yaml").write_text(json.dumps(seal))
     crate = archive.export_run_crate(root, source.name, "exports/validated")
-    result = json.loads((crate / "ro-crate-validation.json").read_text())
+    result = read_record(crate / "ro-crate-validation.yaml")
     assert result["status"] == "passed", result
     metadata_path = crate / "ro-crate-metadata.json"
-    data = json.loads(metadata_path.read_text())
+    data = read_record(metadata_path)
     data["@graph"] = [node for node in data["@graph"] if node["@id"] != "./"]
     metadata_path.write_text(json.dumps(data))
     invalid = validate_crate(crate, result["profile"])
@@ -163,7 +164,7 @@ def test_automatic_error_record_failure_does_not_invalidate_execution(
         raise OSError("fixture disk full")
 
     monkeypatch.setattr(rocrate, "export_crate", fail)
-    monkeypatch.setattr(rocrate, "write_json", fail)
+    monkeypatch.setattr(rocrate, "write_record", fail)
     archive.auto_export_run_crate(root, source.name)
     assert archive.verify_archive(source).valid
     assert "could not be saved" in caplog.text

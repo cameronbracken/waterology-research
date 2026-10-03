@@ -9,6 +9,7 @@ from waterology.cli import app
 from waterology.core import archive as archive_module
 from waterology.core.archive import ArchiveArtifactMissingError, build_run_archive, load_archive
 from waterology.core.assessments import assess_run
+from waterology.core.atomic import read_record
 from waterology.core.config import (
     MetricExtractor,
     ProjectConfig,
@@ -215,7 +216,7 @@ print("ran exactly once")
             start_direct_run(root, experiment_id, run_id="run-interrupted")
 
     staging = root / ".waterology" / "staging" / "run-interrupted"
-    metadata = json.loads((staging / "execution.json").read_text(encoding="utf-8"))
+    metadata = read_record(staging / "execution.yaml")
     assert metadata["state"] == "completed"
     assert metadata["process_id"] is not None
     assert (staging / "stdout.log").read_text(encoding="utf-8") == "ran exactly once\n"
@@ -243,7 +244,7 @@ print("ran exactly once")
 
     recovered = load_archive(root, "run-interrupted")
     assert recovered.process_id == metadata["process_id"]
-    assert (root / ".waterology" / "runs" / "run-interrupted" / "execution.json").exists() is False
+    assert (root / ".waterology" / "runs" / "run-interrupted" / "execution.yaml").exists() is False
 
 
 def test_missing_metric_remains_collecting_with_durable_staging(tmp_path: Path) -> None:
@@ -273,7 +274,7 @@ Path("artifacts/result.txt").write_text("result\\n", encoding="utf-8")
         start_direct_run(root, experiment_id, run_id="run-missing-metric")
 
     staging = root / ".waterology" / "staging" / "run-missing-metric"
-    metadata = json.loads((staging / "execution.json").read_text(encoding="utf-8"))
+    metadata = read_record(staging / "execution.yaml")
     assert metadata["state"] == "completed"
     with open_database(root / ".waterology" / "state.sqlite") as database:
         state = database.connection.execute(
@@ -292,7 +293,7 @@ def test_missing_declared_output_remains_collecting_with_durable_staging(
         start_direct_run(root, experiment_id, run_id="run-missing-output")
 
     staging = root / ".waterology" / "staging" / "run-missing-output"
-    metadata = json.loads((staging / "execution.json").read_text(encoding="utf-8"))
+    metadata = read_record(staging / "execution.yaml")
     assert metadata["state"] == "completed"
     with open_database(root / ".waterology" / "state.sqlite") as database:
         state = database.connection.execute(
@@ -342,7 +343,7 @@ Path("artifacts/metrics.json").write_text(
     run = start_direct_run(worktree, experiment_id, run_id="run-worktree-config")
 
     archive = root / ".waterology" / "runs" / run.run_id
-    assert json.loads((archive / "metrics.json").read_text(encoding="utf-8")) == {"rmse": 1.5}
+    assert read_record(archive / "metrics.yaml") == {"rmse": 1.5}
     assert run.declared_artifacts == ("artifacts/metrics.json",)
 
 
@@ -364,7 +365,7 @@ Path("artifacts/result.txt").write_text("answer\\n", encoding="utf-8")
         kind="answer",
         conclusion="This run answers the experiment.",
         author="cam",
-        evidence=(f".waterology/runs/{run.run_id}/metrics.json",),
+        evidence=(f".waterology/runs/{run.run_id}/metrics.yaml",),
     )
 
     with pytest.raises(RunPreparationError, match="is frozen"):

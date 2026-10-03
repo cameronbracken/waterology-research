@@ -1,13 +1,12 @@
 """Explicit recovery of a rejected create, called only by the study controller."""
 
 import hashlib
-import json
 import re
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from waterology.core.atomic import write_json
+from waterology.core.atomic import read_record, write_record
 from waterology.core.database import open_database
 from waterology.core.execution import _transition, prepare_run_inputs
 from waterology.core.experiments import load_worktree
@@ -33,13 +32,13 @@ def retry_rejected_submission(start, study, attempt, *, gateway=None):
 
     project = discover_project(start)
     staging = project.paths.staging / attempt.run_id
-    evidence_path = staging / "submission-recovery.json"
+    evidence_path = staging / "submission-recovery.yaml"
     if evidence_path.exists() or evidence_path.is_symlink():
         raise StudyError("Submission recovery already attempted; reconcile before further action")
-    metadata_path = staging / "torc.json"
+    metadata_path = staging / "torc.yaml"
     if metadata_path.is_symlink():
         raise StudyError("Submission metadata must not be a symlink")
-    metadata = json.loads(metadata_path.read_text())
+    metadata = read_record(metadata_path)
     # Recognize the TORC create endpoint's typed rejection, never a bare status
     # number in arbitrary logs or a failure after a workflow was created.
     error = metadata.get("error") or ""
@@ -69,7 +68,7 @@ def retry_rejected_submission(start, study, attempt, *, gateway=None):
         raise StudyError(
             "Saved execution configuration or profile differs from the authorized candidate"
         )
-    context = json.loads((staging / "study.json").read_text())
+    context = read_record(staging / "study.yaml")
     if any(
         context.get(key) != value
         for key, value in {
@@ -83,7 +82,7 @@ def retry_rejected_submission(start, study, attempt, *, gateway=None):
     if profile.mode == "slurm":
         raise StudyError("Slurm submission recovery is not supported")
     worktree = Path(load_worktree(project.root, attempt.experiment_id).path)
-    saved = json.loads((staging / "execution-config.json").read_text())
+    saved = read_record(staging / "execution-config.yaml")
     if saved["commit_sha"] != attempt.commit_sha:
         raise StudyError("Saved execution commit differs from the study attempt")
     if output_signatures(worktree, config) != saved["outputs_before"]:
@@ -164,7 +163,7 @@ def retry_rejected_submission(start, study, attempt, *, gateway=None):
             "inventory": inventory,
             "workflow_sha256": provider.workflow_file.sha256,
         }
-        write_json(evidence_path, evidence)
+        write_record(evidence_path, evidence)
         intent = database.append_intent(
             kind="run.submission_recovery",
             entity_type="run",

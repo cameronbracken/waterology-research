@@ -1,12 +1,58 @@
 import json
+import math
 import os
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+import yaml
 
-def write_json(path: Path, payload: dict[str, object]) -> None:
+_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+_DUMPER = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
+
+
+def _plain(value):
+    if isinstance(value, dict):
+        return {str(key): _plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("Durable records cannot contain NaN or infinite values")
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    raise TypeError(f"Unsupported durable record value: {type(value).__name__}")
+
+
+def dump_record(payload: object) -> str:
+    """Typed block YAML. The dumper quotes strings that would otherwise load as other types."""
+    return yaml.dump(
+        _plain(payload),
+        Dumper=_DUMPER,
+        sort_keys=True,
+        allow_unicode=True,
+        default_flow_style=False,
+        width=100,
+    )
+
+
+def load_record(text: str | bytes) -> object:
+    try:
+        return yaml.load(text, Loader=_LOADER)
+    except yaml.YAMLError as error:
+        raise ValueError("Invalid YAML record") from error
+
+
+def read_record(path: Path) -> object:
+    return load_record(path.read_text(encoding="utf-8"))
+
+
+def write_record(path: Path, payload: object) -> None:
+    write_text(path, dump_record(payload))
+
+
+def write_json(path: Path, payload: object) -> None:
+    """Only for files whose format a specification or another tool fixes."""
     write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
