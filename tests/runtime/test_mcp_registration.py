@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-import pytest
 from typer.testing import CliRunner
 
 from waterology.cli import app
@@ -34,7 +33,7 @@ def test_opencode_project_config_uses_current_v2_shape() -> None:
 
 
 def test_runtime_config_snippets_contain_no_machine_paths_or_environment() -> None:
-    for runtime in (Runtime.CLAUDE, Runtime.CODEX, Runtime.OPENCODE):
+    for runtime in (Runtime.CLAUDE, Runtime.CODEX, Runtime.OPENCODE, Runtime.PI):
         config = runtime_mcp_config(runtime)
         serialized = json.dumps(config, sort_keys=True)
         assert "waterology-mcp" in serialized
@@ -42,14 +41,31 @@ def test_runtime_config_snippets_contain_no_machine_paths_or_environment() -> No
         assert "environment" not in serialized
 
 
-def test_pi_mcp_registration_is_explicitly_unsupported() -> None:
-    with pytest.raises(ValueError, match="no built-in MCP"):
-        runtime_mcp_config(Runtime.PI)
+def test_pi_uses_builtin_mcp_registration() -> None:
+    assert runtime_mcp_config(Runtime.PI) == {
+        "mcpServers": {"waterology": {"command": "waterology-mcp"}}
+    }
 
     result = runner.invoke(app, ["mcp", "config", "pi", "--json"])
 
-    assert result.exit_code == 2
-    assert "no built-in MCP" in result.output
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["command"] == [
+        "pi",
+        "mcp",
+        "add",
+        "--local",
+        "waterology",
+        "--",
+        "waterology-mcp",
+    ]
+
+
+def test_pi_package_extension_registers_stdio_server() -> None:
+    extension = (ROOT / "pi-extensions" / "waterology-mcp.ts").read_text(encoding="utf-8")
+
+    assert 'pi.registerMcpServer("waterology", {' in extension
+    assert 'command: "waterology-mcp",' in extension
 
 
 def test_registration_commands_use_supported_runtime_interfaces() -> None:
@@ -67,7 +83,15 @@ def test_registration_commands_use_supported_runtime_interfaces() -> None:
     )
     assert registration_command(Runtime.CODEX) is None
     assert registration_command(Runtime.OPENCODE) is None
-    assert registration_command(Runtime.PI) is None
+    assert registration_command(Runtime.PI) == (
+        "pi",
+        "mcp",
+        "add",
+        "--local",
+        "waterology",
+        "--",
+        "waterology-mcp",
+    )
 
 
 def test_mcp_config_cli_prints_machine_neutral_runtime_snippet() -> None:

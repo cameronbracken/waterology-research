@@ -1,6 +1,6 @@
 {
   "name": "waterology-research",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Research workflows for Claude Code, Codex, OpenCode, and Pi",
   "private": true,
   "keywords": [
@@ -9,6 +9,9 @@
     "reproducibility"
   ],
   "pi": {
+    "extensions": [
+      "./pi-extensions"
+    ],
     "skills": [
       "./skills"
     ]

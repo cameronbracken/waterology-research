@@ -195,8 +195,20 @@ pi install npm:pi-subagents
 ```
 
 Agents with web capabilities also require the web tools documented by
-`pi-subagents`. Pi still has no built-in MCP registration, so use the installed
-`waterology` CLI from Pi's shell tool for managed operations.
+`pi-subagents`.
+
+The package also loads `pi-extensions/waterology-mcp.ts`, which registers the
+`waterology-mcp` stdio server with Pi's built-in MCP support (Pi 1.0 or later).
+Its tools appear as `mcp__waterology__<tool>` and use Pi's default `codemode`
+exposure. Check the connection with `/mcp` inside a session. Without the
+package, add the server to the project's `.pi/mcp.json`:
+
+```console
+pi mcp add --local waterology -- waterology-mcp
+```
+
+Remove `pi-mcp-adapter` and any `"-builtin:mcp"` entry in Pi's `extensions`
+setting, because either one disables the built-in MCP support.
 
 ### Claude Code plugin
 

@@ -2,12 +2,10 @@ from waterology.runtime.install import Runtime
 
 
 def runtime_mcp_config(runtime: Runtime) -> dict[str, object]:
-    if runtime is Runtime.CLAUDE:
+    if runtime in (Runtime.CLAUDE, Runtime.PI):
         return {"mcpServers": {"waterology": {"command": "waterology-mcp"}}}
     if runtime is Runtime.CODEX:
         return {"mcp_servers": {"waterology": {"command": "waterology-mcp"}}}
-    if runtime is Runtime.PI:
-        raise ValueError("Pi has no built-in MCP registration; use the Waterology skills and CLI")
     return {
         "$schema": "https://opencode.ai/config.json",
         "mcp": {
@@ -35,4 +33,6 @@ def registration_command(runtime: Runtime) -> tuple[str, ...] | None:
             "--",
             "waterology-mcp",
         )
+    if runtime is Runtime.PI:
+        return ("pi", "mcp", "add", "--local", "waterology", "--", "waterology-mcp")
     return None

@@ -33,7 +33,9 @@ The Pi adapter installs canonical skills and generated agents under
 a native Pi package and can be registered with
 `pi install /path/to/waterology-research`. Install `npm:pi-subagents` separately
 to run the namespaced `waterology.*` agents; Pi core does not load agent
-definitions itself.
+definitions itself. The package also registers the Waterology MCP server with
+Pi's built-in MCP support. Without the package, run
+`pi mcp add --local waterology -- waterology-mcp`.
 
 Use `--scope user` for user configuration. Preview changes with `--dry-run` when the command
 supports it.

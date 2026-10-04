@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "waterology-research"
-version = "0.7.1"
+version = "0.7.2"
 description = "Research workflows for Claude Code, Codex, OpenCode, and Pi"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -55,6 +55,7 @@ packages = ["src/waterology", "src/waterology_assets"]
 ".codex/config.toml" = "waterology_assets/.codex/config.toml"
 ".opencode/agents" = "waterology_assets/.opencode/agents"
 "pi-agents" = "waterology_assets/pi-agents"
+"pi-extensions" = "waterology_assets/pi-extensions"
 ".claude-plugin" = "waterology_assets/.claude-plugin"
 ".codex-plugin" = "waterology_assets/.codex-plugin"
 ".mcp.json" = "waterology_assets/.mcp.json"

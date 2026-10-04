@@ -16,6 +16,7 @@ from waterology.runtime.skills import parse_skill
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 MANIFESTS = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
+PI_PACKAGE_RESOURCES = {"extensions": ["./pi-extensions"], "skills": ["./skills"]}
 GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents", "pi-agents")
 GENERATED_AGENT_SUFFIXES = {
     ".codex/agents": ".toml",
@@ -93,9 +94,13 @@ def _validate_pi_package(catalog: AssetCatalog) -> list[ValidationIssue]:
     keywords = data.get("keywords")
     if not isinstance(keywords, list) or "pi-package" not in keywords:
         issues.append(ValidationIssue(relative, "missing-field", "keywords: pi-package"))
-    if data.get("pi") != {"skills": ["./skills"]}:
+    if data.get("pi") != PI_PACKAGE_RESOURCES:
         issues.append(
-            ValidationIssue(relative, "invalid-pi-package", "pi.skills must select ./skills")
+            ValidationIssue(
+                relative,
+                "invalid-pi-package",
+                "pi must select ./pi-extensions and ./skills",
+            )
         )
     if data.get("pi-subagents") != {"agents": ["./pi-agents"]}:
         issues.append(
@@ -204,9 +209,7 @@ def _validate_skill_commands(catalog: AssetCatalog) -> list[ValidationIssue]:
     for filename in sorted(expected_commands - entries.keys()):
         command_assets_valid = False
         issues.append(
-            ValidationIssue(
-                f"commands/{filename}", "missing-asset", "generated command is missing"
-            )
+            ValidationIssue(f"commands/{filename}", "missing-asset", "generated command is missing")
         )
     for filename, path in sorted(entries.items()):
         if filename in expected_commands and not path.is_file():
