@@ -68,8 +68,8 @@ five item `Start Here` list. For a publication corpus, identify the research
 trajectories and papers that changed its direction based on originality,
 methodology, and relationship to prior work rather than author prestige.
 
-After drafting, use the `verifier` for inline citations and source URL checks,
-then the `reviewer` for unsupported claims, logical gaps, incomplete sections,
+After drafting, use the `research-verifier` for inline citations and source URL checks,
+then the `research-reviewer` for unsupported claims, logical gaps, incomplete sections,
 and critical findings supported by only one source. Run these sequentially. Fix
 fatal findings before delivery and record unresolved major findings as open
 questions.
@@ -79,5 +79,5 @@ Save the review to `docs/<slug>.md` and provenance to
 verification status, intermediate files, and unresolved gaps. Confirm both
 files exist before reporting completion.
 
-Agents used: `researcher`, `verifier`, `reviewer`.
+Agents used: `researcher`, `research-verifier`, `research-reviewer`.
 Output: `docs/<slug>.md` with `docs/<slug>.provenance.md`.

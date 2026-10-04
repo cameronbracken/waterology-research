@@ -36,8 +36,8 @@ def test_bundled_runtime_resources_match_root_assets() -> None:
 def test_slice_3_monte_carlo_contract_is_complete() -> None:
     simulation = _read("skills/simulation-study/SKILL.md")
     conventions = _read("rules/simulation-conventions.md")
-    r_reviewer = _read("agent-definitions/r-reviewer.md")
-    sim_reviewer = _read("agent-definitions/sim-reviewer.md")
+    code_reviewer = _read("agent-definitions/simulation-code-reviewer.md")
+    sim_reviewer = _read("agent-definitions/simulation-reviewer.md")
 
     for text in (simulation, conventions, sim_reviewer):
         assert "coverage" in text.lower()
@@ -45,10 +45,11 @@ def test_slice_3_monte_carlo_contract_is_complete() -> None:
         assert "MCSE" in text
         assert "failed" in text.lower() or "non-converged" in text.lower()
         assert "raw" in text.lower()
+    assert "`simulation-coordinator`" in simulation
     assert "generate_data" in simulation
-    assert "L'Ecuyer-CMRG" in simulation
-    assert "11" in r_reviewer
-    assert "hydrology" in r_reviewer.lower()
+    assert "`simulation-code-reviewer`" in simulation
+    assert "`simulation-code-reviewer`" in sim_reviewer
+    assert "`simulation-reviewer`" in code_reviewer
     assert "coverage-against-the-estimate" in sim_reviewer
 
 
@@ -83,10 +84,13 @@ def test_mcse_constraint_flags_result_tables_without_uncertainty(tmp_path: Path)
         "a,0.1,0.02,0.95,0.005,0.2,0.01,0.05,0.003\n",
         encoding="utf-8",
     )
-    assert subprocess.run(
-        [sys.executable, str(ROOT / "constraints/mc-has-mcse.py"), str(tmp_path)],
-        check=False,
-    ).returncode == 0
+    assert (
+        subprocess.run(
+            [sys.executable, str(ROOT / "constraints/mc-has-mcse.py"), str(tmp_path)],
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def test_slice_4_reproducibility_capture_covers_supported_stacks() -> None:
@@ -135,7 +139,12 @@ def test_slice_5_bibliography_validator_contract_and_fuzzy_matching(tmp_path: Pa
         encoding="utf-8",
     )
     result = subprocess.run(
-        [sys.executable, str(ROOT / "skills/bib-validate/scripts/validate_bib.py"), str(tex), str(bib)],
+        [
+            sys.executable,
+            str(ROOT / "skills/bib-validate/scripts/validate_bib.py"),
+            str(tex),
+            str(bib),
+        ],
         capture_output=True,
         check=False,
         text=True,
@@ -158,8 +167,7 @@ def test_bibliography_validator_reads_quarto_and_checks_doi_metadata(monkeypatch
         }
     }
     citations = validator.citation_keys(
-        "Quarto cites [@Bracken2026; @Doe2025] and @Smith2024.\n"
-        "```python\n@not_a_citation\n```\n"
+        "Quarto cites [@Bracken2026; @Doe2025] and @Smith2024.\n```python\n@not_a_citation\n```\n"
     )
     assert citations == {"Bracken2026", "Doe2025", "Smith2024"}
 
@@ -206,10 +214,13 @@ def test_slice_6_pipeline_and_conservation_contract(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "mass_balance" in result.stdout
     evidence.write_text("metric: mass_balance\nerror: 0.0002\ntolerance: 0.001\n", encoding="utf-8")
-    assert subprocess.run(
-        [sys.executable, str(ROOT / "constraints/conservation-tol.py"), str(tmp_path)],
-        check=False,
-    ).returncode == 0
+    assert (
+        subprocess.run(
+            [sys.executable, str(ROOT / "constraints/conservation-tol.py"), str(tmp_path)],
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def test_slice_7_document_build_tools(tmp_path: Path) -> None:
@@ -294,7 +305,7 @@ Result caption.
     layout = layout_dir / "layout.qmd"
     layout.write_text(
         "---\ntitle: Layout\nfig-width: 80%\n---\n\n"
-        "![](figure.png){width=100%}\n<div style=\"width: 75%\">Panel</div>\n",
+        '![](figure.png){width=100%}\n<div style="width: 75%">Panel</div>\n',
         encoding="utf-8",
     )
     result = subprocess.run(

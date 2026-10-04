@@ -470,9 +470,31 @@ constraint, validating the full repository, or preparing a release.
 
 ## Research workflows
 
-The bundle provides eight agents: `engineer`, `researcher`, `writer`, `verifier`,
-`reviewer`, `r-reviewer`, `sim-reviewer`, and `reproducibility-auditor`. It also
-installs research skills and Claude Code compatibility commands.
+The bundle provides eleven agents: `research-coordinator`, `researcher`,
+`research-syntesizer`, `research-verifier`, `research-reviewer`, `engineer`,
+`simulation-coordinator`, `simulation-code-reviewer`, `simulation-reviewer`,
+`replication-coordinator`, and `reproducibility-auditor`.
+It also installs research skills and Claude Code compatibility commands.
+
+Use `research-coordinator` to hand off a complete investigation. It follows
+`deep-research`, maintains the plan and task ledger, inspects specialist outputs,
+and returns the final brief and provenance. Supply the recorded plan approval
+or expect a planning checkpoint before investigation begins. Where nested
+agents are unavailable, the coordinator returns briefs for the parent to
+dispatch and resumes from their artifacts. This role does not add a runtime
+agent launcher or change compute and approval boundaries.
+
+Use `simulation-coordinator` to hand off a Monte Carlo study using its existing
+language and toolchain. It follows `simulation-study`, coordinates implementation
+and statistical reviews, and resumes from Waterology run records. Its brief
+names the execution owner and allowed compute; delegation does not grant extra
+compute or permit changing the study's acceptance criteria.
+
+Use `replication-coordinator` to hand off a paper, benchmark, or deliverable
+replication. It follows `replication`, owns the claim ledger and audit handoff,
+and distinguishes restoration of an existing deliverable from a new
+implementation. Recorded environment and compute authority remain in force;
+completed work may report disagreement rather than successful reproduction.
 
 The `writing-style` skill supplies shared prose guidance and a scientific
 writing layer. The `research-software-quality` skill scales testing, debugging,
@@ -494,7 +516,6 @@ support, MyST to Quarto conversion, and verified LaTeX builds.
 | `/engineering` | Build or repair to a specification, or optimize under constraints |
 | `/deepresearch` | Multi source investigation to a cited brief with provenance |
 | `/lit` | Literature review or a publication corpus review |
-| `/draft` | Findings to a paper style Quarto or LaTeX draft |
 | `/review` | Internal critique with severity and a revision plan |
 | `/audit` | Compare paper claims with a codebase |
 | `/audit-reproducibility` | Check numeric claims against produced outputs |

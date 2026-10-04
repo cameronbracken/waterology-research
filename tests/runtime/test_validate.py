@@ -33,7 +33,7 @@ def test_runtime_manifests_have_matching_identity() -> None:
     pi = json.loads(catalog.path("package.json").read_text())
 
     assert claude["name"] == codex["name"] == "waterology"
-    assert claude["version"] == codex["version"] == pi["version"] == "0.7.0"
+    assert claude["version"] == codex["version"] == pi["version"] == "0.8.0"
     assert pi["pi"] == {"skills": ["./skills"]}
     assert pi["pi-subagents"] == {"agents": ["./pi-agents"]}
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
@@ -50,7 +50,7 @@ def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     package = catalog.path("package.json")
     package.write_text(
-        '{"version":"0.7.0","keywords":["pi-package"],"pi":{"skills":[]},'
+        '{"version":"0.8.0","keywords":["pi-package"],"pi":{"skills":[]},'
         '"pi-subagents":{"agents":[]}}\n',
         encoding="utf-8",
     )
@@ -58,8 +58,7 @@ def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
     issues = validate_assets(catalog)
 
     assert any(
-        issue.path == "package.json" and issue.code == "invalid-pi-package"
-        for issue in issues
+        issue.path == "package.json" and issue.code == "invalid-pi-package" for issue in issues
     )
 
 
@@ -133,8 +132,7 @@ def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> N
     catalog = copied_catalog(tmp_path)
     skill = catalog.path("skills/eli5/SKILL.md")
     skill.write_text(
-        skill.read_text(encoding="utf-8")
-        + "\n[Missing reference](references/missing.md)\n",
+        skill.read_text(encoding="utf-8") + "\n[Missing reference](references/missing.md)\n",
         encoding="utf-8",
     )
 
@@ -155,8 +153,7 @@ def test_validation_checks_nested_skill_references_and_images(tmp_path: Path) ->
     reference.write_text("![Missing image](missing.png)\n", encoding="utf-8")
     skill = skill_directory / "SKILL.md"
     skill.write_text(
-        skill.read_text(encoding="utf-8")
-        + "\n[Guide](references/guide.md)\n",
+        skill.read_text(encoding="utf-8") + "\n[Guide](references/guide.md)\n",
         encoding="utf-8",
     )
 
@@ -278,9 +275,7 @@ def test_validation_reports_a_missing_manifest(tmp_path: Path) -> None:
     assert not manifest.exists()
 
 
-@pytest.mark.parametrize(
-    "directory", (".codex/agents", "agents", ".opencode/agents", "pi-agents")
-)
+@pytest.mark.parametrize("directory", (".codex/agents", "agents", ".opencode/agents", "pi-agents"))
 def test_validation_reports_a_missing_generated_agent_directory(
     tmp_path: Path, directory: str
 ) -> None:
@@ -332,17 +327,17 @@ def test_validation_reports_a_missing_canonical_agent_and_orphaned_adapters(
     tmp_path: Path,
 ) -> None:
     catalog = copied_catalog(tmp_path)
-    catalog.path("agent-definitions/writer.md").unlink()
+    catalog.path("agent-definitions/research-syntesizer.md").unlink()
 
     issues = validate_assets(catalog)
     issue_codes = {(issue.path, issue.code) for issue in issues}
 
-    assert ("agent-definitions/writer.md", "missing-asset") in issue_codes
+    assert ("agent-definitions/research-syntesizer.md", "missing-asset") in issue_codes
     for path in (
-        "agents/writer.md",
-        ".codex/agents/writer.toml",
-        ".opencode/agents/writer.md",
-        "pi-agents/writer.md",
+        "agents/research-syntesizer.md",
+        ".codex/agents/research-syntesizer.toml",
+        ".opencode/agents/research-syntesizer.md",
+        "pi-agents/research-syntesizer.md",
     ):
         assert (path, "orphaned-generated-agent") in issue_codes
 
@@ -381,7 +376,7 @@ def test_validation_checks_an_unexpected_canonical_agent_definition(tmp_path: Pa
     unexpected = catalog.path("agent-definitions") / "extra.md"
     unexpected.write_text(
         "---\n"
-        "name: writer\n"
+        "name: research-syntesizer\n"
         "description: Unexpected agent.\n"
         "capabilities: [read]\n"
         "---\n\n"
@@ -398,15 +393,17 @@ def test_validation_checks_an_unexpected_canonical_agent_definition(tmp_path: Pa
 
 def test_validation_reports_a_canonical_filename_name_mismatch(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    writer = catalog.path("agent-definitions/writer.md")
+    writer = catalog.path("agent-definitions/research-syntesizer.md")
     writer.write_text(
-        writer.read_text(encoding="utf-8").replace("name: writer", "name: reviewer", 1),
+        writer.read_text(encoding="utf-8").replace(
+            "name: research-syntesizer", "name: research-reviewer", 1
+        ),
         encoding="utf-8",
     )
 
     issues = validate_assets(catalog)
 
-    assert ("agent-definitions/writer.md", "invalid-name") in {
+    assert ("agent-definitions/research-syntesizer.md", "invalid-name") in {
         (issue.path, issue.code) for issue in issues
     }
 
@@ -420,7 +417,7 @@ def test_validation_reports_a_canonical_filename_name_mismatch(tmp_path: Path) -
         (
             (
                 "---\n"
-                "name: writer\n"
+                "name: research-syntesizer\n"
                 "description: Write research results.\n"
                 "capabilities: [invalid]\n"
                 "---\n\n"
@@ -434,20 +431,22 @@ def test_validation_reports_invalid_canonical_agent_definitions(
     tmp_path: Path, content: str, code: str
 ) -> None:
     catalog = copied_catalog(tmp_path)
-    catalog.path("agent-definitions/writer.md").write_text(content, encoding="utf-8")
+    catalog.path("agent-definitions/research-syntesizer.md").write_text(content, encoding="utf-8")
 
     issues = validate_assets(catalog)
 
-    assert ("agent-definitions/writer.md", code) in {(issue.path, issue.code) for issue in issues}
+    assert ("agent-definitions/research-syntesizer.md", code) in {
+        (issue.path, issue.code) for issue in issues
+    }
 
 
 @pytest.mark.parametrize(
     ("directory", "filename"),
     (
-        ("agents", "writer.md"),
-        (".codex/agents", "writer.toml"),
-        (".opencode/agents", "writer.md"),
-        ("pi-agents", "writer.md"),
+        ("agents", "research-syntesizer.md"),
+        (".codex/agents", "research-syntesizer.toml"),
+        (".opencode/agents", "research-syntesizer.md"),
+        ("pi-agents", "research-syntesizer.md"),
     ),
 )
 def test_validation_reports_a_missing_generated_agent(

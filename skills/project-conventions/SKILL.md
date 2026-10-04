@@ -135,10 +135,10 @@ judgment → a convention (a `rules/*.md` entry).
   rv/renv, lockfile hygiene, relocation pitfalls).
 - **`publish-blog-post`** — the waterology-blog post workflow (webp media,
   R2 uploads, publish checklist).
-- **research bundle** — source-grounded research agents (`researcher`, `writer`,
-  `verifier`, `reviewer`), skills (`deep-research`, `literature-review`,
-  `paper-writing`, `figure-style`, ...), and slash workflows (`/deepresearch`,
-  `/lit`, `/draft`, `/review`, `/summarize`, ...).
+- **research bundle** — source-grounded research agents (`researcher`, `research-syntesizer`,
+  `research-verifier`, `research-reviewer`), skills (`deep-research`, `literature-review`,
+  `figure-style`, ...), and slash workflows (`/deepresearch`,
+  `/lit`, `/review`, `/summarize`, ...).
 
 ## Software quality
 

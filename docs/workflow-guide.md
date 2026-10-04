@@ -23,7 +23,7 @@ explanation below each diagram for readers without diagram support.
 | Run an existing project task | A named workflow | A run archive tied to a committed source version |
 | Test one deliberate change | An experiment worktree and a run | The candidate commit, measurements, and assessment |
 | Evaluate a bounded sequence of changes | A managed study | Frozen evaluation, candidate history, budgets, and outcomes |
-| Explain or challenge results | `paper-writing`, `research-review`, or `audit-reproducibility` | A report, critique, or claim-to-output audit |
+| Challenge or audit results | `research-review` or `audit-reproducibility` | A critique or claim-to-output audit |
 | Hand off a selected result | A deliverable and reproduction check | Reference run, declared checks, export, and reproduction outcome |
 
 Skills guide an agent's work. They do not all launch a managed calculation.
@@ -249,8 +249,8 @@ data before handing off the result.
 | Reproduction is blocked | Resolve the recorded prerequisite; do not describe it as an output mismatch |
 | Reproduction passed | Report the checks and environment covered by that result |
 
-Use `paper-writing` for a report, `research-review` for a critique, and
-`audit-reproducibility` to trace manuscript numbers to produced outputs. Save a
+Use `research-review` for a critique and `audit-reproducibility` to trace
+manuscript numbers to produced outputs. Save a
 session log for unfinished work. Retrieve verified project lessons before the
 next substantial task. Neither a report nor a completed study automatically
 publishes, deploys, or changes shared skills.

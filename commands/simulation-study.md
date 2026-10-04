@@ -1,6 +1,6 @@
 ---
 description: 'Alias for the `simulation-study` skill: Design, scaffold, run, and review
-  a reproducible Monte Carlo study in R.'
+  a reproducible Monte Carlo study using the project''s language and toolchain.'
 argument-hint: <estimators and data generating process>
 ---
 

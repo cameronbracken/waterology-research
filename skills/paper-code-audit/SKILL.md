@@ -29,11 +29,11 @@ risks. Use repository tools such as Git or `gh` when local inspection requires
 them.
 
 For a broad audit, delegate evidence gathering to the `researcher` and source
-and citation checks to the `verifier` through the runtime's available agent
+and citation checks to the `research-verifier` through the runtime's available agent
 mechanism. Keep ownership and expected artifact paths explicit in each brief.
 
 Save exactly one report to `docs/<slug>-audit.md`. End it with a `Sources`
 section containing direct paper and repository URLs.
 
-Agents used: `researcher`, `verifier` (for non-trivial audits).
+Agents used: `researcher`, `research-verifier` (for non-trivial audits).
 Output: `docs/<slug>-audit.md`.

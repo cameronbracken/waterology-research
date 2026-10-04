@@ -70,10 +70,14 @@ source are credited here; this page is the canonical list.
   (`audit-reproducibility` skill and `passport.yaml` schema). The portable
   version adds Fortran and fixed-width outputs and removes Stata specific
   material. The Monte Carlo trio
-  (`simulation-study`, `sim-reviewer`, and simulation conventions), the
-  `r-reviewer`, environment capture, and LaTeX compile workflow are also
+  (`simulation-study`, `simulation-reviewer` (formerly `sim-reviewer`), and simulation conventions), the
+  `simulation-code-reviewer` (formerly `r-reviewer`), environment capture,
+  and LaTeX compile workflow are also
   adapted. Stata, economic estimator examples, and product specific control
-  flow are stripped. `r-package-check` was not ported.
+  flow are stripped. `r-package-check` was not ported. Simulation reviews now
+  report study-specific checks and evidence limits rather than an unconditional
+  trustworthiness verdict. The simulation workflow and conventions now support
+  project-selected languages, RNG mechanisms, and documented output formats.
 - **Credit string:** *Adapted from pedrohcgs/claude-code-my-workflow (MIT,
   © 2026 Pedro H. C. Sant'Anna).*
 - **Note:** Sant'Anna credits the "passport" concept itself to
@@ -91,6 +95,8 @@ source are credited here; this page is the canonical list.
 - **What we adapt:** the `reproducibility-auditor` and its 12-row checklist,
   pipeline traceability, bibliography and DOI validation through OpenAlex and
   Crossref, box-specific LaTeX diagnostics, and the no hardcoded results rule.
+  The auditor separates inspection from reproduction evidence review, records
+  applicability, and leaves execution to the calling workflow.
   The pinned tree no longer contains the roadmap's named `myst_to_quarto.py`,
   so Waterology implements that recorded conversion contract without copying
   unavailable source.
@@ -106,18 +112,26 @@ source are credited here; this page is the canonical list.
 - **Original paths:** `.feynman/agents/{researcher,reviewer,verifier,writer}.md`,
   `skills/*/SKILL.md`, and `prompts/{audit,autoresearch,compare,deepresearch,
   draft,lit,log,recipe,replicate,review,summarize,watch}.md`.
-- **What we adapt:** the four research subagents (`researcher`, `writer`,
-  `verifier`, `reviewer`), the general-research skills (`deep-research`,
-  `literature-review`, `paper-writing`, `paper-narrative`, `paper-code-audit`,
+- **What we adapt:** the four research subagents (`researcher`, `research-syntesizer` (formerly `writer`),
+  `research-verifier` (formerly `verifier`), `research-reviewer` (formerly `reviewer`)), the general-research skills (`deep-research`,
+  `literature-review`, `paper-narrative`, `paper-code-audit`,
   `research-review`, `source-comparison`, `figure-composer`, `figure-style`,
   `replication`, `pdf-explore`, `eli5`, `ml-training-recipe`, `session-log`,
   `watch`, `autoresearch`, `source-summarization`), and the matching
   slash-command workflows
-  (`/deepresearch`, `/lit`, `/draft`, `/review`, `/audit`, `/compare`,
+  (`/deepresearch`, `/lit`, `/review`, `/audit`, `/compare`,
   `/replicate`, `/recipe`, `/autoresearch`, `/watch`, `/log`, `/summarize`).
   Feynman's tool names and product assumptions are replaced with capability
   descriptions that work in Claude Code, Codex, and OpenCode. Durable workflow
-  behavior now lives in canonical skills.
+  behavior now lives in canonical skills. The retired `paper-writing` skill
+  and `/draft` command also derived from this source. The researcher adaptation
+  supports local artifact evidence, task-specific coverage, and explicit search
+  limits. The research verifier preserves citation formats and records source
+  access separately from claim support. Replication routing now distinguishes
+  existing deliverable restoration from new implementation, with a single
+  execution owner and audits tied to exact evidence versions. The research reviewer adapts its methods
+  and reasoning checks to the artifact and reports evidence, severity, location,
+  and remedy for each finding.
   The `commands/` files are generated Claude compatibility shims.
   Computational biology model wrappers and Feynman
   product internal skills are dropped. Figures, papers, and examples are
@@ -186,7 +200,8 @@ source are credited here; this page is the canonical list.
   contrast, hue, and chroma constraints for its report palette. No repository
   source code or notebook cells are copied.
 - **Waterology files:** `src/waterology/core/report_colors.py`, managed report
-  bundles, `skills/paper-writing/SKILL.md`, and `rules/quarto-conventions.md`.
+  bundles and `rules/quarto-conventions.md`. The retired
+  `skills/paper-writing/SKILL.md` also used this method.
 
 ### William Strunk Jr. - concise prose principles
 

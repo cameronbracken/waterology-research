@@ -53,3 +53,12 @@ def test_load_skills_returns_only_command_backed_skills(tmp_path: Path) -> None:
 
     assert [skill.name for skill in skills] == ["session-log", "writing-style"]
     assert [skill.name for skill in skills if skill.claude_command] == ["session-log"]
+
+
+def test_retired_paper_workflow_is_not_packaged() -> None:
+    catalog = AssetCatalog.discover()
+    skills = load_skills(catalog)
+
+    assert "paper-writing" not in {skill.name for skill in skills}
+    assert "draft" not in {skill.claude_command.name for skill in skills if skill.claude_command}
+    assert not (catalog.root / "commands/draft.md").exists()

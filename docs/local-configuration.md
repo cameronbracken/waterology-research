@@ -58,7 +58,7 @@ r-conventions = ["r.md"]
 quarto-conventions = ["reports.md"]
 setup-environment = ["environments.md"]
 figure-style = ["figures.md"]
-paper-writing = ["reports.md"]
+research-review = ["reviews.md"]
 publish-blog-post = ["blog.md"]
 
 [profiles.local]

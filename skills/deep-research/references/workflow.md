@@ -19,6 +19,14 @@ decision, task ledger, verification log, and decision log. Summarize it and ask
 for explicit confirmation before searching, fetching, delegating, drafting, or
 reviewing. Apply requested plan changes and ask again.
 
+For a delegated investigation, the parent may hand off planning to
+`research-coordinator` before approval, but only plan preparation is authorized
+at that point. The coordinator returns the plan for the parent to obtain the
+user's confirmation. Record that approval and its scope in the plan. Reuse
+recorded approval when the plan is unchanged; request a new decision only when
+a material scope change requires it. Assignment to a coordinator alone does
+not approve the research plan.
+
 After approval, continue in degraded mode if a capability fails. Record the
 failure and still write a partial or blocked final artifact plus provenance.
 Use `Verification: BLOCKED` for checks that could not run. Do not end with chat
@@ -42,6 +50,20 @@ write each brief first under `docs/.plans/`. Give it a question, source scope,
 file ownership, output path, and return contract. Launch agents through the
 runtime's available delegation mechanism.
 
+When the coordinator cannot launch specialists, the parent may dispatch the
+written briefs and resume it with artifact paths. Record the dispatch checkpoint
+in the plan and ledger; it is not final delivery. Record task identifiers,
+launch identities, and content fingerprints or immutable snapshots for inputs
+and accepted outputs. Include input fingerprints in briefs and require workers
+to return the versions actually inspected. Compare dispatched, returned, and
+current versions before accepting a check. Bind verification and review to the
+exact input versions, including the final candidate copied for delivery.
+On resume or revision, invalidate checks whose inputs changed; an unrecorded
+input version leaves the check unverified. Resolve unknown task status before
+dispatching again. If delegation is unavailable throughout the session,
+perform the same stages directly and record the absence of independent review.
+Do not bypass runtime restrictions with an alternate agent launcher.
+
 ## Gather evidence
 
 For direct search, use at least three distinct queries that cover definition or
@@ -62,6 +84,12 @@ Write `docs/.drafts/<slug>-draft.md` with a concise summary, findings organized
 by question or theme, supported caveats and disagreements, and open questions.
 Do not invent sources, results, figures, benchmarks, or tables.
 
+For substantial synthesis, delegate this step to `research-syntesizer` when
+available and authorized. Supply the research questions, collected notes and
+sources, file ownership, and draft output path. Require source mappings and
+preserved citations with the draft. Otherwise synthesize directly. Complete
+this step before citation verification and review.
+
 Before citation, map each critical claim, number, figure, table, and benchmark
 to a source URL, research note, or artifact path. Remove or weaken unsupported
 claims and label inferences.
@@ -72,13 +100,15 @@ For direct search, verify each URL and write the cited draft yourself. Also
 write `docs/.drafts/<slug>-verification.md` with FATAL, MAJOR, and MINOR
 findings plus the checks performed.
 
-When researchers were used, run the `verifier` after the complete draft exists.
+When researchers were used, run the `research-verifier` after the complete draft exists.
 Give it the draft, research files, and `docs/.drafts/<slug>-cited.md` as its
 output. Confirm that file exists before continuing.
 
-Only after citation completes, run the `reviewer` on the cited draft. Do not run
+Only after citation completes, run the `research-reviewer` on the cited draft. Do not run
 citation and review concurrently. Fix fatal findings and perform one more
-review pass. Record unresolved major findings under Open Questions.
+review pass. If revisions change claims, evidence, or citations, repeat the
+affected verification before that review. Record unresolved major findings
+under Open Questions.
 
 Use localized edits for a few simple corrections. For a larger rewrite, write
 `docs/.drafts/<slug>-revised.md`. Check on disk that corrected text is present

@@ -26,8 +26,8 @@ def test_plugin_consolidation_skills_are_discoverable() -> None:
 
 def test_writing_workflows_use_the_shared_style_skill() -> None:
     consumers = (
-        ROOT / "agent-definitions/reviewer.md",
-        ROOT / "agent-definitions/writer.md",
+        ROOT / "agent-definitions/research-reviewer.md",
+        ROOT / "agent-definitions/research-syntesizer.md",
         ROOT / "skills/audit-reproducibility/SKILL.md",
         ROOT / "skills/autoresearch/SKILL.md",
         ROOT / "skills/deep-research/SKILL.md",
@@ -37,7 +37,6 @@ def test_writing_workflows_use_the_shared_style_skill() -> None:
         ROOT / "skills/literature-review/SKILL.md",
         ROOT / "skills/ml-training-recipe/SKILL.md",
         ROOT / "skills/paper-code-audit/SKILL.md",
-        ROOT / "skills/paper-writing/SKILL.md",
         ROOT / "skills/paper-narrative/SKILL.md",
         ROOT / "skills/pdf-explore/SKILL.md",
         ROOT / "skills/publish-blog-post/SKILL.md",
@@ -144,7 +143,7 @@ def test_paper_code_audit_is_portable_and_owns_its_evidence_contract() -> None:
     assert "docs/.plans/<slug>.md" in text
     assert "docs/<slug>-audit.md" in text
     assert "README" in text
-    assert "verifier" in text
+    assert "research-verifier" in text
 
 
 def test_source_comparison_is_portable_and_owns_its_matrix_contract() -> None:
@@ -155,7 +154,7 @@ def test_source_comparison_is_portable_and_owns_its_matrix_contract() -> None:
     assert "docs/<slug>-comparison.md" in text
     assert "evidence type" in text.lower()
     assert "agreement" in text.lower()
-    assert "verifier" in text
+    assert "research-verifier" in text
     assert "verify every source URL and inline citation directly" in text
     assert "delegate verification" in text
 
@@ -171,17 +170,6 @@ def test_watch_is_portable_and_separates_baseline_from_scheduling() -> None:
     assert "explicitly asks" in text
 
 
-def test_paper_writing_is_portable_and_preserves_result_provenance() -> None:
-    text = (ROOT / "skills/paper-writing/SKILL.md").read_text(encoding="utf-8")
-
-    assert "`/draft`" not in text
-    assert "docs/.plans/<slug>.md" in text
-    assert "papers/<slug>.md" in text
-    assert "computed number" in text
-    assert "placeholder" in text
-    assert "writer" in text and "verifier" in text
-
-
 def test_literature_review_is_portable_and_preserves_multihop_search() -> None:
     text = (ROOT / "skills/literature-review/SKILL.md").read_text(encoding="utf-8")
 
@@ -190,7 +178,7 @@ def test_literature_review_is_portable_and_preserves_multihop_search() -> None:
     assert "docs/<slug>.provenance.md" in text
     assert "hop" in text.lower()
     assert "publication corpus" in text.lower()
-    assert "verifier" in text and "reviewer" in text
+    assert "research-verifier" in text and "research-reviewer" in text
 
 
 def test_research_review_is_portable_and_leaves_a_review_when_blocked() -> None:
@@ -201,7 +189,7 @@ def test_research_review_is_portable_and_leaves_a_review_when_blocked() -> None:
     assert "docs/.drafts/<slug>-review-evidence.md" in text
     assert "docs/<slug>-review.md" in text
     assert "Verification: BLOCKED" in text
-    assert "reviewer" in text
+    assert "research-reviewer" in text
 
 
 def test_ml_training_recipe_is_portable_and_checks_dataset_usability() -> None:
@@ -232,6 +220,8 @@ def test_replication_is_portable_and_requires_environment_authorization() -> Non
         assert f"`{assessment}`" in text
     assert "CHANGELOG.md" in text
     assert "claim ledger" in text.lower()
+    assert "`reproducibility-auditor`" in text
+    assert "`replication-coordinator`" in text
 
 
 def test_autoresearch_is_portable_bounded_and_reproducible() -> None:
@@ -271,6 +261,7 @@ def test_deep_research_is_portable_and_preserves_durable_delivery() -> None:
 
     assert "`/deepresearch`" not in skill
     assert "references/workflow.md" in skill
+    assert "`research-coordinator`" in skill
     assert workflow_path.is_file()
 
     workflow = workflow_path.read_text(encoding="utf-8")
@@ -283,7 +274,7 @@ def test_deep_research_is_portable_and_preserves_durable_delivery() -> None:
         assert artifact in workflow
     assert "explicit confirmation" in workflow.lower()
     assert "direct search" in workflow.lower()
-    assert workflow.index("`verifier`") < workflow.index("`reviewer`")
+    assert workflow.index("`research-verifier`") < workflow.index("`research-reviewer`")
     assert "Verification: BLOCKED" in workflow
 
 
@@ -314,7 +305,6 @@ def test_source_summarization_is_portable_bounded_and_single_source() -> None:
 
     researcher = (ROOT / "agent-definitions/researcher.md").read_text(encoding="utf-8")
     assert "Single source chunk mode" in researcher
-    assert "five source minimum does not apply" in researcher.lower()
     assert "Do not search the web" in researcher
 
 
@@ -361,7 +351,6 @@ def test_research_skills_are_portable() -> None:
         "myst-to-quarto",
         "paper-code-audit",
         "paper-narrative",
-        "paper-writing",
         "pdf-explore",
         "replication",
         "research-review",
@@ -428,7 +417,6 @@ def test_personalized_skills_have_resolvable_plugin_only_fallbacks() -> None:
         "setup-environment",
         "publish-blog-post",
         "figure-style",
-        "paper-writing",
     ):
         path = ROOT / "skills" / name / "SKILL.md"
         text = path.read_text()

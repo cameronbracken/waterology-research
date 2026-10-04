@@ -26,7 +26,7 @@ Gather primary material for every source. Delegate broad source sets to the
 `researcher` through the runtime's available agent mechanism. For a narrow
 direct comparison, verify every source URL and inline citation directly after
 drafting. For a broad or delegated comparison, delegate verification to the
-`verifier`. Give each agent explicit source scope, file ownership, and return
+`research-verifier`. Give each agent explicit source scope, file ownership, and return
 paths.
 
 Build a comparison matrix with source, claim, evidence type, caveats, and
@@ -38,5 +38,5 @@ the sources. Apply `figure-style` if a plot would change the decision.
 Save exactly one comparison to `docs/<slug>-comparison.md`. End it with a
 `Sources` section containing a direct URL for every source used.
 
-Agents used: `researcher`, `verifier`.
+Agents used: `researcher`, `research-verifier`.
 Output: `docs/<slug>-comparison.md`.

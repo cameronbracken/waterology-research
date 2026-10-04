@@ -2,41 +2,60 @@
 name: simulation-conventions
 description: Reproducibility and evidence conventions for Monte Carlo studies
 paths:
-  - "**/*simulation*.R"
-  - "**/*_sim.R"
-  - "**/*_mc.R"
+  - "**/*simulation*.*"
+  - "**/*_sim.*"
+  - "**/*_mc.*"
   - "scripts/**/simulations/**"
 ---
 
 # Monte Carlo simulation conventions
 
-A simulation is an experiment. State its DGP, truth, estimand, assumptions,
-regime, replication budget, and outputs before interpreting a result.
+A simulation is an experiment. State its DGP, target truth, estimand, assumptions,
+regime, replication budget, metrics, failure policy, and outputs before
+interpreting results. Follow project conventions for the actual languages used.
 
-## Required structure
+## Structure and targets
 
-- Use one parameterized `generate_data()` function that returns data and truth.
-- Derive truth from DGP parameters, never from a fitted estimate.
-- Match each estimator to the truth for its stated estimand.
-- For an assumption violation, change one assumption over a severity grid and include the zero dose as a control.
-- Do not use an out of assumption run to support nominal coverage, valid standard errors, consistency, or a default method.
+- Use a parameterized data-generation interface returning data and truth or a
+  traceable reference. Function names and return types follow the language.
+- Derive truth from the DGP or an established reference, not the fitted estimate
+  being evaluated. Record uncertainty in numerical reference calculations.
+- Match each method and metric to its declared target and regime. An assumption
+  violation study needs a justified scenario design and appropriate controls.
+- Do not use a violation scenario to establish validity under other assumptions.
+- Preserve frozen protocols, input identities, and acceptance criteria.
 
-## Randomness
+## Randomness and execution
 
-Set `RNGkind("L'Ecuyer-CMRG")` and one master seed. Assign a reproducible stream
-to each replication, not each worker. Qualify a parallel harness by running a
-small fixed set at two worker counts and requiring identical results.
+Record the RNG algorithm and master state or seed. Assign reproducible streams
+to replication and scenario identities rather than worker identities. Qualify
+restart and worker-count behavior with small authorized checks and a declared
+comparison rule. Document any platform or library limitations. An R implementation
+may use L'Ecuyer-CMRG; other languages use documented mechanisms appropriate to
+their runtime. Matching seed integers across languages is not a portability test.
+
+Use the registered workflow or managed-study controller for execution. Preserve
+run identities and reconcile them before resuming. Keep coordination notes
+separate from the authoritative execution records.
 
 ## Metrics and uncertainty
 
-Coverage is `mean(lower <= truth & truth <= upper)`. Bias and RMSE also use
-truth. Every reported bias, coverage, size, power, or method comparison needs
-an MCSE. If a difference is smaller than about twice its MCSE, describe it as
-unresolved at the current replication budget.
+Use target truth for bias, RMSE, and interval coverage where those metrics apply.
+Report MCSE for estimated simulation performance and comparisons under the
+actual replication design. State denominators and how failures affect them.
+Assess comparisons against the declared precision and decision criteria; a
+computed difference without uncertainty is not sufficient evidence of superiority.
+Fixed inputs and deterministic reference values do not require an MCSE.
 
 ## Failures and storage
 
-Record failed and non-converged replications and state the rule used for them.
-Save raw rows before summaries. Each raw row carries replication, scenario,
-estimator, truth, estimate, standard error, interval bounds, and status. Save
-the summary in both a machine readable and human readable form.
+Retain failed and non-converged attempts and the declared rule used for them.
+Save raw results before summaries. Retain scenario, replication, method, status,
+and randomization provenance plus the quantities needed by the chosen metrics.
+Truth may live in scenario metadata if the mapping is explicit. Require standard
+errors or intervals only for methods and metrics that use them.
+
+Use documented formats with schemas and readers appropriate to the project's
+languages. Provide interoperable tables when needed for handoff. Native object
+formats are optional. Bind code and statistical reviews to the exact source and
+output versions, and invalidate checks when those inputs change.

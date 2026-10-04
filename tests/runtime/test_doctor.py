@@ -155,7 +155,7 @@ def test_doctor_returns_exit_one_when_requested_runtime_is_missing(monkeypatch) 
 
 def test_doctor_json_reports_a_missing_canonical_agent(monkeypatch, tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    catalog.path("agent-definitions/writer.md").unlink()
+    catalog.path("agent-definitions/research-syntesizer.md").unlink()
     monkeypatch.setattr(AssetCatalog, "discover", classmethod(lambda cls: catalog))
 
     result = runner.invoke(app, ["doctor", "--json"])

@@ -33,7 +33,7 @@ with this skill name, including common preferences and matching local guidance.
 
 ## Research CLIs the agents expect (global, one-time)
 
-The `researcher`, `reviewer`, and `verifier` agents reach for two tools that
+The `researcher`, `research-reviewer`, and `research-verifier` agents reach for two tools that
 live outside any project environment. Install once per machine, not per project.
 
 - **openalex** — scholarly-metadata CLI (paper/author search, citation graphs,

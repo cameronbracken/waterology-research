@@ -23,6 +23,5 @@ revising the manuscript text.
    work to `figure-style`.
 5. Save a revision plan or manuscript draft with source and provenance notes.
 
-The output reads as a paper's evidence arc, not a generic writing checklist. For
-producing the draft itself, use `paper-writing`; for a hard critique, use
-`research-review`.
+The output reads as a paper's evidence arc, not a generic writing checklist.
+For a hard critique, use `research-review`.

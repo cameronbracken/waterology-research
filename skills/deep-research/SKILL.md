@@ -23,6 +23,14 @@ keys or ask for them in chat. Presence does not verify provider permissions.
 Read [workflow.md](references/workflow.md) and follow it for the complete plan,
 scale, evidence, drafting, citation, review, and delivery protocol.
 
+When handing a complete investigation to another agent, use
+`research-coordinator` and supply the scope, plan and approval record when
+available, owned worktree and artifacts, source and compute limits, and whether
+the parent will dispatch specialists. The coordinator follows this skill. An
+agent already coordinating the investigation keeps ownership rather than
+recursively delegating to another coordinator. Direct execution remains valid
+for a small task or when delegation adds no value.
+
 In an initialized Waterology project, build the reference library while
 researching. Use `literature_search`/`waterology discover` for recorded searches.
 Mark relevant consulted sources included with `source-decision`; this queues
@@ -38,5 +46,6 @@ paywall or storage limits leave pending work and must not erase research results
 Use existing library settings without repeated approval. Do not silently choose
 a different library or upload private source files outside the authorized scope.
 
-Agents used: `researcher`, `verifier`, `reviewer`.
+Coordinator when a complete investigation is delegated: `research-coordinator`.
+Specialists: `researcher`, `research-syntesizer`, `research-verifier`, `research-reviewer`.
 Output: a cited brief in `docs/` (or `papers/`) with a `.provenance.md` sidecar.

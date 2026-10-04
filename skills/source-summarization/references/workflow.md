@@ -89,5 +89,5 @@ Write `docs/<slug>-summary.md` with:
 - `Coverage gaps` for missing Tier 3 chunks, omitted when coverage is complete.
 - `Sources` containing only the single confirmed source from the fetch step.
 
-Do not add remembered citations or perform a verifier pass for this single
+Do not add remembered citations or perform a `research-verifier` pass for this single
 source summary. Confirm the final file exists before reporting completion.

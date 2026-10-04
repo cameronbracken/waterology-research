@@ -27,13 +27,16 @@ def test_repository_has_sorted_canonical_agents() -> None:
 
     assert [agent.name for agent in agents] == [
         "engineer",
-        "r-reviewer",
+        "replication-coordinator",
         "reproducibility-auditor",
+        "research-coordinator",
+        "research-reviewer",
+        "research-syntesizer",
+        "research-verifier",
         "researcher",
-        "reviewer",
-        "sim-reviewer",
-        "verifier",
-        "writer",
+        "simulation-code-reviewer",
+        "simulation-coordinator",
+        "simulation-reviewer",
     ]
     assert all("WebSearch" not in agent.body for agent in agents)
     assert all("WebFetch" not in agent.body for agent in agents)
