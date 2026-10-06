@@ -14,8 +14,7 @@ description: >
 This skill is the entry point for the `waterology` plugin. It loads the right
 **conventions** (judgment guidance) for the file being edited. It also runs
 **constraints** (deterministic pass/fail checks) when the current task creates
-or changes content they cover. The split between conventions and constraints
-follows Edwin Hu's methodology (*edwinhu/workflows*, MIT per README).
+or changes content they cover.
 
 ## When to use
 
