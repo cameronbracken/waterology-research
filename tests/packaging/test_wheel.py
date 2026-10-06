@@ -201,7 +201,8 @@ def test_pi_project_install_smoke(tmp_path: Path) -> None:
     result = runner.invoke(app, ["install", "pi", "--target", str(tmp_path)])
 
     assert result.exit_code == 0, result.stdout
-    assert (tmp_path / ".pi/skills/project-conventions/SKILL.md").is_file()
+    assert (tmp_path / ".pi/skills/waterology-project-conventions/SKILL.md").is_file()
+    assert (tmp_path / ".pi/prompts/waterology-deepresearch.md").is_file()
     agent = tmp_path / ".pi/agents/researcher.md"
     assert agent.is_file()
     metadata = yaml.safe_load(agent.read_text(encoding="utf-8").split("---", 2)[1])

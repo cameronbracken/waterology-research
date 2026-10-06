@@ -10,13 +10,22 @@ from pydantic import ValidationError
 from waterology import __version__
 from waterology.runtime.agents import parse_agent
 from waterology.runtime.assets import AssetCatalog, AssetNotFoundError
-from waterology.runtime.render import GeneratedAssetsStaleError, render_agents, render_commands
+from waterology.runtime.render import (
+    GeneratedAssetsStaleError,
+    render_agents,
+    render_commands,
+    render_pi_assets,
+)
 from waterology.runtime.skills import parse_skill
 
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 MANIFESTS = (".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
-PI_PACKAGE_RESOURCES = {"extensions": ["./pi-extensions"], "skills": ["./skills"]}
+PI_PACKAGE_RESOURCES = {
+    "extensions": ["./pi-extensions"],
+    "skills": ["./pi-skills"],
+    "prompts": ["./pi-prompts"],
+}
 GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents", "pi-agents")
 GENERATED_AGENT_SUFFIXES = {
     ".codex/agents": ".toml",
@@ -99,7 +108,7 @@ def _validate_pi_package(catalog: AssetCatalog) -> list[ValidationIssue]:
             ValidationIssue(
                 relative,
                 "invalid-pi-package",
-                "pi must select ./pi-extensions and ./skills",
+                "pi must select ./pi-extensions, ./pi-skills, and ./pi-prompts",
             )
         )
     if data.get("pi-subagents") != {"agents": ["./pi-agents"]}:
@@ -459,13 +468,34 @@ def _validate_generated_agents(
     return issues
 
 
+def _validate_pi_assets(catalog: AssetCatalog, definitions_valid: bool) -> list[ValidationIssue]:
+    if not definitions_valid:
+        return []
+    try:
+        render_pi_assets(catalog, catalog.root, check=True)
+    except GeneratedAssetsStaleError as error:
+        return [
+            ValidationIssue(
+                path.relative_to(catalog.root).as_posix(),
+                "stale-generated-pi-asset",
+                "rendered content, mode, or presence differs",
+            )
+            for path in error.paths
+        ]
+    return []
+
+
 def validate_assets(catalog: AssetCatalog) -> tuple[ValidationIssue, ...]:
     canonical_issues, canonical_names, canonical_valid = _validate_canonical_agents(catalog)
+    command_issues = _validate_skill_commands(catalog)
     issues = [
         *_validate_manifests(catalog),
         *_validate_pi_package(catalog),
         *_validate_skills(catalog),
-        *_validate_skill_commands(catalog),
+        *command_issues,
+        *_validate_pi_assets(
+            catalog, not any(i.code == "invalid-skill-definition" for i in command_issues)
+        ),
         *canonical_issues,
         *_validate_generated_agents(catalog, canonical_names, canonical_valid),
     ]

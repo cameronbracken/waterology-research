@@ -55,10 +55,10 @@ def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("runtime", "skill_root"),
     [
-        (Runtime.CLAUDE, ".claude/skills"),
-        (Runtime.CODEX, ".agents/skills"),
-        (Runtime.OPENCODE, ".opencode/skills"),
-        (Runtime.PI, ".pi/skills"),
+        (Runtime.CLAUDE, ".claude/skills/"),
+        (Runtime.CODEX, ".agents/skills/"),
+        (Runtime.OPENCODE, ".opencode/skills/"),
+        (Runtime.PI, ".pi/skills/waterology-"),
     ],
 )
 def test_installed_autoresearch_tree_reference_resolves(
@@ -74,7 +74,7 @@ def test_installed_autoresearch_tree_reference_resolves(
 
     apply_install_plan(plan)
 
-    skill = tmp_path / skill_root / "autoresearch/SKILL.md"
+    skill = tmp_path / f"{skill_root}autoresearch/SKILL.md"
     reference = skill.parent / "references/experiment-tree.md"
     token_reference = skill.parent / "references/token-discipline.md"
     assert skill.is_file()

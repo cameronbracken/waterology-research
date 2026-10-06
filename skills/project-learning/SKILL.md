@@ -12,7 +12,7 @@ metadata:
 
 # Project Learning
 
-Use the existing research-software-quality workflow for plan, test, implement,
+Use the existing `research-software-quality` workflow for plan, test, implement,
 review and verify. Add remember and improve at meaningful checkpoints.
 This skill owns reusable lessons. Session-log continues to own narrative handoffs.
 
@@ -64,6 +64,6 @@ The command saves a proposal. Review its scope and overlap with existing skills
 before implementing the shared change in an isolated worktree. Keep global
 preferences, shared skills and runtime permissions outside automatic promotion.
 
-Before a long-session handoff, use session-log to save active state, evidence,
+Before a long-session handoff, use `session-log` to save active state, evidence,
 blockers and restart steps. A lesson does not replace that handoff. A learning
 failure must not interrupt compute reconciliation or cancellation.

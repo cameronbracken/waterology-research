@@ -1,0 +1,30 @@
+---
+name: waterology-pdf-explore
+description: >
+  Read, extract, and cross-check content across scientific PDFs. Use when a task
+  needs methods, figures, tables, citations, data accessions, or claims from
+  more than one place in one or more papers.
+---
+
+<!-- Generated from skills/pdf-explore/SKILL.md. Do not edit. -->
+
+# PDF Explore
+
+Use `waterology-writing-style` for extracted notes, comparisons, and summaries.
+
+Use when a PDF answer depends on more than one page or section.
+
+1. Parse the PDF enough to map its structure — title, abstract, methods,
+   figures, tables, supplement references, and citations. Extract text with
+   `pdftotext` (or a layout-aware tool for tables) before reasoning over it, so
+   the content sits on disk rather than only in a single visible page.
+2. Extract the exact pages and regions that support the answer. Keep table
+   values, figure labels, accession IDs, and quoted snippets tied to their page
+   numbers.
+3. Cross-check claims against methods, captions, supplement text, and cited
+   papers when the conclusion depends on them.
+4. Save extracted notes and provenance as artifacts under `notes/` or `docs/`.
+
+Do not answer from a single visible page when the question spans methods,
+figures, or supplements. For a whole-document summary of a long PDF, use
+`waterology-source-summarization`, which keeps the text on disk and reads bounded windows.

@@ -13,7 +13,10 @@
       "./pi-extensions"
     ],
     "skills": [
-      "./skills"
+      "./pi-skills"
+    ],
+    "prompts": [
+      "./pi-prompts"
     ]
   },
   "pi-subagents": {

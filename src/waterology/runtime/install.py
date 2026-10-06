@@ -12,7 +12,7 @@ from enum import StrEnum
 from pathlib import Path, PurePosixPath
 
 from waterology import __version__
-from waterology.runtime.assets import AssetCatalog
+from waterology.runtime.assets import PI_PROMPT_DIRECTORY, PI_SKILL_DIRECTORY, AssetCatalog
 
 _RECOVERY_LOCK_NAME = ".waterology-install-recovery.lock"
 _TRANSACTION_NAME = ".waterology-install-transaction.json"
@@ -100,13 +100,13 @@ def build_install_plan(
     directories, trusted_root = _installation_layout(runtime, scope, target)
     agent_directory = _agent_directory(runtime)
     actions = (
-        _skill_actions(catalog, directories["skills"], mode)
+        _skill_actions(catalog, runtime, directories["skills"], mode)
         + (
             _file_actions(catalog, agent_directory, directories["agents"], mode)
             if agent_directory is not None
             else ()
         )
-        + _command_actions(catalog, directories.get("commands"), mode)
+        + _command_actions(catalog, runtime, directories.get("commands"), mode)
         + _mcp_configuration_actions(catalog, runtime, scope, trusted_root)
     )
     return InstallPlan(
@@ -1170,7 +1170,11 @@ def _installation_layout(
     trusted_root = _absolute_lexical(Path.home())
     if runtime is Runtime.PI:
         base = trusted_root / ".pi" / "agent"
-        return {"skills": base / "skills", "agents": base / "agents"}, trusted_root
+        return {
+            "skills": base / "skills",
+            "agents": base / "agents",
+            "commands": base / "prompts",
+        }, trusted_root
     return _runtime_directories(runtime, trusted_root), trusted_root
 
 
@@ -1185,7 +1189,11 @@ def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
         return {"skills": base / ".agents" / "skills", "agents": base / ".codex" / "agents"}
     if runtime is Runtime.OPENCODE:
         return {"skills": base / ".opencode" / "skills", "agents": base / ".opencode" / "agents"}
-    return {"skills": base / ".pi" / "skills", "agents": base / ".pi" / "agents"}
+    return {
+        "skills": base / ".pi" / "skills",
+        "agents": base / ".pi" / "agents",
+        "commands": base / ".pi" / "prompts",
+    }
 
 
 def _agent_directory(runtime: Runtime) -> str | None:
@@ -1201,11 +1209,12 @@ def _agent_directory(runtime: Runtime) -> str | None:
 
 
 def _skill_actions(
-    catalog: AssetCatalog, destination: Path, mode: InstallMode
+    catalog: AssetCatalog, runtime: Runtime, destination: Path, mode: InstallMode
 ) -> tuple[InstallAction, ...]:
+    directory = PI_SKILL_DIRECTORY if runtime is Runtime.PI else "skills"
     return tuple(
         _action(catalog, source, destination / source.name, mode)
-        for source in catalog.skill_directories()
+        for source in catalog.skill_directories(directory)
     )
 
 
@@ -1223,12 +1232,14 @@ def _file_actions(
 
 def _command_actions(
     catalog: AssetCatalog,
+    runtime: Runtime,
     destination: Path | None,
     mode: InstallMode,
 ) -> tuple[InstallAction, ...]:
     if destination is None:
         return ()
-    sources = sorted(catalog.path("commands").glob("*.md"))
+    directory = PI_PROMPT_DIRECTORY if runtime is Runtime.PI else "commands"
+    sources = sorted(catalog.path(directory).glob("*.md"))
     return tuple(_action(catalog, source, destination / source.name, mode) for source in sources)
 
 

@@ -34,7 +34,11 @@ def test_runtime_manifests_have_matching_identity() -> None:
 
     assert claude["name"] == codex["name"] == "waterology"
     assert claude["version"] == codex["version"] == pi["version"] == "0.7.2"
-    assert pi["pi"] == {"extensions": ["./pi-extensions"], "skills": ["./skills"]}
+    assert pi["pi"] == {
+        "extensions": ["./pi-extensions"],
+        "skills": ["./pi-skills"],
+        "prompts": ["./pi-prompts"],
+    }
     assert pi["pi-subagents"] == {"agents": ["./pi-agents"]}
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
         assert claude[field] == codex[field]

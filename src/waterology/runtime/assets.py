@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
+PI_SKILL_PREFIX = "waterology-"
+PI_SKILL_DIRECTORY = "pi-skills"
+PI_PROMPT_DIRECTORY = "pi-prompts"
+
 
 class AssetNotFoundError(ValueError):
     pass
@@ -35,5 +39,7 @@ class AssetCatalog:
             raise AssetNotFoundError(f"Asset does not exist: {relative}")
         return candidate
 
-    def skill_directories(self) -> tuple[Path, ...]:
-        return tuple(sorted(path.parent.resolve() for path in self.root.glob("skills/*/SKILL.md")))
+    def skill_directories(self, directory: str = "skills") -> tuple[Path, ...]:
+        return tuple(
+            sorted(path.parent.resolve() for path in self.root.glob(f"{directory}/*/SKILL.md"))
+        )

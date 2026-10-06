@@ -144,6 +144,9 @@ def test_pi_package_loads_skills_subagents_and_mcp_extension() -> None:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
 
     assert "pi-package" in package["keywords"]
-    assert package["pi"] == {"extensions": ["./pi-extensions"], "skills": ["./skills"]}
+    assert package["pi"] == {
+        "extensions": ["./pi-extensions"],
+        "skills": ["./pi-skills"],
+        "prompts": ["./pi-prompts"],
+    }
     assert package["pi-subagents"] == {"agents": ["./pi-agents"]}
-    assert "prompts" not in package["pi"]

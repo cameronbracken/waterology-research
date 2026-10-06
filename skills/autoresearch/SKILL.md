@@ -109,7 +109,7 @@ Use one managed loop with an explicit mode:
 
 Use `engineering-workflow` and the `waterology engineering` commands for an explicit
 engineering entry point. Existing engineering studies remain available through
-`autoresearch` and `study`; both use the same records and controller. Do not force engineering work
+the `autoresearch` skill and `waterology study`; both use the same records and controller. Do not force engineering work
 into a hypothesis narrative or require tree search for cumulative implementation.
 For tree search, read [experiment-tree.md](references/experiment-tree.md).
 
@@ -142,7 +142,7 @@ waterology study stop STUDY_ID
 
 Replace the profile and identifiers with resolved values. The authorization
 text must accurately describe authority already given, not invent approval.
-`create` queues the baseline experiment. `watch` drives queued evaluations and
+`study create` queues the baseline experiment. `study watch` drives queued evaluations and
 waits for new candidates until a stopping condition. It does not generate code
 or scientific conclusions by itself. The active agent owns candidate proposals unless the user authorizes a bounded
 driver. `driver` records that choice and `run` resumes supervised candidate

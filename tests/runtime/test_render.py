@@ -227,3 +227,94 @@ Write the log to `notes/<date>-session.md`.
     assert command_path.is_file()
     assert "`session-log` skill" in command_path.read_text(encoding="utf-8")
     assert render_assets(AssetCatalog.discover(source_root), output_root) == ()
+
+
+def _pi_source(tmp_path: Path) -> Path:
+    source_root = tmp_path / "source"
+    log = source_root / "skills/session-log"
+    (log / "scripts").mkdir(parents=True)
+    (log / "SKILL.md").write_text(
+        """---
+name: session-log
+description: Write a durable session log with `writing-style`.
+metadata:
+  claude-command:
+    name: log
+    argument-hint: (none)
+---
+
+Use `writing-style` for prose. Run `waterology config context session-log`.
+Keep `session-log-notes` and `watch` untouched.
+""",
+        encoding="utf-8",
+    )
+    (log / "references").mkdir()
+    (log / "references/format.md").write_text("Follow `writing-style`.\n", encoding="utf-8")
+    script = log / "scripts/check.py"
+    script.write_text("print('`writing-style`')\n", encoding="utf-8")
+    script.chmod(0o755)
+    (log / "scripts/__pycache__").mkdir()
+    (log / "scripts/__pycache__/check.pyc").write_bytes(b"\x00")
+    style = source_root / "skills/writing-style"
+    style.mkdir()
+    (style / "SKILL.md").write_text(
+        "---\nname: writing-style\ndescription: Write clearly.\n---\n\nWrite clearly.\n",
+        encoding="utf-8",
+    )
+    return source_root
+
+
+def test_pi_assets_use_prefixed_names_and_references(tmp_path: Path) -> None:
+    from waterology.runtime.render import render_pi_assets
+    from waterology.runtime.skills import parse_skill
+
+    catalog = AssetCatalog.discover(_pi_source(tmp_path))
+    output = tmp_path / "output"
+    render_pi_assets(catalog, output)
+
+    skill_path = output / "pi-skills/waterology-session-log/SKILL.md"
+    skill = parse_skill(skill_path)
+    assert skill.name == "waterology-session-log"
+    assert "`waterology-writing-style`" in skill.description
+    assert "Use `waterology-writing-style` for prose." in skill.body
+    assert "`waterology config context session-log`" in skill.body
+    assert "`session-log-notes` and `watch` untouched" in skill.body
+    assert "name: log" in skill_path.read_text(encoding="utf-8")
+
+    reference = output / "pi-skills/waterology-session-log/references/format.md"
+    assert reference.read_text(encoding="utf-8") == "Follow `waterology-writing-style`.\n"
+    script = output / "pi-skills/waterology-session-log/scripts/check.py"
+    assert script.read_text(encoding="utf-8") == "print('`writing-style`')\n"
+    assert script.stat().st_mode & 0o100
+    assert not (output / "pi-skills/waterology-session-log/scripts/__pycache__").exists()
+
+    prompt = (output / "pi-prompts/waterology-log.md").read_text(encoding="utf-8")
+    metadata, body = split_markdown_frontmatter(prompt)
+    assert metadata["argument-hint"] == "(none)"
+    assert "`waterology-session-log`" in metadata["description"]
+    assert "Read the `waterology-session-log` skill" in body
+    assert "$ARGUMENTS" in body
+    assert not (output / "pi-prompts/waterology-writing-style.md").exists()
+
+
+def test_pi_assets_check_reports_drift_mode_and_orphans(tmp_path: Path) -> None:
+    from waterology.runtime.render import render_pi_assets
+
+    catalog = AssetCatalog.discover(_pi_source(tmp_path))
+    output = tmp_path / "output"
+    render_pi_assets(catalog, output)
+    assert render_pi_assets(catalog, output, check=True) == ()
+
+    script = output / "pi-skills/waterology-session-log/scripts/check.py"
+    script.chmod(0o644)
+    orphan = output / "pi-skills/waterology-retired/SKILL.md"
+    orphan.parent.mkdir()
+    orphan.write_text("old\n", encoding="utf-8")
+    with pytest.raises(GeneratedAssetsStaleError) as error:
+        render_pi_assets(catalog, output, check=True)
+    assert set(error.value.paths) == {script, orphan}
+
+    render_pi_assets(catalog, output)
+    assert script.stat().st_mode & 0o100
+    assert not orphan.parent.exists()
+    assert render_pi_assets(catalog, output, check=True) == ()

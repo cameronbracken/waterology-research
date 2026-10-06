@@ -1,0 +1,20 @@
+.interactive-figure {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 1.2rem 0 0.35rem;
+  max-width: 100%;
+  overflow: visible;
+  padding: 0;
+}
+
+.interactive-figure .plotly-graph-div,
+.interactive-figure .html-widget,
+.plot-static-fallback {
+  max-width: 100%;
+}
+
+.plot-static-fallback {
+  height: auto;
+}
