@@ -99,8 +99,15 @@ def build_install_plan(
 ) -> InstallPlan:
     directories, trusted_root = _installation_layout(runtime, scope, target)
     agent_directory = _agent_directory(runtime)
+    # The Codex plugin provides skills and MCP. Copies in .agents/skills would
+    # also load in Pi, which reads that directory, so Codex installs only agents.
+    skill_actions = (
+        ()
+        if runtime is Runtime.CODEX
+        else _skill_actions(catalog, runtime, directories["skills"], mode)
+    )
     actions = (
-        _skill_actions(catalog, runtime, directories["skills"], mode)
+        skill_actions
         + (
             _file_actions(catalog, agent_directory, directories["agents"], mode)
             if agent_directory is not None

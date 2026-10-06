@@ -123,12 +123,6 @@ def _assert_manifest_covers_installed_destinations(manifest_path: Path) -> None:
             ".mcp.json",
         ),
         (
-            "codex",
-            ".codex/agents/researcher.toml",
-            ".agents/skills/project-conventions",
-            ".codex/config.toml",
-        ),
-        (
             "opencode",
             ".opencode/agents/researcher.md",
             ".opencode/skills/project-conventions",

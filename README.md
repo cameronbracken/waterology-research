@@ -171,10 +171,13 @@ For a user-scoped Codex install:
 pixi run waterology install codex --scope user
 ```
 
-Root `skills/` is canonical. The Codex manifest is `.codex-plugin/plugin.json`.
-Generated Codex agents install in `.codex/agents/`.
-Codex installs root skills in `.agents/skills/`. See the official
-[Codex plugin documentation](https://developers.openai.com/plugins/concepts/plugins).
+Root `skills/` is canonical. Codex gets skills and the MCP server from the
+plugin manifest `.codex-plugin/plugin.json`. Install it with
+`pixi run reinstall-plugins --runtime codex`. Codex plugins cannot carry
+agents, so `waterology install codex` installs the generated agents in
+`.codex/agents/` and nothing in `.agents/skills/`. Pi also reads
+`.agents/skills/`, so skill copies there would clash with Pi packages. See the
+official [Codex plugin documentation](https://developers.openai.com/plugins/concepts/plugins).
 
 OpenCode installs project files under `.opencode/`, including agents and
 skills. See the official [OpenCode skills documentation](https://opencode.ai/docs/skills)

@@ -11,7 +11,7 @@ from waterology.runtime.install import (
 )
 
 
-def test_project_codex_plan_uses_shared_skills_and_codex_agents(tmp_path: Path) -> None:
+def test_project_codex_plan_leaves_skills_to_the_plugin(tmp_path: Path) -> None:
     plan = build_install_plan(
         runtime=Runtime.CODEX,
         scope=InstallScope.PROJECT,
@@ -21,7 +21,7 @@ def test_project_codex_plan_uses_shared_skills_and_codex_agents(tmp_path: Path) 
     )
 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
-    assert ".agents/skills/project-conventions" in destinations
+    assert not any(destination.startswith(".agents/") for destination in destinations)
     assert ".codex/agents/researcher.toml" in destinations
     assert ".codex/config.toml" in destinations
     assert all(action.operation == "copy" for action in plan.actions)
@@ -85,13 +85,7 @@ def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
             Runtime.CLAUDE,
             {".claude/.waterology-install.json", ".waterology-claude-install.json"},
         ),
-        (
-            Runtime.CODEX,
-            {
-                ".agents/.waterology-install.json",
-                ".codex/.waterology-install.json",
-            },
-        ),
+        (Runtime.CODEX, {".codex/.waterology-install.json"}),
         (
             Runtime.OPENCODE,
             {".opencode/.waterology-install.json", ".waterology-opencode-install.json"},
@@ -158,7 +152,7 @@ def test_user_codex_plan_uses_home_directories(tmp_path: Path, monkeypatch) -> N
     )
 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
-    assert ".agents/skills/project-conventions" in destinations
+    assert not any(destination.startswith(".agents/") for destination in destinations)
     assert ".codex/agents/researcher.toml" in destinations
     assert plan.trusted_root == tmp_path.absolute()
 

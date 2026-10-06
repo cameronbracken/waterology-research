@@ -84,8 +84,7 @@ def test_readme_documents_install_scope_and_runtime_contracts() -> None:
     assert "`--target` is available only for project installs." in readme
     assert "Both `install` and `doctor` support `--json`." in readme
     assert "Root `skills/` is canonical." in readme
-    assert "Generated Codex agents install in `.codex/agents/`." in readme
-    assert "Codex installs root skills in `.agents/skills/`." in readme
+    assert "`waterology install codex` installs the generated agents" in readme
     assert "only after confirming that no Waterology install process is running" in readme
 
 

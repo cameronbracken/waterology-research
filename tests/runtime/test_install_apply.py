@@ -46,7 +46,7 @@ def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
     assert (tmp_path / ".opencode/agents/researcher.md").is_file()
     manifest = json.loads((tmp_path / ".opencode/.waterology-install.json").read_text())
     assert manifest["schema"] == 1
-    assert manifest["waterology_version"] == "0.7.3"
+    assert manifest["waterology_version"] == "0.7.4"
     assert "agents/researcher.md" in manifest["assets"]
     serialized = (tmp_path / ".opencode/.waterology-install.json").read_text()
     assert serialized == json.dumps(manifest, indent=2, sort_keys=True) + "\n"
@@ -56,7 +56,6 @@ def test_copy_install_writes_manifest_and_assets(tmp_path: Path) -> None:
     ("runtime", "skill_root"),
     [
         (Runtime.CLAUDE, ".claude/skills/"),
-        (Runtime.CODEX, ".agents/skills/"),
         (Runtime.OPENCODE, ".opencode/skills/"),
         (Runtime.PI, ".pi/skills/waterology-"),
     ],
@@ -206,7 +205,7 @@ def test_directory_manifest_fingerprint_detects_nested_file_changes(tmp_path: Pa
     assert conflicts[0].reason == "owned destination was modified"
 
 
-def test_codex_install_writes_separate_root_relative_manifests(tmp_path: Path) -> None:
+def test_codex_install_writes_agents_and_config_without_skills(tmp_path: Path) -> None:
     plan = build_install_plan(
         Runtime.CODEX,
         InstallScope.PROJECT,
@@ -217,15 +216,9 @@ def test_codex_install_writes_separate_root_relative_manifests(tmp_path: Path) -
 
     result = apply_install_plan(plan)
 
-    agents_manifest = json.loads((tmp_path / ".agents/.waterology-install.json").read_text())
     codex_manifest = json.loads((tmp_path / ".codex/.waterology-install.json").read_text())
-    assert set(result.manifests) == {
-        tmp_path / ".agents/.waterology-install.json",
-        tmp_path / ".codex/.waterology-install.json",
-    }
-    assert agents_manifest["assets"]
-    assert all(key.startswith("skills/") for key in agents_manifest["assets"])
-    assert codex_manifest["assets"]
+    assert set(result.manifests) == {tmp_path / ".codex/.waterology-install.json"}
+    assert not (tmp_path / ".agents").exists()
     assert set(codex_manifest["assets"]) >= {"agents/researcher.toml", "config.toml"}
     assert (tmp_path / ".codex/config.toml").read_text(encoding="utf-8") == (
         '[mcp_servers.waterology]\ncommand = "waterology-mcp"\n'
@@ -324,7 +317,7 @@ def test_user_install_rejects_a_symlinked_runtime_root(
     outside = tmp_path / "outside"
     home.mkdir()
     outside.mkdir()
-    (home / ".agents").symlink_to(outside, target_is_directory=True)
+    (home / ".codex").symlink_to(outside, target_is_directory=True)
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     plan = build_install_plan(
         Runtime.CODEX,
@@ -338,7 +331,6 @@ def test_user_install_rejects_a_symlinked_runtime_root(
         apply_install_plan(plan)
 
     assert not any(outside.iterdir())
-    assert not (home / ".codex").exists()
 
 
 def test_install_rejects_a_lexical_destination_escape(tmp_path: Path) -> None:
@@ -569,7 +561,7 @@ def test_late_action_failure_restores_an_earlier_owned_action(
     assert not list(tmp_path.rglob("*.waterology-backup-*"))
 
 
-def test_second_codex_manifest_failure_rolls_back_actions_and_first_manifest(
+def test_codex_manifest_failure_rolls_back_actions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     plan = build_install_plan(
@@ -602,27 +594,27 @@ def test_manifest_failure_restores_prior_manifests(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     plan = build_install_plan(
-        Runtime.CODEX,
+        Runtime.CLAUDE,
         InstallScope.PROJECT,
         tmp_path,
         InstallMode.COPY,
         AssetCatalog.discover(),
     )
     apply_install_plan(plan)
-    agents_manifest = tmp_path / ".agents/.waterology-install.json"
-    codex_manifest = tmp_path / ".codex/.waterology-install.json"
-    for path in (agents_manifest, codex_manifest):
+    assets_manifest = tmp_path / ".claude/.waterology-install.json"
+    config_manifest = tmp_path / ".waterology-claude-install.json"
+    for path in (assets_manifest, config_manifest):
         data = json.loads(path.read_text())
         data["waterology_version"] = "prior-version"
         path.write_text(json.dumps(data) + "\n")
-    prior_agents = agents_manifest.read_bytes()
-    prior_codex = codex_manifest.read_bytes()
+    prior_assets = assets_manifest.read_bytes()
+    prior_config = config_manifest.read_bytes()
     real_replace = install_module.os.replace
 
     def fail_second_manifest(source: Path, target: Path) -> None:
         source = Path(source)
         target = Path(target)
-        if target == codex_manifest and ".waterology-stage-" in source.name:
+        if target == config_manifest and ".waterology-stage-" in source.name:
             raise OSError("injected manifest update failure")
         real_replace(source, target)
 
@@ -631,8 +623,8 @@ def test_manifest_failure_restores_prior_manifests(
     with pytest.raises(OSError, match="injected manifest update failure"):
         apply_install_plan(plan)
 
-    assert agents_manifest.read_bytes() == prior_agents
-    assert codex_manifest.read_bytes() == prior_codex
+    assert assets_manifest.read_bytes() == prior_assets
+    assert config_manifest.read_bytes() == prior_config
     assert not list(tmp_path.rglob("*.waterology-stage-*"))
     assert not list(tmp_path.rglob("*.waterology-backup-*"))
 

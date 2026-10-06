@@ -129,7 +129,7 @@ api_key_env = "EXAMPLE_LLM_KEY"
     assert "fixture-private-value" not in result.output
 
 
-@pytest.mark.parametrize("runtime", ["claude", "codex", "opencode"])
+@pytest.mark.parametrize("runtime", ["claude", "opencode"])
 @pytest.mark.parametrize("mode", ["copy", "link"])
 def test_install_includes_resolver_but_never_copies_personal_values(
     tmp_path, monkeypatch, runtime, mode
@@ -143,7 +143,7 @@ def test_install_includes_resolver_but_never_copies_personal_values(
     runner = CliRunner()
     result = runner.invoke(app, ["install", runtime, "--target", str(target), "--mode", mode])
     assert result.exit_code == 0, result.output
-    skill_root = target / (".agents" if runtime == "codex" else f".{runtime}") / "skills"
+    skill_root = target / f".{runtime}" / "skills"
     assert "waterology config context" in (skill_root / "writing-style/SKILL.md").read_text()
     for path in target.rglob("*"):
         if path.is_file():

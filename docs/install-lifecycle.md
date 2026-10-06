@@ -57,6 +57,11 @@ configuration or delete a modified retired asset. Unowned configuration is
 never overwritten. To change copy/link mode, uninstall first, then install in
 the requested mode.
 
+Codex installs from version 0.7.3 and earlier also copied skills into
+`.agents/skills/`. Codex now gets skills from its plugin, and later installs
+neither update nor remove those copies. Delete the skill directories listed in
+`.agents/.waterology-install.json`, then delete that manifest.
+
 Schema 1 manifests are supported. Tests cover a synthetic prior-version
 manifest and assets removed from the new catalog. They do not establish that
 every historical package version or native marketplace installation upgrades
