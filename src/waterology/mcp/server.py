@@ -277,6 +277,9 @@ mcp = create_server()
 
 
 def main() -> None:
+    from waterology.core.credentials import load_credentials
+
+    load_credentials()
     mcp.run()
 
 

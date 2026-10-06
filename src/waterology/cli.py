@@ -129,7 +129,10 @@ def main(
     """Run Waterology commands."""
     if output_format not in {"yaml", "json"}:
         raise typer.BadParameter("Use yaml or json")
+    from waterology.core.credentials import load_credentials
     from waterology.workflow_cli import WORKFLOW_OUTPUT_FORMAT
+
+    load_credentials()
 
     WORKFLOW_OUTPUT_FORMAT.set(output_format)
 

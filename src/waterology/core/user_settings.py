@@ -38,6 +38,20 @@ class DashboardSettings(BaseModel):
     torc_password_keychain_service: str = ""
 
 
+class CredentialSettings(BaseModel):
+    """Dotenv file that fills missing research API keys. An empty path disables it."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    file: str = "~/.config/secrets/research.env"
+
+    @field_validator("file")
+    @classmethod
+    def valid_file(cls, value: str) -> str:
+        if "\x00" in value:
+            raise ValueError("Credentials path must not contain NUL")
+        return value.strip()
+
+
 class UserSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     identity: IdentitySettings = Field(default_factory=IdentitySettings)
@@ -45,6 +59,7 @@ class UserSettings(BaseModel):
     writing: WritingSettings = Field(default_factory=WritingSettings)
     guidance: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     dashboard: DashboardSettings = Field(default_factory=DashboardSettings)
+    credentials: CredentialSettings = Field(default_factory=CredentialSettings)
 
     @field_validator("guidance")
     @classmethod

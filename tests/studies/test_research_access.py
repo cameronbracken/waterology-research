@@ -7,7 +7,8 @@ def test_access_reports_missing_names_without_values(monkeypatch):
     monkeypatch.delenv("ZOTERO_API_KEY", raising=False)
     monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
     monkeypatch.delenv("SEMANTIC_SCHOLAR_API_KEY", raising=False)
-    assert len(research_access()["warnings"]) == 3
+    missing = [w for w in research_access()["warnings"] if "is not available" in w]
+    assert len(missing) == 3
     monkeypatch.setenv("ZOTERO_API_KEY", "SECRET-ZOTERO")
     monkeypatch.setenv("OPENALEX_API_KEY", "SECRET-OPENALEX")
     monkeypatch.setenv("SEMANTIC_SCHOLAR_API_KEY", "SECRET-S2")

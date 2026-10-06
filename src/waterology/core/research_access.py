@@ -2,25 +2,36 @@
 
 import os
 
+from waterology.core.credentials import PROVIDER_VARIABLES, last_credential_load
+
 
 def research_access() -> dict:
-    providers = {
-        "zotero": "ZOTERO_API_KEY",
-        "openalex": "OPENALEX_API_KEY",
-        "semantic-scholar": "SEMANTIC_SCHOLAR_API_KEY",
-    }
+    load = last_credential_load()
+    missing = [
+        name for name, variable in PROVIDER_VARIABLES.items() if not os.environ.get(variable)
+    ]
+    warnings = [
+        f"{PROVIDER_VARIABLES[name]} is not available to this process; "
+        f"authenticated {name} access is unavailable"
+        for name in missing
+    ]
+    if load and load.problem:
+        warnings.append(f"Credentials file {load.path or ''} was not used: {load.problem}")
+    if missing:
+        target = load.path if load and load.path else "the [credentials] file in config.toml"
+        warnings.append(
+            "MCP clients started outside your shell do not inherit direnv. "
+            f"Add the missing keys to {target}, then restart the MCP server"
+        )
     return {
         "providers": {
             name: {
                 "environment_variable": variable,
                 "credential_available": bool(os.environ.get(variable)),
             }
-            for name, variable in providers.items()
+            for name, variable in PROVIDER_VARIABLES.items()
         },
-        "warnings": [
-            f"{variable} is not available to this process; authenticated {name} access is unavailable"
-            for name, variable in providers.items()
-            if not os.environ.get(variable)
-        ],
+        "credentials_file": load.summary() if load else None,
+        "warnings": warnings,
         "validation": "Presence only; credentials and library permissions are not verified",
     }
