@@ -489,37 +489,6 @@ class ZoteroGateway:
         self._created(self.api.create_items([item]), record["item_key"])
         return record["item_key"]
 
-    def attachment(self, record: dict, path: Path):
-        key = record["attachment_key"]
-        existing = self._get("item", key)
-        if existing is None:
-            item = {
-                "key": key,
-                "version": 0,
-                "itemType": "attachment",
-                "parentItem": record["item_key"],
-                "linkMode": "imported_file",
-                "title": record["source"]["title"],
-                "filename": path.name,
-                "contentType": "application/pdf",
-            }
-            self._created(self.api.create_items([item]), key)
-        elif existing["data"].get("parentItem") != record["item_key"]:
-            raise ValueError("Saved attachment parent changed")
-        if existing and existing["data"].get("md5"):
-            # Zotero's file API uses MD5 as a transport checksum, not an authenticity claim.
-            digest = hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest()
-            if existing["data"]["md5"] == digest:
-                return
-            raise ValueError(
-                "Existing attachment bytes differ; retained local PDF will not replace them"
-            )
-        result = self.api.upload_attachments(
-            [{"key": key, "filename": str(path), "contentType": "application/pdf"}]
-        )
-        if result.get("failure") or not (result.get("success") or result.get("unchanged")):
-            raise ValueError("Zotero did not confirm PDF upload")
-
 
 def sync_references(
     start: Path,
@@ -557,8 +526,13 @@ def sync_references(
                     {"id": record["id"], "status": "blocked", "reason": "Library target changed"}
                 )
                 continue
-            finished = record["metadata_status"] == "synced" and (
-                not settings.download_pdfs or record["pdf_status"] in {"uploaded", "unavailable"}
+            finished = (
+                not record.get("error")
+                and record["metadata_status"] == "synced"
+                and (
+                    not settings.download_pdfs
+                    or record["pdf_status"] in {"downloaded", "uploaded", "unavailable"}
+                )
             )
             if not finished or record.get("target") != target:
                 pending.append(path)
@@ -657,8 +631,6 @@ def sync_references(
                         record["pdf_sha256"] = digest
                         record["pdf_status"] = "downloaded"
                         write_document(path, record)
-                        gateway.attachment(record, pdf)
-                        record["pdf_status"] = "uploaded"
             except Exception as error:  # noqa: BLE001 - retain resumable provider failures without credential-bearing messages
                 record["error"] = type(error).__name__
                 if record["metadata_status"] != "synced":

@@ -310,18 +310,21 @@ waterology zotero sync --limit 20
 ```
 
 Queue records live in `.waterology/references/*.yaml`. PDF bytes are retained under
-its `pdfs/` directory with SHA-256 identities and uploaded as child attachments.
+its `pdfs/` directory with SHA-256 identities. Sync copies PDFs only to this local
+cache; it does not create or upload Zotero attachments or use Zotero file storage.
 PDFs must be at most 30 MB and pass a PDF signature check. No authenticated
-publisher session is used. Paywalls, quotas, offline services and failed uploads
-retain pending status separately from citation metadata. A downloaded PDF is
+publisher session is used. Paywalls, offline services and failed downloads
+retain pending status separately from citation metadata. A cached PDF has
+`pdf_status: downloaded` and needs no further PDF sync. A downloaded PDF is
 not automatically a read or verified source.
 
 DOIs and stable source identities deduplicate project records. Existing Zotero
 items with an exact DOI match are reused without replacing their metadata or
 removing their existing collection memberships. Object keys and destination are
-saved before writes. Retries reuse pinned PDF bytes and reconcile a matching
-remote file checksum. An altered destination or conflicting attachment remains
-blocked. Batches report remaining work and rotate attempted failures so they
+saved before writes. Retries reuse pinned PDF bytes, including PDFs cached before
+an earlier upload failed. An altered destination or changed pinned PDF remains
+blocked. Previously uploaded PDFs remain complete; remote attachments are not
+changed. Batches report remaining work and rotate attempted failures so they
 cannot indefinitely hide later pending references.
 
 These services use the [Zotero Web API](https://www.zotero.org/support/dev/web_api/v3/write_requests)

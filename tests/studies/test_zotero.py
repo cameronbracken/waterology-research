@@ -28,7 +28,6 @@ class Gateway:
     def __init__(self):
         self.items = set()
         self.attachments = set()
-        self.fail_upload = False
         self.collections = 0
 
     def collection(self, settings):
@@ -40,9 +39,7 @@ class Gateway:
 
     def attachment(self, record, path):
         self.attachments.add(record["attachment_key"])
-        if self.fail_upload:
-            self.fail_upload = False
-            raise TimeoutError("remote write may have succeeded; token=PRIVATE")
+        pytest.fail("PDF uploads are forbidden")
 
 
 def test_configure_writes_canonical_hidden_settings_file(tmp_path):
@@ -83,7 +80,7 @@ def test_settings_prefer_canonical_file_over_legacy_file(tmp_path):
     assert loaded.collection_name == "Canonical fixture"
 
 
-def test_doi_dedup_and_attachment_resume_use_pinned_bytes(project):
+def test_doi_dedup_caches_pdf_without_upload(project):
     source = {
         "title": "Fixture",
         "doi": "https://doi.org/10.1234/ABC",
@@ -93,7 +90,6 @@ def test_doi_dedup_and_attachment_resume_use_pinned_bytes(project):
     second = queue_reference(project, {**source, "doi": "10.1234/abc"}, reason="cited", sync=False)
     assert first["id"] == second["id"]
     gateway = Gateway()
-    gateway.fail_upload = True
     downloads = []
 
     def download(url):
@@ -101,14 +97,43 @@ def test_doi_dedup_and_attachment_resume_use_pinned_bytes(project):
         return b"%PDF-1.7\nfixture"
 
     result = sync_references(project, gateway=gateway, downloader=download)
-    assert result["status"] == "partial"
-    assert result["references"][0]["metadata_status"] == "synced"
-    assert "PRIVATE" not in str(reference_status(project))
+    assert result["status"] == "complete"
+    record = result["references"][0]
+    assert record["metadata_status"] == "synced"
+    assert record["pdf_status"] == "downloaded"
+    cached = project / ".waterology/references/pdfs" / f"{record['pdf_sha256']}.pdf"
+    assert cached.read_bytes() == b"%PDF-1.7\nfixture"
+    assert not gateway.attachments
     result = sync_references(
         project, gateway=gateway, downloader=lambda u: pytest.fail("must reuse bytes")
     )
-    assert result["references"][0]["pdf_status"] == "uploaded"
-    assert len(gateway.items) == len(gateway.attachments) == len(downloads) == 1
+    assert result["status"] == "complete"
+    assert result["references"] == []
+    assert len(gateway.items) == len(downloads) == 1
+
+
+@pytest.mark.parametrize("legacy_status", ["pending", "downloaded"])
+def test_failed_upload_resumes_from_pinned_local_pdf(project, legacy_status):
+    source = project / "fixture.pdf"
+    source.write_bytes(b"%PDF-1.7\nfixture")
+    record = queue_reference(
+        project, {"title": "Fixture", "pdf_path": "fixture.pdf"}, reason="read", sync=False
+    )
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    directory = project / ".waterology/references"
+    (directory / "pdfs").mkdir()
+    cached = directory / "pdfs" / f"{digest}.pdf"
+    cached.write_bytes(source.read_bytes())
+    record.update(pdf_sha256=digest, pdf_status=legacy_status, error="RequestEntityTooLargeError")
+    write_document(directory / f"ref-{record['id']}.yaml", record)
+    source.unlink()
+    gateway = Gateway()
+    result = sync_references(project, gateway=gateway)
+    assert result["status"] == "complete"
+    assert result["references"][0]["pdf_status"] == "downloaded"
+    assert "error" not in reference_status(project)[0]
+    assert cached.read_bytes() == b"%PDF-1.7\nfixture"
+    assert not gateway.attachments
 
 
 def test_pending_work_not_starved_by_finished_records(project):
@@ -189,18 +214,6 @@ def test_sensitive_url_refused_before_persistence(project):
             sync=False,
         )
     assert reference_status(project) == []
-
-
-def test_sdk_reconciles_already_uploaded_attachment(project):
-    from waterology.core.zotero import ZoteroGateway
-
-    gateway = object.__new__(ZoteroGateway)
-    pdf = project / "fixture.pdf"
-    pdf.write_bytes(b"%PDF-1.7\nfixture")
-    md5 = hashlib.md5(pdf.read_bytes(), usedforsecurity=False).hexdigest()
-    gateway._get = lambda *a: {"data": {"parentItem": "ABCDEFGH", "md5": md5}}
-    gateway.api = None  # No upload call is allowed when remote digest already agrees.
-    gateway.attachment({"attachment_key": "BBBBBBBB", "item_key": "ABCDEFGH"}, pdf)
 
 
 def test_enrichment_preserves_reference_and_attachment_identity(project):
