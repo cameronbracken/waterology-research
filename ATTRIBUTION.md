@@ -132,6 +132,12 @@ source are credited here; this page is the canonical list.
   execution owner and audits tied to exact evidence versions. The research reviewer adapts its methods
   and reasoning checks to the artifact and reports evidence, severity, location,
   and remedy for each finding.
+  Deep-research source coverage also adapts the user-supplied Feynman Pi
+  checklist `feynman-source-coverage-20261007/deepresearch.md` (2026-10-07):
+  11-source planning, native-tool evidence, topic-specific skips, blocked
+  access, one coverage ledger across direct and delegated runs, and provenance
+  checks. Waterology retains its own workflow, approval gates, and `docs/`
+  artifact paths rather than requiring the installed Feynman prompt.
   The `commands/` files are generated Claude compatibility shims.
   Computational biology model wrappers and Feynman
   product internal skills are dropped. Figures, papers, and examples are

@@ -11,13 +11,16 @@ words. Every approved run leaves:
 - `docs/.plans/<slug>.md`
 - `docs/.drafts/<slug>-draft.md`
 - `docs/.drafts/<slug>-cited.md`
+- `docs/.drafts/<slug>-source-coverage.md`
 - `docs/<slug>.md` or `papers/<slug>.md`
 - `docs/<slug>.provenance.md` or `papers/<slug>.provenance.md`
 
 Create the plan first. Record the research questions, evidence needs, scale
-decision, task ledger, verification log, and decision log. Summarize it and ask
-for explicit confirmation before searching, fetching, delegating, drafting, or
-reviewing. Apply requested plan changes and ask again.
+decision, task ledger, verification log, and decision log. Include the 11-source
+coverage table with planned use, relevance, and owner from
+[source-coverage.md](source-coverage.md). Summarize it and ask for
+explicit confirmation before searching, fetching, contacting external services,
+delegating, drafting, or reviewing. Apply requested plan changes and ask again.
 
 For a delegated investigation, the parent may hand off planning to
 `research-coordinator` before approval, but only plan preparation is authorized
@@ -47,8 +50,9 @@ Choose scale before assigning work:
 For a narrow explainer, keep direct ownership unless the user requests broad
 coverage, current benchmarks, or a comprehensive landscape. When delegating,
 write each brief first under `docs/.plans/`. Give it a question, source scope,
-file ownership, output path, and return contract. Launch agents through the
-runtime's available delegation mechanism.
+file ownership, output path, and return contract. Include assigned sources,
+native tool names, and coverage status reporting requirements. Launch agents
+through the runtime's available delegation mechanism.
 
 When the coordinator cannot launch specialists, the parent may dispatch the
 written briefs and resume it with artifact paths. Record the dispatch checkpoint
@@ -65,6 +69,12 @@ perform the same stages directly and record the absence of independent review.
 Do not bypass runtime restrictions with an alternate agent launcher.
 
 ## Gather evidence
+
+Maintain the source coverage ledger after approval. Follow
+[source-coverage.md](source-coverage.md) for supported retrieval operations,
+search evidence, skip reasons, and blocked access. Coverage applies across the
+run, not separately to each researcher. After consuming delegated results,
+the parent merges the ledger and fills relevant gaps within the approved scope.
 
 For direct search, use at least three distinct queries that cover definition or
 history, mechanism, and current usage or comparison. Save exact queries and
@@ -125,6 +135,14 @@ Copy the final candidate to `papers/<slug>.md` for a paper style draft or
 - Verification status.
 - Plan and research file paths.
 - Blocked checks and unresolved gaps.
+- Complete source coverage table and a link to its ledger.
+
+Check that the coverage ledger has exactly the 11 required sources, final
+statuses for every row, and tool-call evidence for searched rows. Resolve
+omitted relevant sources or record blocked checks. List blocked sources and
+their effect on conclusions in the final brief. Missing access to a required
+source or verification prevents an unqualified verification PASS. Justified
+topic-specific skips are not failures.
 
 Confirm every required artifact exists and that claimed fixes appear in the
 final candidate. Respond with links to the final artifact and provenance plus a

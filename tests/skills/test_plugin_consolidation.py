@@ -278,6 +278,51 @@ def test_deep_research_is_portable_and_preserves_durable_delivery() -> None:
     assert "Verification: BLOCKED" in workflow
 
 
+def test_deep_research_requires_evidence_for_all_source_coverage_statuses() -> None:
+    skill = (ROOT / "skills/deep-research/SKILL.md").read_text(encoding="utf-8")
+    references = ROOT / "skills/deep-research/references"
+    workflow = (references / "workflow.md").read_text(encoding="utf-8")
+    coverage = (references / "source-coverage.md").read_text(encoding="utf-8")
+
+    assert "references/source-coverage.md" in skill
+    rows = [line.split("|")[1].strip() for line in coverage.splitlines() if line.startswith("| ")]
+    assert rows[2:] == [
+        "alphaXiv",
+        "Semantic Scholar",
+        "OpenAlex",
+        "arXiv",
+        "PubMed",
+        "Europe PMC",
+        "bioRxiv",
+        "medRxiv",
+        "Crossref",
+        "Web",
+        "Hugging Face",
+    ]
+    for requirement in (
+        "planned use, relevance, and owner",
+        "contact external services before approval",
+        "known arXiv ID lookup, not topic search",
+        "Source | Status | Tool and query/ID | Date | Evidence reference | Reason or error",
+        "`searched`",
+        "`skipped`",
+        "`blocked`",
+        "tool-call evidence",
+        "Zero results count as searched",
+        "not separately for each child",
+        "complete\ncoverage table and a link to the ledger",
+        "prevents an unqualified",
+        "not a runtime tool-call gate",
+    ):
+        assert requirement in coverage
+    ledger = "docs/.drafts/<slug>-source-coverage.md"
+    assert ledger in workflow
+    assert ledger in coverage
+    assert (ROOT / "pi-skills/waterology-deep-research/references/source-coverage.md").read_text(
+        encoding="utf-8"
+    ) == coverage
+
+
 def test_source_summarization_is_portable_bounded_and_single_source() -> None:
     skill_path = ROOT / "skills/source-summarization/SKILL.md"
     workflow_path = ROOT / "skills/source-summarization/references/workflow.md"

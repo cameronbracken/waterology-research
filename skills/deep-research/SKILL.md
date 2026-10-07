@@ -20,8 +20,12 @@ At entry, run `waterology research-access` or MCP `research_access`. Use
 key is missing, give a concise warning before trying that provider. Never print
 keys or ask for them in chat. Presence does not verify provider permissions.
 
-Read [workflow.md](references/workflow.md) and follow it for the complete plan,
-scale, evidence, drafting, citation, review, and delivery protocol.
+Read [workflow.md](references/workflow.md) and
+[source-coverage.md](references/source-coverage.md). Follow both for the complete
+plan, source coverage, evidence ledger, drafting, citation, review, and delivery
+protocol. Consider all 11 sources before plan approval and record each as
+searched, skipped with a topic-specific reason, or blocked before delivery.
+Do not contact external services before approval.
 
 When handing a complete investigation to another agent, use
 `research-coordinator` and supply the scope, plan and approval record when
