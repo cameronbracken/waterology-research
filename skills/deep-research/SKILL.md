@@ -37,7 +37,8 @@ for a small task or when delegation adds no value.
 
 In an initialized Waterology project, build the reference library while
 researching. Use `literature_search`/`waterology discover` for recorded searches,
-with `provider="core"` or `--provider core` for the CORE source.
+with `provider="core"` or `--provider core` for the CORE source and
+`provider="alphaxiv"` or `--provider alphaxiv` for alphaXiv.
 Mark relevant consulted sources included with `source-decision`; this queues
 them for the configured Zotero project collection. For sources found through
 other search tools, use MCP `zotero_capture` or `waterology zotero capture source.yaml`

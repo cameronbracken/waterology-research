@@ -117,7 +117,7 @@ def register_workflow_tools(server, bounded_tool):
         limit: int = 20,
         project_path: str = ".",
     ) -> dict:
-        """Query OpenAlex, Semantic Scholar or CORE once and retain queries, source identities and provider failures."""
+        """Query OpenAlex, Semantic Scholar, CORE or alphaXiv once and retain queries, source identities and provider failures."""
         return search_literature(
             Path(project_path), query, after=after, before=before, limit=limit, provider=provider
         )

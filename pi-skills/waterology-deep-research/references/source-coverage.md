@@ -15,7 +15,7 @@ gates.
 
 | Source | Tool and supported use |
 | --- | --- |
-| alphaXiv | `alpha_search`; inspect decisive papers with `alpha_get_paper` or `alpha_ask_paper`, and code with `alpha_read_code` when needed |
+| alphaXiv | Waterology `literature_search` with `provider: "alphaxiv"` for semantic search or `"alphaxiv-keyword"` for exact terms in full text (CLI `waterology discover --provider alphaxiv`), no login needed; in Pi, `alpha_search` when logged in. Inspect decisive papers with `alpha_get_paper` or `alpha_ask_paper`, and code with `alpha_read_code` when needed |
 | Semantic Scholar | `feynman_science_database_search`, `source: "semanticscholar"`; prefer default citation sorting, newest-first only for recency questions |
 | OpenAlex | `feynman_science_database_search`, `source: "openalex"`; keyword/conceptual discovery and citation/reference graphs |
 | CORE | Waterology `literature_search` with `provider: "core"` (CLI `waterology discover --provider core`); repository copies, theses, and reports that publisher indexes miss, with PDF download locators. Full text requires `CORE_API_KEY` |
@@ -28,11 +28,12 @@ gates.
 | Web | `web_search` with varied queries, then `fetch_content` / `get_search_content` for primary sources |
 | Hugging Face | Discover relevant Hub repositories through web search; use `hf_dataset_info` before claiming dataset usability, `hf_repo_files` before `hf_repo_read_file`; inspect only small text files |
 
-CORE uses the Waterology tool in every runtime. The other tools are native Pi
-tool names. In another supported runtime, record its actual
+CORE and alphaXiv search use the Waterology tool in every runtime. The other
+tools are native Pi tool names. In another supported runtime, record its actual
 native tool and the equivalent supported operation. If the required source
 capability is unavailable, mark it blocked. In Pi, do not substitute standalone
-Feynman commands for a missing native alphaXiv tool. Tool registration does not
+Feynman commands for a missing native alphaXiv tool; use the Waterology
+provider instead. Tool registration does not
 prove endpoint access. Access, authentication, rate limits, or tool loading
 failures require the exact observed error. Fallback evidence from another source
 does not make the blocked source searched.

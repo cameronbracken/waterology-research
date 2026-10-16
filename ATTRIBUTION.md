@@ -200,6 +200,10 @@ source are credited here; this page is the canonical list.
   into `research-syntesizer`, `research-verifier` and
   `skills/autoresearch/references/experiment-tree.md`. The
   `alphaXiv/openresearch-cli` URL now redirects to this repository.
+- **alphaXiv discovery:** the `alphaxiv` and `alphaxiv-keyword` providers in
+  `src/waterology/core/literature.py` send the same public alphaXiv requests as
+  `src/client.rs` at `8fc90cf355cda1e89a6aabc02d49a098f159f463`. The Python
+  implementation is original. No Rust source is copied.
 - **Current difference:** OpenResearch now includes OpenAlex discovery. The
   arXiv-only rationale in the historical roadmap applies to the earlier snapshot.
 

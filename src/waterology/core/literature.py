@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import warnings
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -109,6 +110,32 @@ def fetch_core(query: str, *, after: str | None, before: str | None, limit: int)
     return _read_without_redirects(request, 32_000_000)
 
 
+def _fetch_alphaxiv(strategy: str, query: str, *, after: str | None, before: str | None) -> dict:
+    # The public discovery endpoint needs no login. Its size is fixed server side.
+    parameters = {"q": query, "prioritize": "default"}
+    if after:
+        parameters["publishedAfter"] = after
+    if before:
+        parameters["publishedBefore"] = before
+    request = Request(
+        f"https://api.alphaxiv.org/search/v2/paper/discover/{strategy}?" + urlencode(parameters),
+        headers={"User-Agent": "Waterology literature discovery"},
+    )
+    return {"results": _read_without_redirects(request, 4_000_000)}
+
+
+def fetch_alphaxiv(query: str, *, after: str | None, before: str | None, limit: int) -> dict:
+    """Semantic search of arXiv titles and abstracts through alphaXiv."""
+    return _fetch_alphaxiv("embedding", query, after=after, before=before)
+
+
+def fetch_alphaxiv_keyword(
+    query: str, *, after: str | None, before: str | None, limit: int
+) -> dict:
+    """Exact term search of arXiv titles, abstracts and full text through alphaXiv."""
+    return _fetch_alphaxiv("keyword", query, after=after, before=before)
+
+
 def _outside_dates(publication_date: str | None, after: str | None, before: str | None) -> bool:
     if publication_date:
         date.fromisoformat(publication_date)
@@ -213,7 +240,52 @@ def normalize_core(results: list[dict], *, after=None, before=None) -> list[dict
     return _tag_provider(normalize_sources(converted), "core")
 
 
-PROVIDERS = ("openalex", "semantic-scholar", "core")
+ARXIV_ID = re.compile(r"(\d{4}\.\d{4,5}|[a-z-]+(\.[A-Z]{2})?/\d{7})")
+
+
+def normalize_alphaxiv(
+    results: list[dict], *, after=None, before=None, provider="alphaxiv"
+) -> list[dict]:
+    converted = []
+    for item in results:
+        if not isinstance(item, dict):
+            raise TypeError("Provider result must be an object")
+        identifier = item.get("paperId")
+        if not isinstance(identifier, str) or not identifier:
+            raise ValueError("Source lacks an identifier")
+        # Versions of one paper share an identity, as on alphaXiv.
+        identifier = re.sub(r"v\d+$", "", identifier)
+        arxiv = ARXIV_ID.fullmatch(identifier)
+        publication_date = (item.get("publicationDate") or "")[:10] or None
+        if _outside_dates(publication_date, after, before):
+            continue
+        # Matched full text snippets are dropped so a search never marks a source as read.
+        converted.append(
+            {
+                "id": identifier,
+                # arXiv registers a DataCite DOI for every paper, which merges with OpenAlex.
+                "doi": f"10.48550/arXiv.{identifier}" if arxiv else None,
+                "title": item.get("title"),
+                "publication_date": publication_date,
+                "authorships": [],
+                "primary_location": {
+                    "source": {"display_name": "arXiv"},
+                    "landing_page_url": f"https://www.alphaxiv.org/abs/{identifier}",
+                },
+                "best_oa_location": {
+                    "pdf_url": f"https://arxiv.org/pdf/{identifier}" if arxiv else None
+                },
+                "type": "preprint",
+            }
+        )
+    return _tag_provider(normalize_sources(converted), provider)
+
+
+def normalize_alphaxiv_keyword(results: list[dict], *, after=None, before=None) -> list[dict]:
+    return normalize_alphaxiv(results, after=after, before=before, provider="alphaxiv-keyword")
+
+
+PROVIDERS = ("openalex", "semantic-scholar", "core", "alphaxiv", "alphaxiv-keyword")
 
 
 def _directory(start: Path) -> Path:
@@ -287,7 +359,7 @@ def search_literature(
     provider: str = "openalex",
 ) -> dict:
     if provider not in PROVIDERS:
-        raise ValueError("Provider must be openalex, semantic-scholar or core")
+        raise ValueError("Provider must be one of " + ", ".join(PROVIDERS))
     if not query.strip() or not 1 <= limit <= 100:
         raise ValueError("Supply a query and limit between 1 and 100")
     if after:
@@ -314,6 +386,8 @@ def search_literature(
             "openalex": (fetch_openalex, "results", normalize_sources),
             "semantic-scholar": (fetch_semantic_scholar, "data", normalize_semantic_scholar),
             "core": (fetch_core, "results", normalize_core),
+            "alphaxiv": (fetch_alphaxiv, "results", normalize_alphaxiv),
+            "alphaxiv-keyword": (fetch_alphaxiv_keyword, "results", normalize_alphaxiv_keyword),
         }[provider]
         payload = (fetcher or fetch)(query, after=after, before=before, limit=limit)
         if not isinstance(payload, dict) or not isinstance(payload.get(results_key), list):

@@ -31,7 +31,9 @@ When working in an initialized Waterology project, record retrieval through
 `waterology discover "QUERY"` or MCP `literature_search`. Select Semantic Scholar
 with `--provider semantic-scholar` or MCP `provider="semantic-scholar"` for an
 additional search pass. Select CORE with `--provider core` to reach repository
-copies, theses and reports that publisher indexes miss. OpenAlex remains the default. Save explicit date
+copies, theses and reports that publisher indexes miss. Select alphaXiv with
+`--provider alphaxiv` for semantic arXiv search or `--provider alphaxiv-keyword`
+for exact terms in full text. OpenAlex remains the default. Save explicit date
 bounds only when the question calls for them. The service retains exact queries,
 provider failures and DOI provenance. Use `source-decision` to append inclusion
 or exclusion reasons, and `source-add` for agency reports or local sources.

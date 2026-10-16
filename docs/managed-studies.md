@@ -267,6 +267,28 @@ before saving the record, so a search never marks a source as read.
 See the [CORE API v3 documentation](https://api.core.ac.uk/docs/v3) for query
 syntax and rate limits.
 
+[alphaXiv](https://www.alphaxiv.org) indexes arXiv preprints. Two providers
+search it without a login:
+
+```bash
+waterology discover "streamflow forecasting" --provider alphaxiv
+waterology discover "LSTM" --provider alphaxiv-keyword
+```
+
+`alphaxiv` ranks titles and abstracts semantically. `alphaxiv-keyword` matches
+exact terms, such as method names or acronyms, in titles, abstracts and full
+text. MCP `literature_search` accepts the same provider names. Date bounds are
+sent to alphaXiv and then applied locally. alphaXiv fixes its result count, so
+`--limit` can narrow but not widen a search.
+
+Each source keeps its arXiv ID, the arXiv DOI (`10.48550/arXiv.<id>`), an
+alphaXiv link and the arXiv PDF. The DOI lets the same paper merge with OpenAlex
+records. Results carry no authors, so add them when capturing a source to Zotero.
+Matched full text snippets are dropped, so a search never marks a source as read.
+The endpoint is undocumented. Waterology uses the same requests as
+[OpenResearch](https://github.com/alphaXiv/OpenResearch), and a failed search is
+recorded as `unverified`.
+
 ### Automatic Zotero capture
 
 From an initialized project, run:
