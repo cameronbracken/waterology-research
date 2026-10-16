@@ -80,7 +80,9 @@ Do not claim a result was reproduced unless there is evidence of a rerun.
 For web sources, use the runtime's page reader or `kagi_extract` to inspect the
 relevant content. Search for a canonical URL, lawful archive, or supplied local
 copy when a link fails. For papers, OpenAlex or DOI metadata can establish
-identity and locate available text; metadata alone cannot verify content claims.
+identity and locate available text. A CORE search (`literature_search` with
+`provider: "core"`) can find a repository copy when the publisher text is
+blocked; metadata alone cannot verify content claims.
 
 Record access as `accessible`, `blocked`, or `not found`, with the locator and
 what was inspected. A paywall, timeout, or missing credential is an access limit.

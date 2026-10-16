@@ -14,6 +14,7 @@ PROVIDER_VARIABLES = {
     "zotero": "ZOTERO_API_KEY",
     "openalex": "OPENALEX_API_KEY",
     "semantic-scholar": "SEMANTIC_SCHOLAR_API_KEY",
+    "core": "CORE_API_KEY",
 }
 
 

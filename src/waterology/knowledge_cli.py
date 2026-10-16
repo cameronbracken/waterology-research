@@ -101,7 +101,7 @@ def register_knowledge_commands(app):
 
     @app.command("research-access")
     def access():
-        """Check Zotero, OpenAlex and Semantic Scholar credential availability without printing secrets or making requests."""
+        """Check Zotero, OpenAlex, Semantic Scholar and CORE credential availability without printing secrets or making requests."""
         from waterology.core.research_access import research_access
 
         emit(research_access())

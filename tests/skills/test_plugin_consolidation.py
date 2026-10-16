@@ -290,6 +290,7 @@ def test_deep_research_requires_evidence_for_all_source_coverage_statuses() -> N
         "alphaXiv",
         "Semantic Scholar",
         "OpenAlex",
+        "CORE",
         "arXiv",
         "PubMed",
         "Europe PMC",

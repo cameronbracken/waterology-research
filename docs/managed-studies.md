@@ -199,8 +199,8 @@ Check provider access before starting a literature or deep-research task:
 waterology research-access
 ```
 
-The package reads `ZOTERO_API_KEY`, `OPENALEX_API_KEY` and
-`SEMANTIC_SCHOLAR_API_KEY` from the process
+The package reads `ZOTERO_API_KEY`, `OPENALEX_API_KEY`,
+`SEMANTIC_SCHOLAR_API_KEY` and `CORE_API_KEY` from the process
 environment. Missing keys produce warnings. The check reports presence only,
 never their values, and does not claim the keys are valid. Export them through
 your shell or approved environment manager. A running agent may need its
@@ -244,6 +244,28 @@ is never converted to an invented publication day.
 
 See the [Semantic Scholar API tutorial](https://webflow.semanticscholar.org/product/api/tutorial)
 for search and authentication details.
+
+[CORE](https://core.ac.uk) aggregates open access papers from institutional and
+subject repositories, including many that publisher indexes miss:
+
+```bash
+waterology discover "reservoir operations" --provider core --limit 20
+```
+
+MCP `literature_search` accepts `provider="core"`. Discovery searches CORE
+works, which merge copies of one paper held by several repositories. The key
+goes in an `Authorization: Bearer` header and redirects are refused, so the key
+never reaches another host. CORE allows unauthenticated use at 10 requests per
+minute and 100 per day. A free [registered key](https://core.ac.uk/services/api)
+raises the limit and is required for full text. Date bounds use a CORE year
+query followed by the same exact local date filtering as Semantic Scholar.
+
+Search records keep the CORE `downloadUrl` as the PDF locator. Authenticated
+responses also inline each paper's parsed full text. Waterology drops that text
+before saving the record, so a search never marks a source as read.
+
+See the [CORE API v3 documentation](https://api.core.ac.uk/docs/v3) for query
+syntax and rate limits.
 
 ### Automatic Zotero capture
 

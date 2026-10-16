@@ -16,14 +16,14 @@ metadata:
 Use `writing-style` for the research brief and synthesis.
 
 At entry, run `waterology research-access` or MCP `research_access`. Use
-`OPENALEX_API_KEY` and `ZOTERO_API_KEY` from the environment when present. If a
-key is missing, give a concise warning before trying that provider. Never print
-keys or ask for them in chat. Presence does not verify provider permissions.
+`OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`, `CORE_API_KEY` and `ZOTERO_API_KEY`
+from the environment when present. If a key is missing, give a concise warning
+before trying that provider. Never print keys or ask for them in chat. Presence does not verify provider permissions.
 
 Read [workflow.md](references/workflow.md) and
 [source-coverage.md](references/source-coverage.md). Follow both for the complete
 plan, source coverage, evidence ledger, drafting, citation, review, and delivery
-protocol. Consider all 11 sources before plan approval and record each as
+protocol. Consider all 12 sources before plan approval and record each as
 searched, skipped with a topic-specific reason, or blocked before delivery.
 Do not contact external services before approval.
 
@@ -36,7 +36,8 @@ recursively delegating to another coordinator. Direct execution remains valid
 for a small task or when delegation adds no value.
 
 In an initialized Waterology project, build the reference library while
-researching. Use `literature_search`/`waterology discover` for recorded searches.
+researching. Use `literature_search`/`waterology discover` for recorded searches,
+with `provider="core"` or `--provider core` for the CORE source.
 Mark relevant consulted sources included with `source-decision`; this queues
 them for the configured Zotero project collection. For sources found through
 other search tools, use MCP `zotero_capture` or `waterology zotero capture source.yaml`

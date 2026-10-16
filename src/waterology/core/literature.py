@@ -65,6 +65,11 @@ def fetch_semantic_scholar(
         "https://api.semanticscholar.org/graph/v1/paper/search?" + urlencode(parameters),
         headers=headers,
     )
+    return _read_without_redirects(request, 4_000_000)
+
+
+def _read_without_redirects(request: Request, bound: int) -> dict:
+    """Read a bounded JSON response. Refuse redirects so credential headers stay on one host."""
     from urllib.request import HTTPRedirectHandler, build_opener
 
     class NoRedirect(HTTPRedirectHandler):
@@ -72,10 +77,55 @@ def fetch_semantic_scholar(
             return None
 
     with build_opener(NoRedirect()).open(request, timeout=30) as response:
-        payload = response.read(4_000_001)
-    if len(payload) > 4_000_000:
+        payload = response.read(bound + 1)
+    if len(payload) > bound:
         raise ValueError("Provider response exceeds the bounded read limit")
     return json.loads(payload)
+
+
+def fetch_core(query: str, *, after: str | None, before: str | None, limit: int) -> dict:
+    key = os.environ.get("CORE_API_KEY")
+    if not key:
+        warnings.warn(
+            "CORE_API_KEY is not available; trying unauthenticated CORE access without full text",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    terms = [f"({query})"] if after or before else [query]
+    if after:
+        terms.append(f"yearPublished>={after[:4]}")
+    if before:
+        terms.append(f"yearPublished<={before[:4]}")
+    headers = {"User-Agent": "Waterology literature discovery"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    # The trailing slash avoids a redirect that would otherwise be refused.
+    request = Request(
+        "https://api.core.ac.uk/v3/search/works/?"
+        + urlencode({"q": " AND ".join(terms), "limit": limit}),
+        headers=headers,
+    )
+    # Authenticated responses inline each work's parsed full text.
+    return _read_without_redirects(request, 32_000_000)
+
+
+def _outside_dates(publication_date: str | None, after: str | None, before: str | None) -> bool:
+    if publication_date:
+        date.fromisoformat(publication_date)
+    # Never invent a day for papers whose provider knows only the year.
+    return bool(after or before) and (
+        not publication_date
+        or bool(after and publication_date < after)
+        or bool(before and publication_date > before)
+    )
+
+
+def _tag_provider(sources: list[dict], provider: str) -> list[dict]:
+    for source in sources:
+        source["provider"] = provider
+        for provenance in source["provenance"]:
+            provenance["provider"] = provider
+    return sources
 
 
 def normalize_semantic_scholar(results: list[dict], *, after=None, before=None) -> list[dict]:
@@ -84,14 +134,7 @@ def normalize_semantic_scholar(results: list[dict], *, after=None, before=None) 
         if not isinstance(item, dict):
             raise TypeError("Provider result must be an object")
         publication_date = item.get("publicationDate")
-        if publication_date:
-            date.fromisoformat(publication_date)
-        # Never invent a day for papers whose provider knows only the year.
-        if (after or before) and (
-            not publication_date
-            or (after and publication_date < after)
-            or (before and publication_date > before)
-        ):
+        if _outside_dates(publication_date, after, before):
             continue
         converted.append(
             {
@@ -112,12 +155,65 @@ def normalize_semantic_scholar(results: list[dict], *, after=None, before=None) 
                 else "article",
             }
         )
-    sources = normalize_sources(converted)
-    for source in sources:
-        source["provider"] = "semantic-scholar"
-        for provenance in source["provenance"]:
-            provenance["provider"] = "semantic-scholar"
-    return sources
+    return _tag_provider(normalize_sources(converted), "semantic-scholar")
+
+
+CORE_TYPES = {
+    "preprint": "preprint",
+    "book": "book",
+    "book part": "book-chapter",
+    "thesis": "dissertation",
+    "doctoral thesis": "dissertation",
+    "master thesis": "dissertation",
+    "report": "report",
+    "technical report": "report",
+    "dataset": "dataset",
+}
+
+
+def normalize_core(results: list[dict], *, after=None, before=None) -> list[dict]:
+    converted = []
+    for item in results:
+        if not isinstance(item, dict):
+            raise TypeError("Provider result must be an object")
+        # CORE writes missing values as empty strings. Keep the date part of its timestamps.
+        publication_date = (item.get("publishedDate") or "")[:10] or None
+        if _outside_dates(publication_date, after, before):
+            continue
+        document_type = item.get("documentType")
+        if isinstance(document_type, list):
+            document_type = document_type[0] if document_type else None
+        journals = item.get("journals") or []
+        display = next(
+            (link.get("url") for link in item.get("links") or [] if link.get("type") == "display"),
+            None,
+        )
+        # The parsed fullText is deliberately dropped; downloadUrl is the full-text locator.
+        converted.append(
+            {
+                "id": str(item["id"]) if item.get("id") is not None else None,
+                "doi": item.get("doi") or None,
+                "title": item.get("title"),
+                "publication_date": publication_date,
+                "authorships": [
+                    {"author": {"display_name": a.get("name")}} for a in item.get("authors") or []
+                ],
+                "primary_location": {
+                    "source": {
+                        "display_name": (journals[0].get("title") if journals else None)
+                        or item.get("publisher")
+                        or ""
+                    },
+                    "landing_page_url": display,
+                },
+                "best_oa_location": {"pdf_url": item.get("downloadUrl") or None},
+                "type": CORE_TYPES.get((document_type or "").lower(), "article"),
+            }
+        )
+    return _tag_provider(normalize_sources(converted), "core")
+
+
+PROVIDERS = ("openalex", "semantic-scholar", "core")
 
 
 def _directory(start: Path) -> Path:
@@ -190,8 +286,8 @@ def search_literature(
     fetcher=None,
     provider: str = "openalex",
 ) -> dict:
-    if provider not in {"openalex", "semantic-scholar"}:
-        raise ValueError("Provider must be openalex or semantic-scholar")
+    if provider not in PROVIDERS:
+        raise ValueError("Provider must be openalex, semantic-scholar or core")
     if not query.strip() or not 1 <= limit <= 100:
         raise ValueError("Supply a query and limit between 1 and 100")
     if after:
@@ -214,16 +310,19 @@ def search_literature(
         "error": None,
     }
     try:
-        fetch = fetch_openalex if provider == "openalex" else fetch_semantic_scholar
+        fetch, results_key, normalize = {
+            "openalex": (fetch_openalex, "results", normalize_sources),
+            "semantic-scholar": (fetch_semantic_scholar, "data", normalize_semantic_scholar),
+            "core": (fetch_core, "results", normalize_core),
+        }[provider]
         payload = (fetcher or fetch)(query, after=after, before=before, limit=limit)
-        results_key = "results" if provider == "openalex" else "data"
         if not isinstance(payload, dict) or not isinstance(payload.get(results_key), list):
             raise TypeError("Provider response lacks results")
         results = payload[results_key][:limit]
         record["sources"] = (
-            normalize_sources(results)
+            normalize(results)
             if provider == "openalex"
-            else normalize_semantic_scholar(results, after=after, before=before)
+            else normalize(results, after=after, before=before)
         )
     except (OSError, ValueError, TypeError, AttributeError) as error:
         # HTTP exceptions can contain URLs with API keys. Never persist their message.

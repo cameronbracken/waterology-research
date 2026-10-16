@@ -1,9 +1,9 @@
 # Source Coverage
 
-Consider all 11 sources on every run. Query relevant sources and explain each
+Consider all 12 sources on every run. Query relevant sources and explain each
 skip. Do not run irrelevant searches merely to fill the checklist. For a
-scholarly topic, normally query alphaXiv, Semantic Scholar, OpenAlex, and the
-web. A narrower choice requires a topic-specific justification.
+scholarly topic, normally query alphaXiv, Semantic Scholar, OpenAlex, CORE,
+and the web. A narrower choice requires a topic-specific justification.
 
 ## Plan before access
 
@@ -18,6 +18,7 @@ gates.
 | alphaXiv | `alpha_search`; inspect decisive papers with `alpha_get_paper` or `alpha_ask_paper`, and code with `alpha_read_code` when needed |
 | Semantic Scholar | `feynman_science_database_search`, `source: "semanticscholar"`; prefer default citation sorting, newest-first only for recency questions |
 | OpenAlex | `feynman_science_database_search`, `source: "openalex"`; keyword/conceptual discovery and citation/reference graphs |
+| CORE | Waterology `literature_search` with `provider: "core"` (CLI `waterology discover --provider core`); repository copies, theses, and reports that publisher indexes miss, with PDF download locators. Full text requires `CORE_API_KEY` |
 | arXiv | `feynman_science_database_search`, `source: "arxiv"`; known arXiv ID lookup, not topic search; discover IDs through alphaXiv, other databases, or web search |
 | PubMed | `feynman_science_database_search`, `source: "pubmed"`; biomedical discovery, metadata, and identifier conversion |
 | Europe PMC | `feynman_science_database_search`, `source: "europepmc"`; biomedical discovery and available open-access full-text sections |
@@ -27,7 +28,8 @@ gates.
 | Web | `web_search` with varied queries, then `fetch_content` / `get_search_content` for primary sources |
 | Hugging Face | Discover relevant Hub repositories through web search; use `hf_dataset_info` before claiming dataset usability, `hf_repo_files` before `hf_repo_read_file`; inspect only small text files |
 
-These are native Pi tool names. In another supported runtime, record its actual
+CORE uses the Waterology tool in every runtime. The other tools are native Pi
+tool names. In another supported runtime, record its actual
 native tool and the equivalent supported operation. If the required source
 capability is unavailable, mark it blocked. In Pi, do not substitute standalone
 Feynman commands for a missing native alphaXiv tool. Tool registration does not
@@ -71,7 +73,7 @@ budget without the workflow's required approval.
 
 ## Review and provenance
 
-Before delivery, check that the ledger contains exactly these 11 sources, every
+Before delivery, check that the ledger contains exactly these 12 sources, every
 row has a final status, and searched rows have actual tool-call evidence. Resolve
 omitted relevant sources or record the blocked checks. Include the complete
 coverage table and a link to the ledger in the final provenance sidecar. List
