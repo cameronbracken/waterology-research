@@ -6,6 +6,10 @@ from a parent and tests one change against it. The `waterology-autoresearch` ski
 linear mode covers a single metric with a handful of sequential edits. Use
 this tree discipline when the study spans several distinct design decisions.
 
+Create a node only for a run that establishes a baseline or tests a hypothesis
+in the study. Unrelated cleanup, refactors, bug fixes, and dependency updates
+do not get nodes.
+
 ## Cardinal rules
 
 Breaking these rules silently invalidates results.
@@ -44,6 +48,10 @@ base                     base                   base
 Before making X a child of Y, name what Y established that X retains. If X and
 Y are options tried for the same decision, they are siblings.
 
+If a node with recorded results sits under the wrong parent, correct its parent
+in the ledger and note the change. Do not recreate and rerun it. Its branch still
+holds the old parent's code, so move only nodes whose code fits the new parent.
+
 ## Loop
 
 1. Run the benchmark once on the frozen root and record the seed.
@@ -63,3 +71,7 @@ Lead with the strongest result figure. Then report the path through the tree,
 each round's decision, the winner and margin, and what was abandoned. Include
 a provenance table mapping every claim to its branch, exact run command, seed,
 and metric. Copy commands verbatim.
+
+List every node tried with its metric, including reverted and failed nodes. Do
+not claim an effect from the most favorable setting alone. State how the result
+varies across the settings and seeds tried.

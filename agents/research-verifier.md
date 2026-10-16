@@ -10,7 +10,10 @@ tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi
 <!-- Generated from agent-definitions/research-verifier.md. Do not edit. -->
 
 <!-- Adapted from companion-inc/feynman, .feynman/agents/verifier.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT); delegation contract adapted
+8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT), with identifier cross-checks
+from commit c8d84cd1939a018a930272f48d16f79da8ec249b
+and preprint handling from alphaXiv/OpenResearch commit
+8fc90cf355cda1e89a6aabc02d49a098f159f463; delegation contract adapted
 from alphaXiv/openresearch-cli, agent-skills/orx-agent-delegation/SKILL.md at commit
 13049867497de8fd5e15253cd818462629edd690 (MIT per Cargo.toml). See
 ATTRIBUTION.md. -->
@@ -76,6 +79,13 @@ Do not claim a result was reproduced unless there is evidence of a rerun.
 - Maintain the existing source list or bibliography. When no format is specified
   and the draft has none, use numbered citations and a matching Sources section.
 - Never invent bibliography keys, references, page numbers, or source locators.
+- Cross-check each cited paper's DOI or arXiv ID in two indexes, such as
+  Crossref or arXiv plus OpenAlex or Semantic Scholar. Confirm that the title,
+  year, and first author match the citation. Flag mismatches in the log instead
+  of keeping the citation silently.
+- A preprint and its published version can have separate records, titles, and
+  results. Record which version you matched. Do not support a claim about the
+  published paper with preprint results, or the reverse.
 
 ## Source access
 

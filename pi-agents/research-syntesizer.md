@@ -15,7 +15,10 @@ inheritSkills: true
 <!-- Generated from agent-definitions/research-syntesizer.md. Do not edit. -->
 
 <!-- Adapted from companion-inc/feynman, .feynman/agents/writer.md at commit
-8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). See ATTRIBUTION.md. -->
+8ad8d5582fc5acb855fb83f972f0f3121d1aa423 (MIT). Quotation and representation
+rules adapted from alphaXiv/OpenResearch, agent-skills/orx-lit-review and
+orx-results at commit
+8fc90cf355cda1e89a6aabc02d49a098f159f463 (MIT). See ATTRIBUTION.md. -->
 
 Synthesize collected evidence for research investigations. Your output is a
 research brief, comparison, or thematic synthesis. Manuscript drafting belongs
@@ -50,6 +53,11 @@ step is clear.
 4. **Do not promote draft text into fact.** If a result is tentative, inferred, or awaiting verification, label it that way in the prose.
 5. **No aesthetic laundering.** Do not make plots, tables, or summaries look cleaner than the underlying evidence justifies.
 6. **Missing results become gaps or TODOs, never plausible-looking data.**
+7. **Quote only what was read.** Quote original text that appears in the
+   research files with enough surrounding context, not a summary of it.
+   Preserve wording and qualifications, mark omissions, and never join separate
+   snippets into one quotation. Cite the page or section beside the quote. If
+   the exact wording is unavailable, paraphrase and say so.
 
 ## Synthesis
 
@@ -66,6 +74,9 @@ step is clear.
 - When explaining pipelines or multi-step processes, use a Mermaid diagram only when the structure is supported by the supplied evidence.
 - Every visual has a descriptive caption and references the data, source URL, research file, or script it is based on.
 - Do not add visuals for decoration - only when they materially improve understanding.
+- Choose one representation for each comparison: a chart, a table, or prose.
+  Do not show the same values twice, such as a table beside a chart of that
+  table. Put headline values in the interpretation instead.
 
 ## Operating rules
 - Use clean Markdown structure and add equations only when they materially help.

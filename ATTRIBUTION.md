@@ -139,6 +139,11 @@ source are credited here; this page is the canonical list.
   checks. Waterology retains its own workflow, approval gates, and `docs/`
   artifact paths rather than requiring the installed Feynman prompt.
   The `commands/` files are generated Claude compatibility shims.
+  A 2026-10-16 review of Feynman at `c8d84cd1939a018a930272f48d16f79da8ec249b` added DOI and
+  arXiv cross-checks in two indexes to the research verifier and a rule against
+  claiming an effect from the most favorable setting to the experiment tree
+  write-up. Changes coupled to the Feynman runtime, such as async subagent
+  workflows and its science database tool, were not adopted.
   Computational biology model wrappers and Feynman
   product internal skills are dropped. Figures, papers, and examples are
   retargeted to the R, Quarto, hydrology, and energy stack.
@@ -187,6 +192,14 @@ source are credited here; this page is the canonical list.
   plan. New Python services and managed research/engineering contracts are
   original Waterology implementations. No upstream runtime code or UI assets
   are copied. Earlier adapted skill content retains its historical credit above.
+- **Update review:** a 2026-10-16 review at
+  `8fc90cf355cda1e89a6aabc02d49a098f159f463` adapted rules from `orx-lit-review` (quote only text that was read,
+  keep preprint and published versions separate), `orx-results` (one
+  representation for each comparison) and `orx-experiment-tree` (nodes only for
+  baselines and hypotheses, correct a misplaced node rather than rerunning it)
+  into `research-syntesizer`, `research-verifier` and
+  `skills/autoresearch/references/experiment-tree.md`. The
+  `alphaXiv/openresearch-cli` URL now redirects to this repository.
 - **Current difference:** OpenResearch now includes OpenAlex discovery. The
   arXiv-only rationale in the historical roadmap applies to the earlier snapshot.
 
