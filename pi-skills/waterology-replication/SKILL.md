@@ -1,8 +1,8 @@
 ---
 name: waterology-replication
 description: >
-  Plan a replication of a paper, claim, or benchmark, and execute only after an
-  explicit environment choice. Use when the user asks to replicate results,
+  Plan and run a replication of a paper, claim, or benchmark in the project
+  environment, with ledgers, environment gates, and audits in strict mode. Use when the user asks to replicate results,
   reproduce an experiment, verify a claim empirically, or build a replication
   package.
 metadata:
@@ -15,14 +15,40 @@ metadata:
 
 # Replication
 
-Use `waterology-writing-style` for the plan, claim ledger, and report. For a complete
-delegated task, use `replication-coordinator` with the target, owned worktree,
+Use `waterology-writing-style` for the plan, claim ledger, and report.
+
+## Mode
+
+Run `waterology config context replication` and follow its `reproducibility`
+mode as defined in `waterology-project-conventions`.
+
+In `light` mode:
+
+- Read the target sources and linked code. Focus on the main claim unless the
+  user asks for more.
+- Write one report at `docs/<slug>-replication.md`. Give a short plan, each
+  claim compared, its target and observed result, and any substitutions or
+  downscaling.
+- Run in the project environment. Ask before installing new packages, starting
+  remote or long jobs, or spending compute beyond the project's normal runs.
+- Commit the code. Record the source revision, the lockfile, and the commands
+  that produced each result in the report.
+- State what agreed, what did not, and what was not attempted. Do not call a
+  result replicated without a comparison that supports it.
+- Skip the separate claim ledger, task ledger, `CHANGELOG.md` trail, content
+  fingerprints, and reproducibility audit unless the user asks.
+
+In `strict` mode, follow the rest of this skill.
+
+## Strict mode
+
+For a complete delegated task, use `replication-coordinator` with the target, owned worktree,
 existing plan and run identities, environment choice, compute authority, budgets,
 and delegation permissions. An agent already coordinating this task retains
 ownership rather than delegating to another coordinator. Direct work remains
 valid for a small task or when delegation is unavailable.
 
-## Scope and durable plan
+### Scope and durable plan
 
 Identify whether the task reproduces an existing Waterology deliverable or
 implements a new replication from a paper, benchmark, or claim. Preserve the
@@ -50,7 +76,7 @@ For substantial new implementation, `engineer` may implement a bounded
 specification with fixed targets and allowed checks. The execution owner, not
 that specialist, submits the registered production workflow.
 
-## Environment and execution authority
+### Environment and execution authority
 
 Require an explicit environment choice before execution. Record separately:
 
@@ -70,7 +96,7 @@ Name exactly one execution owner, either the parent or coordinator. If the paren
 owns execution, return the ready request and prerequisites rather than launching
 it as well. Plan-only work ends with the plan and checks explicitly not attempted.
 
-## Execute through the existing services
+### Execute through the existing services
 
 For an existing Waterology deliverable, use the CLI reproduction workflow within
 the selected environment and existing compute authority:
@@ -110,7 +136,7 @@ Select and export a resulting deliverable with `waterology deliverable register`
 and `waterology deliverable export` when that handoff is in scope. Output
 agreement and support for the paper's claims are separate assessments.
 
-## Assess and audit
+### Assess and audit
 
 Assess each claim as `aligned`, `partially aligned`, `inconclusive under this setup`,
 or `not attempted`. State the comparison results and uncertainty supporting that
@@ -136,7 +162,7 @@ affected checks; missing version records leave them unverified. Reaudit affected
 claims after report corrections, and require a new authorized run for changes
 that invalidate execution evidence. Do not erase previous findings or attempts.
 
-## Resume and deliver
+### Resume and deliver
 
 Keep a task ledger in the plan with task identifiers, owners, brief paths,
 dependencies, launch identities, inputs, outputs, statuses, and blockers. This

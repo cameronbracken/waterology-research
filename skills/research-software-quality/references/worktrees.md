@@ -4,7 +4,15 @@ Before editing, inspect the branch, status, worktree inventory, Git directory,
 and common Git directory. If already in a linked worktree, use it. Do not create
 a nested worktree.
 
-## Required isolation
+## Light mode
+
+In `light` reproducibility mode, as defined in `project-conventions`, use a
+worktree only when another session may write to the same repository or the
+checkout contains unrelated changes. Otherwise work on a named branch in the
+current checkout. Documentation edits on a clean checkout may stay on the
+current branch.
+
+## Required isolation in strict mode
 
 Use a worktree when any condition is true:
 
@@ -18,7 +26,7 @@ Use a worktree when any condition is true:
 Skills and agent instructions count as behavior. Their Markdown file type does
 not make them documentation-only edits.
 
-## Optional isolation
+## Optional isolation in strict mode
 
 Working in place is optional only when every condition is true:
 
@@ -33,7 +41,7 @@ reserve `main` as the integration lane and give each writing session a named
 branch and worktree.
 
 The machine-checked examples in
-[worktree-cases.yaml](worktree-cases.yaml) cover the required cutoff cases.
+[worktree-cases.yaml](worktree-cases.yaml) cover the cutoff cases in both modes.
 
 ## Location and manager
 

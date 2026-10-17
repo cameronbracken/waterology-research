@@ -9,6 +9,11 @@ description: Use when changing research software or agent behavior, diagnosing f
 
 Match the workflow to the change's risk, size, and isolation needs. Preserve
 evidence, reproducibility, and user intent without imposing a fixed ceremony.
+Run `waterology config context research-software-quality` and follow its
+`reproducibility` mode as defined in `waterology-project-conventions`. The table below
+describes `strict` mode. In `light` mode, work on a branch in the current
+checkout unless [worktrees.md](references/worktrees.md) says otherwise, run
+focused checks, and request reviews only when the user asks.
 
 ## Route the task
 
@@ -40,8 +45,9 @@ reasoning.
 
 ## Persistence
 
-For substantial work in an initialized project, use `waterology-project-learning` to
-retrieve relevant verified lessons before planning. After verification or a
+In `strict` mode, for substantial work in an initialized project, use
+`waterology-project-learning` to retrieve relevant verified lessons before planning. In
+`light` mode, use it when the user asks. After verification or a
 meaningful failure recovery, record the supported lesson and its evidence.
 Keep shared workflow changes as reviewable proposals. This completes
 plan -> test -> implement -> review -> verify -> remember -> improve without

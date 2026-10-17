@@ -1,7 +1,6 @@
 ---
 description: 'Alias for the `waterology-simulation-study` skill: Design, scaffold,
-  run, and review a reproducible Monte Carlo study using the project''s language and
-  toolchain.'
+  run, and review a Monte Carlo study using the project''s language and toolchain.'
 argument-hint: <estimators and data generating process>
 ---
 

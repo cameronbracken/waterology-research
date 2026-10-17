@@ -1,6 +1,7 @@
 ---
-description: 'Alias for the `replication` skill: Plan a replication of a paper, claim,
-  or benchmark, and execute only after an explicit environment choice.'
+description: 'Alias for the `replication` skill: Plan and run a replication of a paper,
+  claim, or benchmark in the project environment, with ledgers, environment gates,
+  and audits in strict mode.'
 argument-hint: <paper>
 ---
 

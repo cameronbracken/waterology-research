@@ -1,8 +1,8 @@
 ---
 name: simulation-study
 description: >
-  Design, scaffold, run, and review a reproducible Monte Carlo study using the
-  project's language and toolchain. Use for estimator bias, coverage, size,
+  Design, scaffold, run, and review a Monte Carlo study using the project's
+  language and toolchain. Use for estimator bias, coverage, size,
   power, or finite sample comparisons.
 metadata:
   claude-command:
@@ -13,21 +13,35 @@ metadata:
 # Simulation Study
 
 Read [the bundled simulation conventions](references/simulation-conventions.md)
-and the project conventions for its actual languages before writing code. Use
-an isolated worktree. Reuse the project's toolchain and environment; do not
-translate existing code or install another language merely to follow this skill.
-Use `writing-style` for the plan and report.
+and the project conventions for its actual languages before writing code.
+Reuse the project's toolchain and environment; do not translate existing code or
+install another language merely to follow this skill. Use `writing-style` for
+the plan and report.
 
-For a complete delegated study, use `simulation-coordinator`. Supply the study
+## Mode
+
+Run `waterology config context simulation-study` and follow its
+`reproducibility` mode as defined in `project-conventions`. The design,
+implementation, and metric rules below apply in both modes because they decide
+whether the results are correct. Steps marked _strict only_ are skipped in
+`light` mode.
+
+In `light` mode, put the plan at the top of `docs/<slug>-simulation.md` and keep
+the results in the same file. Commit the code, run it through the project's
+normal task runner, and record the commands, seed, and lockfile in the report.
+Ask before starting a long run.
+
+_Strict only:_ use an isolated worktree. For a complete delegated study, use
+`simulation-coordinator`. Supply the study
 scope, existing protocol and run identities, worktree, allowed files, environment,
 compute and storage limits, and delegation authority. The coordinator follows
 this skill; it does not delegate the same study to another coordinator. Direct
 execution remains valid when delegation adds no value or is unavailable.
 
-## Preflight and durable plan
+## Preflight and plan
 
-Write `docs/.plans/<slug>-simulation.md`, or update the assigned existing plan.
-Record the question, estimands or targets, truth derivation or reference,
+In strict mode, write `docs/.plans/<slug>-simulation.md`, or update the assigned
+existing plan. Record the question, estimands or targets, truth derivation or reference,
 assumptions, regimes, DGP parameters, methods, scenario grid, replication budget,
 randomization design, output schema, metrics, precision requirements, failure
 policy, and acceptance criteria. Identify which checks and outputs apply to the
@@ -74,7 +88,7 @@ for simulation design and performance-measure uncertainty.
   with a schema and reader. Provide interoperable tables when needed for handoff;
   native serialization such as RDS is optional, not a universal requirement.
 
-## Execute and preserve the study
+## Execute and preserve the study (strict only)
 
 Initialize project records with `waterology init` when needed, inspect native
 tasks with `waterology config refresh --check`, and register the simulation with
@@ -113,6 +127,10 @@ criteria rather than inventing an after-the-fact threshold. Build figures and
 summaries from saved values. A successful process exit is not statistical acceptance.
 
 ## Review, corrections, and handoff
+
+In `light` mode, review the code and metrics yourself, fix what you find, and
+write the report. Use the reviewer agents when the user asks. The rest of this
+section is _strict only_.
 
 Use `simulation-code-reviewer` for implementation quality and
 `simulation-reviewer` for statistical design and evidence. Supply immutable

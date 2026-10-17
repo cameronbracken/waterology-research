@@ -160,3 +160,22 @@ def test_install_includes_resolver_but_never_copies_personal_values(
     monkeypatch.setenv("WATEROLOGY_CONFIG", str(tmp_path / "other-user.toml"))
     result = runner.invoke(app, ["config", "context", "writing-style"])
     assert "Updated local instructions" not in result.output
+
+
+def test_context_reports_project_reproducibility(tmp_path, monkeypatch):
+    monkeypatch.setenv("WATEROLOGY_CONFIG", str(tmp_path / "config.toml"))
+    project = tmp_path / "project"
+    (project / "src").mkdir(parents=True)
+    monkeypatch.chdir(project / "src")
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["config", "context", "replication"])
+    assert result.exit_code == 0, result.output
+    assert '"reproducibility": "light"' in result.output
+
+    (project / "waterology.toml").write_text(
+        'name = "study"\nreproducibility = "strict"\n', encoding="utf-8"
+    )
+    result = runner.invoke(app, ["config", "context", "replication"])
+    assert result.exit_code == 0, result.output
+    assert '"reproducibility": "strict"' in result.output

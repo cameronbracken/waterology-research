@@ -24,6 +24,8 @@ Assume the receiving agent has no conversation context. Include:
 - Files or evidence scope the agent owns.
 - Metric or decision criteria when applicable.
 - Constraints, authorization boundaries, and allowed compute.
+- The project's reproducibility mode, `light` or `strict`, from
+  `waterology config context agent-delegation`.
 - Expected output path and return format.
 - A concrete definition of done.
 

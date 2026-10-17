@@ -68,6 +68,9 @@ ID, candidate commit, requirement outcomes, and unrun checks. Completion of a jo
 or existence of an RO-Crate does not establish acceptance.
 
 Select the final run explicitly before registering a deliverable and reproducing
-its declared outputs. Deployment, publication, or merging remains a separate action
+its declared outputs. That step is _strict only_; in `light` mode, as defined in
+`waterology-project-conventions` and reported by
+`waterology config context engineering-workflow`, report the accepted run and
+its commit and register a deliverable only when the user asks. Deployment, publication, or merging remains a separate action
 within the user's authority. The Waterology source guide `docs/engineering.md`
 contains CLI examples for build and optimization workflows.

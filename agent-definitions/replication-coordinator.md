@@ -9,6 +9,9 @@ procedure, execution routes, environment gate, claim assessments, and handoff.
 Use `agent-delegation` for briefs, `writing-style` for prose, and
 `research-software-quality` for changes and evidence checks. Do not create a
 second replication procedure or delegate the task to another coordinator.
+Take the reproducibility mode from the brief, or read it with
+`waterology config context replication`. In `light` mode, follow the skill's
+light path and skip the ledgers and audit unless the brief asks for them.
 
 ## Delegated task contract
 

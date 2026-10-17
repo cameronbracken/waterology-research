@@ -1,10 +1,10 @@
 ---
 name: waterology-project-conventions
 description: >
-  Conventions and selective reproducibility checks for research
-  code (hydrology / energy systems / extremes). Use when writing or editing R,
-  Python, Fortran, Quarto, or LaTeX in a research project. Run constraints only
-  for applicable content changed since its last successful check.
+  Conventions, the project reproducibility mode, and optional constraint checks
+  for research code (hydrology / energy systems / extremes). Use when writing or
+  editing R, Python, Fortran, Quarto, or LaTeX in a research project, or when
+  another skill needs to know whether the project runs in light or strict mode.
 ---
 
 <!-- Generated from skills/project-conventions/SKILL.md. Do not edit. -->
@@ -12,9 +12,10 @@ description: >
 # waterology — project conventions
 
 This skill is the entry point for the `waterology` plugin. It loads the right
-**conventions** (judgment guidance) for the file being edited. It also runs
-**constraints** (deterministic pass/fail checks) when the current task creates
-or changes content they cover.
+**conventions** (judgment guidance) for the file being edited. It defines the
+project **reproducibility mode** that other skills follow. It runs
+**constraints** (deterministic pass/fail checks) when the mode or the user calls
+for them.
 
 ## When to use
 
@@ -28,6 +29,36 @@ source credit, or visual design, read
 [local preferences](references/local-preferences.md). Run
 `waterology config context project-conventions` to include the current user's
 identity and optional local guidance. No personal defaults ship with the package.
+
+## Reproducibility mode
+
+`waterology config context <skill>` reports the mode in its `reproducibility`
+field. It reads `reproducibility` from the nearest `waterology.toml`. A missing
+key or missing file means `light`. The mode applies to every Waterology skill and
+agent. A direct user request overrides it for that task.
+
+**`light` (default).** Work is reproducible when the code is committed, the
+environment is pinned in a lockfile such as `pixi.lock` or `rv.lock`, and a
+README or task explains how to run it.
+
+- Run in the project environment without asking for an environment decision.
+- Do not create run archives, evidence or claim ledgers, RO-Crate exports, or
+  fresh directory reruns unless the user asks.
+- Report results in plain prose. Name anything material that was not checked.
+  Skip lifecycle labels such as `UNVERIFIED` or `STALE` and the
+  RED/YELLOW/GREEN audit verdict.
+- Work on a branch in the current checkout. Use a worktree only when another
+  session may edit the same checkout.
+- Run independent reviews, `waterology-project-learning` steps, and constraint checks only
+  on request or before a commit the user asked for.
+- Keep project paths portable and seed stochastic code as ordinary good
+  practice.
+
+**`strict`.** Follow every archive, ledger, gate, label, audit, review, and
+worktree step the skill or agent describes. Use it for replication packages,
+publication deliverables, and managed studies.
+
+When a skill or agent step is marked _strict only_, skip it in `light` mode.
 
 ## File formats
 
@@ -69,11 +100,12 @@ Python matches the project environment; Fortran is `implicit none` + explicit ki
 dual-theme Quarto with `ggplot` -> `ggplotly` graphics, light for print and never 
 hand-type computed numbers.
 
-### 2. Run constraints for unvalidated changes
+### 2. Run constraints when the mode calls for them
 
-The constraints are scriptable, deterministic checks. Run them after the final
-edit only when the current task creates or changes an applicable source,
-configuration, result, or rendered artifact. Target the changed paths:
+The constraints are scriptable, deterministic checks. In `light` mode, run them
+on request or before a commit the user asked for. In `strict` mode, run them
+after the final edit when the current task creates or changes an applicable
+source, configuration, result, or rendered artifact. Target the changed paths:
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/constraints/check-all.py path/to/changed/files

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import typer
 
+from waterology.core.config import load_project_config
 from waterology.core.profiles import (
     MachineConfigError,
     load_machine_config,
@@ -15,11 +16,25 @@ from waterology.core.profiles import (
 )
 
 
+def project_reproducibility(start: Path) -> str:
+    """Return the nearest project's reproducibility mode, or the light default."""
+    current = start.resolve()
+    for candidate in (current, *current.parents):
+        path = candidate / "waterology.toml"
+        if path.is_file():
+            return load_project_config(path).reproducibility
+    return "light"
+
+
 def local_context(section: str) -> dict:
     source = machine_config_path()
     config = load_machine_config(source)
     files = list(config.preferences.files)
-    result = {"guidance": [], "papers": []}
+    result = {
+        "reproducibility": project_reproducibility(Path.cwd()),
+        "guidance": [],
+        "papers": [],
+    }
     if section == "project-conventions":
         result["identity"] = config.identity.model_dump(exclude_defaults=True)
     if section == "writing-style":
@@ -74,7 +89,7 @@ def register_user_config_commands(config_app: typer.Typer) -> None:
         """Read the selected skill's local guidance. Output may be private."""
         try:
             typer.echo(json.dumps(local_context(section), indent=2))
-        except (MachineConfigError, OSError) as error:
+        except (MachineConfigError, OSError, ValueError) as error:
             typer.echo(str(error), err=True)
             raise typer.Exit(1) from None
 

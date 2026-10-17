@@ -19,6 +19,19 @@ RO-Crate links that file to the run action; keep both consistent. Use
 Pixi with pip, add renv to a project that uses another declared R workflow, or
 upgrade packages while capturing them.
 
+## Mode
+
+Run `waterology config context capture-environment` and follow its
+`reproducibility` mode as defined in `project-conventions`.
+
+In `light` mode, confirm that the lockfile is committed and current and that a
+README or task documents how to run the canonical entry point. Add or update a
+short environment section in the README with the language versions, lockfile,
+seed, and run command. Skip `--verify`, the separate requirements report, and
+archive or RO-Crate links unless the user asks.
+
+In `strict` mode, follow the full capture below.
+
 ## Detect the stack
 
 Inspect project guidance and files, then run every applicable path:

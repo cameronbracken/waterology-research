@@ -35,7 +35,13 @@ process. Work the gates in order and name the one you are on:
    pinned TORC profile, for local compute too.
 5. __Durable evidence.__ Archived runs, automatic RO-Crate exports, and
    assessments, failures retained.
-6. __Verified deliverable.__ `deliverable register` then `reproduce`.
+6. __Verified deliverable.__ `deliverable register` then `reproduce`. _Strict
+   only._ In `light` mode, report the accepted run and its commit, and register a
+   deliverable only when the user asks.
+
+Run `waterology config context autoresearch` for the project's
+`reproducibility` mode as defined in `waterology-project-conventions`. Gates 1 through 5
+apply in both modes because the study controller depends on them.
 
 Skipping a gate is a reportable blocker, not a shortcut. If a gate cannot be
 satisfied, say which one and why, and stop there. Never substitute a shell loop,

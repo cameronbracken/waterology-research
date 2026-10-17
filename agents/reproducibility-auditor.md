@@ -30,6 +30,17 @@ distinguish inspection from evidence of an executed check.
 - Save the report to the requested output path and return its path, checks,
   evidence, and blockers.
 
+## Reproducibility mode
+
+Take the project's reproducibility mode from the brief, or read it with
+`waterology config context reproducibility-auditor`. Both modes are defined in
+`project-conventions`. In `light` mode, check that the code is committed, the
+environment is pinned in a lockfile, and a README or task explains how to run
+it. Report what is present, what is missing, and the fix for each gap in plain
+prose. Skip the six dimension review, the check labels, and the verdict unless
+the brief asks for a full audit. In `strict` mode, follow the rest of this
+definition.
+
 ## Audit mode and execution ownership
 
 State the mode at the start of the report:

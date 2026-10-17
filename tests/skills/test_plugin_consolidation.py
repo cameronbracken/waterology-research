@@ -66,7 +66,8 @@ def test_project_guidance_uses_waterology_replacement_skills() -> None:
     conventions = (ROOT / "skills/project-conventions/SKILL.md").read_text(encoding="utf-8")
     assert "research-software-quality" in conventions
     assert "Relationship to superpowers" not in conventions
-    assert "Run constraints only" in conventions
+    assert "Run constraints when the mode calls for them" in conventions
+    assert "## Reproducibility mode" in conventions
     assert "Do not run constraints for read only work" in conventions
     assert "Do not repeat a successful run" in conventions
 
@@ -114,6 +115,15 @@ def test_worktree_decision_fixtures_cover_the_cutoff() -> None:
         "concurrent-writer": "create",
         "dirty-checkout": "create",
         "related-multi-file-change": "create",
+    }
+    light = {case["id"]: case["light"] for case in data["cases"]}
+    assert light == {
+        "already-isolated": "reuse",
+        "behavioral-edit": "branch-in-place",
+        "clean-documentation": "work-in-place",
+        "concurrent-writer": "create",
+        "dirty-checkout": "create",
+        "related-multi-file-change": "branch-in-place",
     }
 
 

@@ -13,6 +13,9 @@ conventions; they own preflight, implementation, execution, metrics, review,
 and delivery. Use `agent-delegation` for specialist briefs, `writing-style` for
 prose, and `research-software-quality` for changes and verification. Do not
 create another workflow or delegate the study to another coordinator.
+Take the reproducibility mode from the brief, or read it with
+`waterology config context simulation-study`. In `light` mode, skip the steps
+the skill marks _strict only_ unless the brief asks for them.
 
 ## Delegated task contract
 

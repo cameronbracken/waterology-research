@@ -45,8 +45,14 @@ only for files another tool or specification fixes, such as RO-Crate metadata.
 ## Skill edits
 
 Use `writing-style` for prose. Treat skill and agent instruction edits as
-behavior changes that require an isolated worktree. Edit and validate one skill
-at a time.
+behavior changes. Make them on a named branch, and use a worktree when another
+session may edit this checkout. Validate each changed skill.
+
+## Reproducibility mode
+
+`reproducibility` in `waterology.toml` selects `light` (the default) or
+`strict`. `skills/project-conventions/SKILL.md` defines both modes. Other skills
+and agents point to that definition rather than restating it.
 
 ## Attribution
 

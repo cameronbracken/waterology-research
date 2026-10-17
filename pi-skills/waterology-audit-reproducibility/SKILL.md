@@ -23,6 +23,19 @@ mismatch is not automatically a failure. The manuscript is not the oracle.
 Treat the computed value as a challenger, not as ground truth, and identify
 which artifact needs correction through evidence.
 
+## Mode
+
+Run `waterology config context audit-reproducibility` and follow its
+`reproducibility` mode as defined in `waterology-project-conventions`.
+
+In `light` mode, compare each numeric claim with the current outputs and write
+one report listing matches, mismatches with their likely cause, and claims with
+no matching output. Use `PASS`, `FAIL`, `EXPLAINED`, and `UNMATCHED` as plain
+labels. Skip the passport, the `STALE` and `UNVERIFIED` lifecycle states, archive
+seals, and RO-Crate references unless the user asks for them.
+
+In `strict` mode, follow the full workflow below.
+
 ## Inputs and boundaries
 
 Require a manuscript path. Accept one or more output files or directories and

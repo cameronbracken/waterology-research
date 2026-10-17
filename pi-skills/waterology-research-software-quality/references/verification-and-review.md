@@ -14,7 +14,8 @@ Match each statement to fresh evidence.
 
 ## Review cutoff
 
-Use an independent reviewer when any of these applies:
+In `light` reproducibility mode, use an independent reviewer only when the user
+requests one. In `strict` mode, use one when any of these applies:
 
 - The user requests a review.
 - The change is broad, risky, difficult to reverse, or affects a release.

@@ -204,6 +204,7 @@ class ProjectConfig(BaseModel):
     environment_files: tuple[str, ...] = ()
     outputs: tuple[str, ...] = ()
     default_compute_profile: str = Field(default="direct", min_length=1)
+    reproducibility: Literal["light", "strict"] = "light"
     workflows: dict[str, WorkflowConfig] = Field(default_factory=dict)
     deliverables: dict[str, DeliverableConfig] = Field(default_factory=dict)
     study_contracts: dict[str, str] = Field(default_factory=dict)
@@ -222,6 +223,8 @@ class ProjectConfig(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_compatible(self, handler):
         payload = handler(self)
+        # Agent workflow policy, not an execution input. Keep it out of saved hashes.
+        payload.pop("reproducibility", None)
         for key in (
             "zotero",
             "workflows",
@@ -305,6 +308,7 @@ def project_config_toml(config: ProjectConfig) -> str:
         f"environment_files = {_toml_array(config.environment_files)}",
         f"outputs = {_toml_array(config.outputs)}",
         f"default_compute_profile = {json.dumps(config.default_compute_profile)}",
+        f"reproducibility = {json.dumps(config.reproducibility)}",
     ]
     if config.concurrency is not None:
         lines.extend(["", "[concurrency]", f"max_runs = {config.concurrency.max_runs}"])

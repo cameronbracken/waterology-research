@@ -132,3 +132,31 @@ def test_legacy_configuration_keeps_its_execution_fingerprint_shape():
         "metrics",
     }
     assert set(ProjectConfig(name="legacy").model_dump(mode="json")) == expected
+
+
+def test_reproducibility_defaults_to_light(tmp_path: Path) -> None:
+    path = tmp_path / "waterology.toml"
+    path.write_text('schema_version = 1\nname = "study"\n', encoding="utf-8")
+
+    assert load_project_config(path).reproducibility == "light"
+
+
+def test_reproducibility_accepts_strict_and_rejects_unknown(tmp_path: Path) -> None:
+    path = tmp_path / "waterology.toml"
+    path.write_text('name = "study"\nreproducibility = "strict"\n', encoding="utf-8")
+    assert load_project_config(path).reproducibility == "strict"
+
+    path.write_text('name = "study"\nreproducibility = "medium"\n', encoding="utf-8")
+    with pytest.raises(ValidationError):
+        load_project_config(path)
+
+
+def test_project_config_toml_writes_reproducibility(tmp_path: Path) -> None:
+    from waterology.core.config import project_config_toml
+
+    config = ProjectConfig(name="study", reproducibility="strict")
+    path = tmp_path / "waterology.toml"
+    path.write_text(project_config_toml(config), encoding="utf-8")
+
+    assert 'reproducibility = "strict"' in path.read_text(encoding="utf-8")
+    assert load_project_config(path).reproducibility == "strict"

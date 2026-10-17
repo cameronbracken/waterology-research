@@ -24,6 +24,7 @@ command = ["pixi", "run", "analysis"]
 environment_files = ["pixi.toml", "pixi.lock"]
 outputs = ["results/metrics.yaml"]
 default_compute_profile = "direct"
+reproducibility = "light"
 
 [archive]
 allow_missing_outputs = false
@@ -36,6 +37,13 @@ path = "results/metrics.yaml"
 format = "yaml"
 field = "rmse"
 ```
+
+`reproducibility` selects how much record keeping agents do. `light`, the default
+when the key is missing, treats committed code plus a pinned, documented
+environment as reproducible. `strict` adds run archives, evidence and claim
+ledgers, environment gates, audits, reviews, and worktree isolation.
+`skills/project-conventions/SKILL.md` defines both modes. Agents read the mode with
+`waterology config context <skill>`. It does not affect execution fingerprints.
 
 `command` is an argument array, not a shell string. `outputs` may not overlap. Metric extractors read
 named fields from JSON files after successful execution.
