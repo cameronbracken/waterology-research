@@ -517,6 +517,11 @@ verification, review, and worktree isolation to the task.
 The `agent-delegation` skill defines portable task briefs, worktree ownership,
 compute authorization, and return contracts. `source-summarization` keeps long
 source text on disk and reads it in bounded windows.
+The `sol-pi` skill hands a coding task to
+[SoL-Pi](https://github.com/NVlabs/SoL-Pi) and reports its changes and cost. It
+needs the upstream `sol-pi-run` launcher on PATH. The optional upstream prompt
+hooks are not bundled. Install them from the SoL-Pi checkout if you want
+`/sol-pi` and `$sol-pi` handled without a host model turn.
 
 The `audit-reproducibility` skill compares numeric manuscript claims with R,
 Python, Fortran, and text outputs. It records provenance and tolerance results

@@ -281,6 +281,18 @@ source are credited here; this page is the canonical list.
 - **Credit string:** *Managed execution integrates with TORC
   (NatLabRockies/torc, BSD 3-Clause).*
 
+### NVlabs/SoL-Pi - SoL-Pi delegation skill
+
+- **Organization:** NVIDIA Corporation and affiliates
+- **Repo:** <https://github.com/NVlabs/SoL-Pi/tree/219568034fa54ed121ede80961655e33dfb9d0e3>,
+  commit `219568034fa54ed121ede80961655e33dfb9d0e3`
+- **License:** MIT - Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES
+- **What we adapt:** `skills/sol-pi/SKILL.md` merges the Claude Code and Codex
+  variants of `examples/sol-pi-skill/*/SKILL.md` into one portable skill. The
+  `sol-pi-run` and `sol-pi-context` launchers, prompt hooks and SoL-Pi
+  extensions are not copied. Users install them from the upstream checkout.
+- **Credit string:** *SoL-Pi delegation skill adapted from NVlabs/SoL-Pi (MIT).*
+
 ### Workflow Run RO-Crate and roc-validator
 
 - **Authors:** Workflow Run RO-Crate working group; CRS4 roc-validator contributors.
