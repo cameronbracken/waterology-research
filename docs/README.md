@@ -16,6 +16,7 @@ recorded evidence and a reproducible deliverable.
 | [TORC execution](torc.md) | Prepare workers and diagnose local, remote, or Slurm execution |
 | [RO-Crate integration](ro-crate.md) | Inspect automatic crates, export run provenance, and interpret validation |
 | [Workflow Run RO-Crate evaluation](workflow-run-ro-crate.md) | Read the profile design and interoperability evaluation |
+| [Apptainer](apptainer.md) | Freeze a pixi environment and OS userspace into one file for a paper |
 
 The files under `superpowers/specs/` and `superpowers/plans/` are design and
 implementation records. They explain why behavior exists, but are not setup
