@@ -318,3 +318,37 @@ def test_pi_assets_check_reports_drift_mode_and_orphans(tmp_path: Path) -> None:
     assert script.stat().st_mode & 0o100
     assert not orphan.parent.exists()
     assert render_pi_assets(catalog, output, check=True) == ()
+
+
+def test_pi_cross_skill_links_resolve_in_skills_and_support_files(tmp_path: Path) -> None:
+    import re
+
+    from waterology.runtime.render import render_pi_assets
+
+    source = _pi_source(tmp_path)
+    skill = source / "skills/session-log/SKILL.md"
+    skill.write_text(
+        skill.read_text()
+        + "\nRead [style](../writing-style/SKILL.md#base).\n"
+        + "Keep [local format](references/format.md) and [web](https://example.org/) links.\n"
+    )
+    reference = source / "skills/session-log/references/format.md"
+    reference.write_text(reference.read_text() + "Read [style](../../writing-style/SKILL.md).\n")
+    output = tmp_path / "output"
+
+    render_pi_assets(AssetCatalog.discover(source), output)
+
+    for relative in (
+        "pi-skills/waterology-session-log/SKILL.md",
+        "pi-skills/waterology-session-log/references/format.md",
+    ):
+        path = output / relative
+        for target in re.findall(r"\]\(([^)]+)\)", path.read_text()):
+            if target.startswith("https:"):
+                assert target == "https://example.org/"
+                continue
+            assert (path.parent / target.split("#", 1)[0]).is_file(), target
+    assert (
+        "../waterology-writing-style/SKILL.md#base"
+        in (output / "pi-skills/waterology-session-log/SKILL.md").read_text()
+    )

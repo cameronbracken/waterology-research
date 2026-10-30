@@ -41,10 +41,21 @@ the target format calls for them.
 - Check affect/effect, articles, agreement, and typographical errors.
 - Use numbered research questions only when they clarify scope.
 
-## Optional style corpus
+## Style examples
 
-The `writing.papers` list in the local Waterology configuration supplies optional
-DOIs, URLs, or paths to example papers. `writing.files` can hold the user's
-analysis of those examples. No corpus is bundled as a personal style default.
-Source papers can be collaborative and publisher edited. Treat a selected
-corpus as examples, not proof of a single author's voice.
+The house style above was informed by Cameron Bracken's published research:
+
+- Bracken et al. (2015), [Spatial variability of seasonal extreme precipitation
+  in the western United States](https://doi.org/10.1002/2015JD023205).
+- Bracken et al. (2024), [Standardized benchmark of historical compound wind
+  and solar energy droughts across the Continental United States](https://doi.org/10.1016/j.renene.2023.119550).
+- Bracken et al. (2025), [Intensifying Renewable Energy Droughts in the Western
+  U.S. Amid Evolving Infrastructure and Climate](https://doi.org/10.1029/2024EF005313).
+- Bracken et al. (2025), [GODEEEP-hydro: Historical and projected power system
+  ready hydropower data for the United States](https://doi.org/10.1038/s41597-025-05097-3).
+
+These are public examples, not an installed user's identity or proof that the
+current agent has read the papers. Source papers are collaborative and publisher
+edited; do not infer a sole author's voice. Retrieve the originals only when
+the task calls for examining examples. Local `writing.papers` and `writing.files`
+can supply a different corpus or additional prose analysis.

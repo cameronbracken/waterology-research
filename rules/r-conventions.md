@@ -20,21 +20,9 @@ use the [local resolver](../skills/project-conventions/references/local-preferen
 
 Run `waterology config context r-conventions` for optional local style.
 
-- Use the project formatter and its configuration (for example, **air**).
-- Match the project assignment convention. If none exists, choose a consistent
-  convention; the example below uses `<-`.
-- Use the native pipe `|>`, never magrittr `%>%`.
-- Place the variable assignment on the first line of a pipe chain, with the
-  first operation on the next line:
-  ```r
-  result <-
-    data |>
-      filter(year >= 2000) |>
-      summarise(mean_flow = mean(flow, na.rm = TRUE))
-  ```
-- Use `function(x)` for multiline functions, use `\(x)` lambda syntax for inline functions.
+- Use [r-code-style](../skills/r-code-style/SKILL.md) for assignment, pipes,
+  formatter defaults, function syntax, and script organization.
 - Use `# %%` section markers for editor cell navigation (VSCode / Positron).
-- Put file paths and settings in a dedicated section at the top of the script.
 
 ## Reproducibility
 
@@ -60,11 +48,12 @@ Run `waterology config context r-conventions` for optional local style.
 
 ## Visualization
 
-- Follow the project or local figure guidance. Choose accessible colors and
-  backgrounds suited to the intended medium.
-- ggplot for static, plotly for interactive, base R + TikZ/`pgfSweave` for
-  publication graphics. Explicit `ggsave` dimensions; `bg = "transparent"`
-  for figures dropped into Beamer.
+- Only when creating or revising a data visual, use
+  [data-visualization](../skills/data-visualization/SKILL.md). It loads scientific
+  figure or interactive guidance only as needed. General R editing does not
+  require plotting skills.
+- Set explicit `ggsave` dimensions; use `bg = "transparent"` for figures
+  dropped into Beamer when the slide design needs transparency.
 
 ## Packages
 

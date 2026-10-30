@@ -10,6 +10,10 @@ dynamic workflows for
 [Pi](https://pi.dev/). It supports reproducible research using R, Python, Julia,
 Fortran, and Rust with documentation using Markdown, Quarto, and LaTeX.
 
+The package deliberately ships opinionated choices about tools, design, prose,
+and workflow. Private values, machine details, accounts, and local overrides
+stay in [personal configuration](docs/local-configuration.md).
+
 To get started, consider your research goals and what it would take to get there.
 Use skills for planning, implementation, literature review, review, and writing.
 When the work needs measured candidate evaluations, use a registered workflow
@@ -97,7 +101,8 @@ subcommands and options, for example `wgy workflow list`.
 
 ## Personal settings
 
-Installations contain no personal identity, machine inventory, or writing corpus.
+Installations contain shared house defaults and public writing examples, but
+no private user identity, machine inventory, values, or service configuration.
 Use `waterology config init` to create optional private user settings. Existing
 machine profiles remain in the same global file. See
 [Personal configuration](docs/local-configuration.md) for preferences, writing
@@ -187,7 +192,9 @@ Pi installs project skills and agents under `.pi/skills/` and `.pi/agents/`, or
 user assets under `~/.pi/agent/skills/` and `~/.pi/agent/agents/`. The root
 `package.json` is also a native Pi package, so a checkout can be registered
 directly with `pi install /path/to/waterology-research` (or add `-l` for project
-scope). Pi exposes each workflow as `/skill:<name>`.
+scope). Pi also exposes each workflow as `/skill:<name>` for explicit invocation.
+Ordinary prompts can select skills through their descriptions without a special
+command. The package's [artifact guide](docs/artifact-skills.md) gives examples.
 
 Pi core has no built-in subagent definition format. Install
 [`pi-subagents`](https://github.com/nicobailon/pi-subagents) to discover the
@@ -557,6 +564,11 @@ The platform and research feature roadmaps are complete. The platform includes c
 packaging, research methods, experiment state, TORC execution, agent sessions and MCP, and the
 local research dashboard. The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
 [ATTRIBUTION.md](ATTRIBUTION.md).
+
+## AI use
+
+GPT-6 through Codex assisted with the 0.8.2 skill consolidation, documentation,
+runtime link handling, and tests.
 
 ## License
 

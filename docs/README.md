@@ -8,6 +8,7 @@ recorded evidence and a reproducible deliverable.
 | --- | --- |
 | [Engineering](engineering.md) | Build or repair to a specification, or optimize under fixed constraints |
 | [Workflow guide](workflow-guide.md) | Choose skills, experiments, workflows, studies, and deliverables |
+| [Artifact skills](artifact-skills.md) | Choose plots, diagrams, reports, notes, documentation, and interactive layers |
 | [Getting started](getting-started.md) | Install Waterology, initialize a project, and run an experiment |
 | [Workflow execution](workflow-execution.md) | Register project tasks, execute them, and reproduce a selected result |
 | [Managed studies](managed-studies.md) | Authorize bounded iteration, compare evidence, and record conclusions |

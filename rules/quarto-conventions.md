@@ -17,7 +17,8 @@ use the [local resolver](../skills/project-conventions/references/local-preferen
 ## Quarto
 
 Run `waterology config context quarto-conventions` for optional local guidance.
-The themes below are examples; project and local preferences take precedence.
+The themes below are package defaults; project requirements and local overrides
+take precedence.
 
 - Use the project environment or discover `quarto` on PATH.
 - Standalone HTML uses `embed-resources: true` and a dual theme for a
@@ -44,6 +45,13 @@ The themes below are examples; project and local preferences take precedence.
   the figure regenerable. Use the project or local palette.
 - Mermaid for flow charts, plotly for interactive plots, bokeh for richer
   interactives, PNG or vector for static.
+
+Load [reports](../skills/reports/SKILL.md) only when authoring a report, and
+[interactive-reports](../skills/interactive-reports/SKILL.md) only for requested
+interactive reporting. For visual creation, choose
+[data-visualization](../skills/data-visualization/SKILL.md) for data displays or
+[diagrams](../skills/diagrams/SKILL.md) for conceptual relationships. An existing
+image or a static HTML document does not require all of these skills.
 
 ## No hand-typed computed numbers
 

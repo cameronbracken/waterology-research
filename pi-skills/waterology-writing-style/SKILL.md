@@ -1,6 +1,6 @@
 ---
 name: waterology-writing-style
-description: Use when writing or editing prose people will read, including documentation, plans, messages, comments, reports, manuscripts, abstracts, captions, and research summaries.
+description: Use when writing, rewriting, or tightening prose, including paragraphs, emails, documentation, plans, reports, manuscripts, abstracts, captions, and research summaries.
 ---
 
 <!-- Generated from skills/writing-style/SKILL.md. Do not edit. -->
@@ -12,7 +12,7 @@ all prose. For research artifacts, also read
 [scientific-prose.md](references/scientific-prose.md).
 
 If the CLI is unavailable, use the shared
-[local preferences resolver](../project-conventions/references/local-preferences.md)
+[local preferences resolver](../waterology-project-conventions/references/local-preferences.md)
 with this skill name, including common preferences and matching local guidance.
 
 ## Base layer
@@ -28,14 +28,24 @@ with this skill name, including common preferences and matching local guidance.
 - Cite factual claims and credit source authors when sources are available.
   Prefer scholarly citations; otherwise cite the repository or a stable URL.
 - Preserve the user's vocabulary and level of formality.
+- Use plain ASCII punctuation unless a scientific symbol requires Unicode.
+  Avoid em dashes, long semicolon chains, and unnecessary hyphenated phrases.
+- Remove sales language and stock phrasing such as "genuinely", "key", "best",
+  "super", "gotchas", and "tuning knobs" when a precise statement works.
+- Use emoji, bold text, parenthetical asides, and rhetorical openings sparingly.
+  Write commit subjects in the imperative and keep terminal messages factual.
+- For a Markdown file, use
+  [Markdown delivery](references/markdown-artifacts.md). Read it only when
+  producing that artifact, rather than for every chat reply or code comment.
 
-## Local writing guidance
+## Private overrides and examples
 
 Run `waterology config context writing-style` to include optional local
-preferences, writing instructions and a user-selected style corpus. Local
-settings guide tone and formatting when the user and project leave them open.
-The package does not select an author's papers or punctuation preferences for
-new users. If the CLI is unavailable, read `preferences.files`, `writing.files`, `writing.papers`
+context, writing overrides, and any additional style corpus. The package's
+prose conventions and scientific writing reference supply the house style;
+they work without local configuration. Local settings can override those
+defaults when the user and project leave a choice open.
+If the CLI is unavailable, read `preferences.files`, `writing.files`, `writing.papers`
 and `guidance.writing-style` from the global Waterology configuration directly.
 Resolve file paths relative to that configuration. Missing configuration means
 use the shared base layer. Do not publish private guidance or infer that papers

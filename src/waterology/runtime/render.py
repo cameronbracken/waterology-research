@@ -118,8 +118,9 @@ def render_claude_command(skill: SkillDefinition) -> str:
 
 # Pi has no package namespaces, and skill names that collide with another package
 # (Feynman ships several of the same names) keep only the first one loaded. Pi gets
-# prefixed copies, and exact `skill-name` references in the text follow the rename.
+# prefixed copies; inline skill names and relative cross-skill links follow the rename.
 SKILL_REFERENCE = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)*)`")
+SKILL_LINK = re.compile(r"(\]\((?:\.\./)+)([a-z0-9]+(?:-[a-z0-9]+)*)(?=[/#)])")
 
 
 def pi_name(name: str) -> str:
@@ -127,8 +128,11 @@ def pi_name(name: str) -> str:
 
 
 def _pi_references(text: str, names: frozenset[str]) -> str:
-    return SKILL_REFERENCE.sub(
+    text = SKILL_REFERENCE.sub(
         lambda match: f"`{pi_name(match[1])}`" if match[1] in names else match[0], text
+    )
+    return SKILL_LINK.sub(
+        lambda match: f"{match[1]}{pi_name(match[2])}" if match[2] in names else match[0], text
     )
 
 

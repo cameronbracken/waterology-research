@@ -1,10 +1,9 @@
 ---
 name: waterology-project-conventions
 description: >
-  Conventions, the project reproducibility mode, and optional constraint checks
-  for research code (hydrology / energy systems / extremes). Use when writing or
-  editing R, Python, Fortran, Quarto, or LaTeX in a research project, or when
-  another skill needs to know whether the project runs in light or strict mode.
+  Apply research coding and tool defaults when writing scripts, adding features,
+  or editing Python, R, Fortran, Quarto, or LaTeX. Also defines light and strict
+  reproducibility modes and when to run constraints.
 ---
 
 <!-- Generated from skills/project-conventions/SKILL.md. Do not edit. -->
@@ -22,13 +21,20 @@ for them.
 Editing or reviewing any of: `.R` `.r` `.Rmd`, `.py`, `.f90` `.F90` `.f`,
 `.qmd`, `.tex` — in a research/analysis/simulation/paper context.
 
-## Preferences and privacy
+## Package defaults and private context
 
-When the project does not settle a choice about tools, collaboration, privacy,
-source credit, or visual design, read
-[local preferences](references/local-preferences.md). Run
-`waterology config context project-conventions` to include the current user's
-identity and optional local guidance. No personal defaults ship with the package.
+Waterology is an opinionated research package. Shared choices about tools,
+design, writing, and workflow belong in its skills and rules. Explicit user
+instructions, project requirements, and established project conventions take
+precedence. Optional local overrides choose among remaining open choices.
+
+When selecting tools or starting implementation, read
+[tool choices](references/tool-choices.md). For identity, machine details, or
+private overrides, use [local preferences](references/local-preferences.md).
+`waterology config context project-conventions` reads that optional local context;
+it is an internal helper, not a command the user must request. Private values,
+long-term goals, inventories, paths, accounts, and credentials stay outside the
+public package. Do not copy them into artifacts without the user's request.
 
 ## Reproducibility mode
 
@@ -69,7 +75,8 @@ Choose a format by who reads and edits the file:
 | Settings people edit by hand | TOML |
 | Configuration and ledgers read by people and tools | YAML |
 | Notes, skills, agent definitions and other plain text an LLM may read | Markdown |
-| Written reports | LaTeX, with TikZ for diagrams |
+| Notes, ordinary reports, and code documentation | Markdown |
+| Polished PDF reports, manuscripts, and white papers | LaTeX, with TikZ for diagrams |
 | Reports that need interactive graphics | Quarto |
 | Output exchanged only between programs | JSON or JSONL |
 
@@ -95,10 +102,30 @@ style when they conflict):
 | `.stan` (and cmdstanr drivers) | `rules/stan-conventions.md` |
 | `Makevars*` `Makefile` `configure` `meson.build` | `rules/native-build-conventions.md` |
 
+When writing R, including chunks in Quarto or R Markdown, use
+[r-code-style](../waterology-r-code-style/SKILL.md).
+
+For authored artifacts, load only the skill for the requested work. Follow a
+linked skill or reference only when its stated condition applies, and do not
+reload guidance already read for the task. Reusing an existing visual does not
+require its creation workflow.
+
+| Requested work | Skill |
+| --- | --- |
+| Plots, charts, maps, or images encoding data | [data-visualization](../waterology-data-visualization/SKILL.md) |
+| Diagrams, schematics, or conceptual flows | [diagrams](../waterology-diagrams/SKILL.md) |
+| Narrative report with linked or embedded evidence | [reports](../waterology-reports/SKILL.md) |
+| Simple Markdown notes or todos | [markdown-notes](../waterology-markdown-notes/SKILL.md) |
+| Documentation accompanying code | [documentation](../waterology-documentation/SKILL.md) |
+
+Requested interaction adds [interactive-graphics](../waterology-interactive-graphics/SKILL.md)
+for plots or diagrams, or [interactive-reports](../waterology-interactive-reports/SKILL.md)
+for reports. Static work does not load these layers merely because it is HTML.
+
 Highlights you should not need to re-derive: R follows the project formatter and assignment style;
-Python matches the project environment; Fortran is `implicit none` + explicit kinds + `intent`; documents use
-dual-theme Quarto with `ggplot` -> `ggplotly` graphics, light for print and never 
-hand-type computed numbers.
+Python matches the project environment; Fortran is `implicit none` + explicit kinds + `intent`;
+interactive reports use dual-theme Quarto, print is light, and computed numbers
+are imported from outputs rather than hand-typed.
 
 ### 2. Run constraints when the mode calls for them
 

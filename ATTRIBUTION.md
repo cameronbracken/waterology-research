@@ -1,5 +1,36 @@
 # Attribution
 
+## Public house defaults and private context, 2026-10-30
+
+- At Cameron Bracken's request, reusable tool choices, coding and prose style,
+  environment workflow, visual preferences, and blog preparation guidance from
+  local configuration were consolidated into canonical skills and rules.
+- Tool selection lives in `skills/project-conventions/references/tool-choices.md`;
+  prose in `skills/writing-style/`; environment and R formatter defaults in
+  `skills/setup-environment/` and `skills/r-code-style/`; blog recipes in
+  `skills/publish-blog-post/references/blog-defaults.md`. Existing visual and
+  document rules retain the shared palette, theme, and layout choices.
+- The scientific prose reference now lists the public papers that informed
+  the package's house style. The paper-source credit below remains applicable.
+- Private values, long-term goals, machine inventories, private paths,
+  account settings, and credentials are excluded from package assets.
+
+## Cameron Bracken - R style and visualization guidance, 2026-10-29
+
+- Author: [Cameron Bracken](https://orcid.org/0000-0003-1917-402X).
+- Source: the author's global agent instructions, sections _R Code Style_
+  and _Visualization_, moved at the author's request, and the author's follow-up
+  request separating data displays, conceptual diagrams, reports, interactive
+  graphics and reports, notes, and code documentation.
+- Waterology files: `skills/r-code-style/SKILL.md`, `skills/data-visualization/`,
+  `skills/diagrams/`, `skills/reports/`, `skills/interactive-graphics/`,
+  `skills/interactive-reports/`, `skills/markdown-notes/`, `skills/documentation/`, and
+  `skills/writing-style/references/markdown-artifacts.md`. The initial broad
+  visualization skill was replaced by these focused entry points. Shared visual
+  design and Markdown delivery live in references; conditional links load only
+  guidance needed for the requested artifact. Existing figure, R, and document
+  conventions route to the matching skills.
+
 ## ECC project learning adaptation, 2026-09-05
 
 - Source: [affaan-m/ECC](https://github.com/affaan-m/ECC/tree/e04ea0b9cc8248686edf5ac751cadff550e162b8),
@@ -246,8 +277,8 @@ source are credited here; this page is the canonical list.
   <https://doi.org/10.1038/s41597-025-05097-3>
 - **What we adapt:** an original analysis of recurring structure, claim
   calibration, quantitative scope, limitations, and reproducibility details in
-  four first-author papers. This records historical source credit, not a default
-  style corpus. Users configure their own examples in local writing settings.
+  four first-author papers. These public examples inform the package's house
+  style; users can supply different examples in local writing settings.
   No paper passages are copied. Collaborative and
   publisher editing limits any inference about sole-author style.
 - **Credit string:** *Scientific prose guidance informed by an original

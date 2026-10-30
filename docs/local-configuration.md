@@ -1,10 +1,22 @@
 # Personal configuration
 
-Waterology ships shared research workflows without a personal identity, writing
-corpus, machine inventory, or personal preferences. Keep those in the global
-configuration and optional local Markdown files. Runtime installations include
-the instructions for reading them; they never copy your configuration or its
-contents into a project, wheel, or plugin cache.
+Waterology is a personal research package published for others to use. It ships
+opinionated defaults for design, tools, writing, and workflow. Those choices
+belong in canonical skills and rules, where they are maintained and discovered
+together. Private context and optional overrides belong in the global
+configuration and local Markdown files. Runtime installations include the
+resolver; they never copy those local files into a project, wheel, or plugin cache.
+
+| Public package | Local configuration only |
+| --- | --- |
+| Tool and language choices, environment workflow, coding style | Machine inventories, interpreter locations, private aliases and project paths |
+| Palettes, themes, figure formats, report and diagram workflow | Account details, compute targets, allocation identifiers, service endpoints |
+| Prose conventions, public writing examples, source attribution | Personal values, long-term vision, private notes and identity settings |
+| Reusable blog layout, media preparation, provider preferences | Site credentials, private destinations, deployment secrets |
+
+An author's public papers can inform the package's house style without making
+that author the identity of every installed user. User instructions, project
+requirements, and local overrides can replace package defaults where applicable.
 
 ## Location and precedence
 
@@ -81,13 +93,13 @@ Keep these files outside repositories. Do not put credentials in them.
 All personal sections are optional; strings default to empty and lists to `[]`.
 The dashboard host defaults to loopback. Its profile must be explicitly selected.
 
-For example, `preferences.md` can describe collaboration and privacy choices.
-`r.md` can select an assignment style, formatter configuration, line width, and
-editor markers. `figures.md` can specify palette, theme, dimensions, and export
-formats. `blog.md` can supply a site's location, frontmatter, media destinations,
-image tools, and preview/build commands. Machine guidance can point to an
-existing private inventory rather than duplicating it. Credentials remain in
-SSH, provider stores, Keychain, or environment variables.
+For example, `preferences.md` can hold personal values and private collaboration
+context. `r.md` can point to a machine's formatter configuration. `blog.md` can
+supply a private site location or destination. Files can also provide deliberate
+local overrides, but do not copy a whole package workflow there just to change
+one setting. Machine guidance can point to an existing private inventory rather
+than duplicating it. Credentials remain in SSH, provider stores, Keychain, or
+environment variables.
 
 ## Reading local guidance
 
@@ -109,16 +121,17 @@ of the common preferences file.
 Skills with personal choices invoke the corresponding context command. If the
 CLI is unavailable in a plugin-only install, the shared project-conventions
 reference documents the same path resolution for reading local files directly.
-For additional skills, request that the agent read `waterology config context
-SKILL-NAME` or add that instruction to your private user guidance. Changing a
-local file takes effect at its next read; restart a running task if its agent
-has already read the older contents.
+These context commands are internal helpers; the user does not need to name
+them to activate a skill. Normal prompts select skills through their descriptions.
+For a new skill that needs private context, put the resolver instruction in its
+canonical entry point. Changing a local file takes effect at its next read;
+restart a running task if its agent has already read the older contents.
 
-Writing examples are optional. The package does not select papers on your
-behalf or claim that a configured source has been read. Supply your own prose
-analysis in a local Markdown file or have the agent retrieve/read the selected
-papers under your normal access rules. Public source credits in
-`ATTRIBUTION.md` record the package's origins, not an installed user's corpus.
+The scientific prose reference includes public papers that informed the house
+style. Local writing examples are optional overrides or additions. Neither a
+bundled citation nor a configured source proves that the current agent has
+read its text. Supply prose analysis or retrieve the originals when the task
+requires it. Public source credit does not set the installed user's identity.
 
 ## Dashboard launcher
 
@@ -142,12 +155,13 @@ to install. Each user supplies their own file. Keep the global configuration
 outside the checkout; copying an entire home/config directory into a repository
 would defeat this separation.
 
-To migrate older personal defaults, save them into private Markdown files,
-reference those files in the global configuration, and reinstall the updated
-skills. Remove obsolete personal files from any unmanaged old installations.
-Reinstallation of an owned copy updates the skill directory and removes its
-obsolete bundled reference. Link installations see the updated source directly.
-Do not put local overrides back into canonical skills.
+When consolidating local guidance, move reusable defaults into the matching
+canonical skills and rules. Retain only private context and intentional overrides
+locally, remove obsolete config references, and validate every remaining path.
+Keep a private backup until the migration is verified. Do not copy an entire
+personal directory into the repository. Reinstall cached plugins or owned copies
+after package changes; link installations see updated source directly. Start a
+new agent session when its skill catalog still reflects the previous install.
 
 Removing content from the latest commit does not remove it from earlier
 commits. Before first public publication, audit the complete history intended

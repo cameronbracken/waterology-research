@@ -21,6 +21,13 @@ Use the existing manager (such as Pixi, uv, conda, or venv) and its documented
 commands. Do not mix dependency managers or assume personal shell aliases.
 For remote systems, inspect their documented module/environment requirements.
 
+For new work, use Pixi for mixed-language or system dependencies and uv for pure
+Python. In a Pixi project, run through `pixi run` and declare dependencies with
+`pixi add`; do not use an ad hoc `pip install` to mutate the environment. Use
+`python3` outside a managed environment, and the environment's interpreter
+inside it. Reuse a project's existing virtual environment rather than creating
+a competing one. Machine-specific aliases and HPC modules stay in local guidance.
+
 ## Style
 
 - Format with **ruff** or **black**. Prefer `ruff` for lint + format.

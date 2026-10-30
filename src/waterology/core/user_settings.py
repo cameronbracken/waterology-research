@@ -42,7 +42,8 @@ class CredentialSettings(BaseModel):
     """Dotenv file that fills missing research API keys. An empty path disables it."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    file: str = "~/.config/secrets/research.env"
+    # This is a user-level location resolved against each user's home directory.
+    file: str = "~/.config/secrets/research.env"  # waterology: allow-abs-path
 
     @field_validator("file")
     @classmethod

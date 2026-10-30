@@ -2,7 +2,7 @@
 name: waterology-setup-environment
 description: >
   Scaffold or repair a project environment for a research project: pixi for
-  Python and system tools, rv or renv for R packages, direnv for per-project
+  Python and system tools, rv for new R environments, direnv for project
   variables. Use when creating a new project, adding an environment to an
   existing one, moving a project between machines, or when an environment
   misbehaves (missing deps, wrong interpreter, broken shebangs).
@@ -18,7 +18,7 @@ Discover installed tools and required target platforms; do not assume a user's
 package manager, operating system, interpreter location, or shell aliases.
 
 If the CLI is unavailable, use the shared
-[local preferences resolver](../project-conventions/references/local-preferences.md)
+[local preferences resolver](../waterology-project-conventions/references/local-preferences.md)
 with this skill name, including common preferences and matching local guidance.
 
 ## Choose the tool
@@ -26,12 +26,20 @@ with this skill name, including common preferences and matching local guidance.
 - **pixi** is the default for anything with system or compiled dependencies
   (CmdStan, GDAL, gfortran, quarto, pandoc) and for mixed-language projects.
 - **uv** only for pure Python projects with PyPI-only dependencies.
-- **R packages**: `rv` (`rproject.toml` + `rv sync`) in newer projects, `renv`
-  in older ones. Never mix the two; check `.Rprofile` to see which is active.
-- **R installation**: use the project's chosen system or environment-managed R.
-  Verify that its Rscript/R executable is available in the execution environment.
+- **R packages**: prefer `rv` (`rproject.toml` + `rv sync`) for new work.
+  Maintain an existing `renv` project without mixing managers or migrating it
+  as a side effect; check `.Rprofile` to see which is active.
+- **R installation**: on macOS, prefer system R from Homebrew and keep R itself
+  out of Pixi. Pixi supplies tools R calls, such as pandoc, Quarto, air, and
+  CmdStan. Verify that R and Rscript are on PATH inside the environment.
+  Preserve an existing project's R installation on other targets.
 - **HPC**: inspect the target system's module and environment requirements.
   Put machine-specific instructions in local guidance, not shared templates.
+
+Use direnv for project variables and environment activation. Keep secrets and
+machine paths outside committed setup files; follow the project's `.envrc`
+convention. Prefer bash for portable non-interactive scripts; interactive shell
+choice and private aliases belong in local configuration.
 
 ## Research CLIs the agents expect (global, one-time)
 
