@@ -1,9 +1,11 @@
+from waterology.agents.antigravity import AntigravityAdapter
 from waterology.agents.base import AdapterError, RuntimeAdapter
 from waterology.agents.claude import ClaudeAdapter
 from waterology.agents.codex import CodexAdapter
 from waterology.agents.opencode import OpenCodeAdapter
 
 _ADAPTERS: dict[str, RuntimeAdapter] = {
+    "antigravity": AntigravityAdapter(),
     "claude": ClaudeAdapter(),
     "codex": CodexAdapter(),
     "opencode": OpenCodeAdapter(),

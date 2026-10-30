@@ -1,7 +1,7 @@
 {
   "name": "waterology",
-  "version": "0.8.2",
-  "description": "Reproducible computational research workflows for Claude Code, Codex, and OpenCode.",
+  "version": "0.9.0",
+  "description": "Reproducible computational research workflows for Antigravity, Claude Code, Codex, and OpenCode.",
   "author": {
     "name": "Cameron Bracken",
     "url": "https://codeberg.org/waterology"

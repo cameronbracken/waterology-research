@@ -63,6 +63,21 @@ def test_project_pi_plan_installs_prefixed_skills_prompts_and_subagents(tmp_path
     assert not any(destination.endswith(".json") for destination in destinations)
 
 
+def test_project_antigravity_plan_installs_skills_and_agents(tmp_path: Path) -> None:
+    plan = build_install_plan(
+        runtime=Runtime.ANTIGRAVITY,
+        scope=InstallScope.PROJECT,
+        target=tmp_path,
+        mode=InstallMode.COPY,
+        catalog=AssetCatalog.discover(),
+    )
+
+    destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
+    assert ".agent/skills/project-conventions" in destinations
+    assert ".agent/agents/researcher.md" in destinations
+    assert not any(destination.endswith(".json") for destination in destinations)
+
+
 def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
     plan = build_install_plan(
         runtime=Runtime.OPENCODE,
@@ -81,6 +96,7 @@ def test_project_opencode_plan_uses_v2_paths(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("runtime", "expected_manifests"),
     [
+        (Runtime.ANTIGRAVITY, {".agent/.waterology-install.json"}),
         (
             Runtime.CLAUDE,
             {".claude/.waterology-install.json", ".waterology-claude-install.json"},
@@ -172,6 +188,25 @@ def test_user_claude_plan_uses_home_directories(tmp_path: Path, monkeypatch) -> 
     assert ".claude/skills/project-conventions" in destinations
     assert ".claude/agents/researcher.md" in destinations
     assert ".claude/commands/deepresearch.md" in destinations
+
+
+def test_user_antigravity_plan_uses_gemini_config_directory(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+
+    plan = build_install_plan(
+        runtime=Runtime.ANTIGRAVITY,
+        scope=InstallScope.USER,
+        target=Path("unused"),
+        mode=InstallMode.COPY,
+        catalog=AssetCatalog.discover(),
+    )
+
+    destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
+    assert ".gemini/config/skills/project-conventions" in destinations
+    assert ".gemini/config/agents/researcher.md" in destinations
+    assert plan.trusted_root == tmp_path.absolute()
 
 
 def test_user_pi_plan_uses_pi_agent_skills(tmp_path: Path, monkeypatch) -> None:

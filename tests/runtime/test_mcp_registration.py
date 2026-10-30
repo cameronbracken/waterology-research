@@ -33,12 +33,36 @@ def test_opencode_project_config_uses_current_v2_shape() -> None:
 
 
 def test_runtime_config_snippets_contain_no_machine_paths_or_environment() -> None:
-    for runtime in (Runtime.CLAUDE, Runtime.CODEX, Runtime.OPENCODE, Runtime.PI):
+    for runtime in (
+        Runtime.ANTIGRAVITY,
+        Runtime.CLAUDE,
+        Runtime.CODEX,
+        Runtime.OPENCODE,
+        Runtime.PI,
+    ):
         config = runtime_mcp_config(runtime)
         serialized = json.dumps(config, sort_keys=True)
         assert "waterology-mcp" in serialized
         assert str(Path.home()) not in serialized
         assert "environment" not in serialized
+
+
+def test_antigravity_uses_mcp_config_and_cli_registration() -> None:
+    assert runtime_mcp_config(Runtime.ANTIGRAVITY) == {
+        "mcpServers": {"waterology": {"command": "waterology-mcp"}}
+    }
+
+    result = runner.invoke(app, ["mcp", "config", "antigravity", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["command"] == [
+        "agy",
+        "mcp",
+        "add",
+        "waterology",
+        "waterology-mcp",
+    ]
 
 
 def test_pi_uses_builtin_mcp_registration() -> None:
@@ -69,6 +93,13 @@ def test_pi_package_extension_registers_stdio_server() -> None:
 
 
 def test_registration_commands_use_supported_runtime_interfaces() -> None:
+    assert registration_command(Runtime.ANTIGRAVITY) == (
+        "agy",
+        "mcp",
+        "add",
+        "waterology",
+        "waterology-mcp",
+    )
     assert registration_command(Runtime.CLAUDE) == (
         "claude",
         "mcp",

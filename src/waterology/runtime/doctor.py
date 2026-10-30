@@ -17,6 +17,15 @@ class Diagnostic:
     message: str
 
 
+_RUNTIME_COMMANDS: dict[str, str] = {
+    "antigravity": "agy",
+    "claude": "claude",
+    "codex": "codex",
+    "opencode": "opencode",
+    "pi": "pi",
+}
+
+
 def run_diagnostics(
     catalog: AssetCatalog,
     runtime: str | None = None,
@@ -31,14 +40,14 @@ def run_diagnostics(
             f"{len(issues)} asset validation issue(s)" if issues else "Assets are valid",
         )
     ]
-    for name in ("claude", "codex", "opencode", "pi"):
-        path = shutil.which(name)
+    for name, command in _RUNTIME_COMMANDS.items():
+        path = shutil.which(command)
         required = runtime == name
         diagnostics.append(
             Diagnostic(
                 f"runtime:{name}",
                 "pass" if path else ("fail" if required else "warn"),
-                path or f"{name} command was not found",
+                path or f"{command} command was not found",
             )
         )
     torc_path = shutil.which("torc")

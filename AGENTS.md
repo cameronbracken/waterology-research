@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Waterology is a research workflow package for Claude Code, Codex, OpenCode, and Pi.
+Waterology is a research workflow package for Antigravity, Claude Code, Codex, OpenCode, and Pi.
 
 ## Source layout
 
 Root `skills/` and `agent-definitions/` are canonical. Runtime agent files in
-`agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated.
+`.agent/agents/`, `agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated.
 Do not edit generated runtime files.
 
 ## Development

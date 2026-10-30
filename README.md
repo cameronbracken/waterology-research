@@ -4,6 +4,7 @@ Waterology is a set of tools for computationally focused research with a heavy f
 It is also a worflow that helps you build software to a specification, 
 optimize under fixed constraints, or answer scientific questions. This repo provides skills, agents, and
 dynamic workflows for
+[Antigravity](https://antigravity.google/),
 [Claude Code](https://claude.com/claude-code),
 [Codex](https://openai.com/codex/),
 [OpenCode](https://opencode.ai/), and
@@ -119,6 +120,7 @@ root package manifest.
 ```
 skills/             canonical research skills
 agent-definitions/  canonical agent definitions
+.agent/agents/      generated Antigravity agents
 agents/              generated Claude Code agents
 .codex/agents/      generated Codex agents
 .opencode/agents/   generated OpenCode agents
@@ -156,6 +158,7 @@ by the current project:
 
 ```console
 pixi install
+pixi run waterology install antigravity
 pixi run waterology install claude
 pixi run waterology install codex
 pixi run waterology install opencode
@@ -187,6 +190,11 @@ official [Codex plugin documentation](https://developers.openai.com/plugins/conc
 OpenCode installs project files under `.opencode/`, including agents and
 skills. See the official [OpenCode skills documentation](https://opencode.ai/docs/skills)
 and [OpenCode agent documentation](https://opencode.ai/v2/docs/agents).
+
+Antigravity installs project skills and agents under `.agent/skills/` and
+`.agent/agents/`, or user assets under `~/.gemini/config/skills/` and
+`~/.gemini/config/agents/`. Register the MCP server with
+`agy mcp add waterology waterology-mcp`.
 
 Pi installs project skills and agents under `.pi/skills/` and `.pi/agents/`, or
 user assets under `~/.pi/agent/skills/` and `~/.pi/agent/agents/`. The root
@@ -370,7 +378,7 @@ remote PATH requirements, network security, upgrades, and troubleshooting.
 
 ## Agent sessions and MCP
 
-Waterology can launch Claude Code, Codex, or OpenCode in an experiment worktree. Each top level
+Waterology can launch Antigravity, Claude Code, Codex, or OpenCode in an experiment worktree. Each top level
 session receives a task brief, role, compute profile, artifact location, project guidance, and MCP
 instructions. The database prevents two active sessions from writing to the same worktree.
 
@@ -384,7 +392,7 @@ pixi run waterology agent resume <session-id> "Check the residual diagnostics"
 pixi run waterology agent stop <session-id>
 ```
 
-Claude Code, Codex, and OpenCode keep their native sessions and structured events. Waterology stores
+Antigravity, Claude Code, Codex, and OpenCode keep their native sessions and structured events. Waterology stores
 the native identifier, process metadata, task brief, attempt logs, timestamps, and resulting commits
 under `.waterology/sessions/<session-id>/`. Resume uses the runtime's native mechanism. A missing
 process becomes `lost`, while its worktree and logs remain available. `waterology repair-index`
@@ -417,6 +425,7 @@ destination is absent or already owned by Waterology. Print a machine neutral re
 or supported CLI command with:
 
 ```console
+waterology mcp config antigravity
 waterology mcp config claude
 waterology mcp config codex
 waterology mcp config opencode

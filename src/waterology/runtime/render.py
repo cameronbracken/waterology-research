@@ -16,6 +16,12 @@ from waterology.runtime.assets import (
 )
 from waterology.runtime.skills import FRONTMATTER, SkillDefinition, load_skills
 
+ANTIGRAVITY_TOOLS = {
+    "read": ("read_file", "view_file", "grep_search", "find_by_name", "list_dir"),
+    "write": ("write_file", "edit_file"),
+    "shell": ("run_command", "manage_task"),
+    "web": ("search_web", "read_url_content"),
+}
 CLAUDE_TOOLS = {
     "read": ("Read", "Grep", "Glob"),
     "write": ("Write", "Edit"),
@@ -33,6 +39,16 @@ PI_TOOLS = {
     "shell": ("bash",),
     "web": ("web_search", "fetch_content", "get_search_content", "source_check"),
 }
+
+
+def render_antigravity(agent: AgentDefinition) -> str:
+    tools = [tool for capability in agent.capabilities for tool in ANTIGRAVITY_TOOLS[capability]]
+    frontmatter = yaml.safe_dump(
+        {"name": agent.name, "description": agent.description, "tools": tools},
+        sort_keys=False,
+    ).rstrip()
+    marker = f"<!-- Generated from agent-definitions/{agent.name}.md. Do not edit. -->"
+    return f"---\n{frontmatter}\n---\n\n{marker}\n\n{agent.body}"
 
 
 def render_claude(agent: AgentDefinition) -> str:
@@ -191,6 +207,7 @@ def _is_executable(path: Path) -> bool:
 
 Renderer = Callable[[AgentDefinition], str]
 DESTINATIONS: dict[str, tuple[str, str, Renderer]] = {
+    "antigravity": (".agent/agents", ".md", render_antigravity),
     "claude": ("agents", ".md", render_claude),
     "codex": (".codex/agents", ".toml", render_codex),
     "opencode": (".opencode/agents", ".md", render_opencode),

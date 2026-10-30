@@ -232,7 +232,7 @@ def run_supervised_attempt(
     adapter = get_adapter(session.runtime)
     command = adapter.build_command(
         RuntimeLaunch(
-            executable=executable or session.runtime,
+            executable=executable or adapter.default_executable or session.runtime,
             worktree=project.root / session.worktree,
             prompt=prompt,
             role=session.role,

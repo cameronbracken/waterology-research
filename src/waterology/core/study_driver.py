@@ -32,7 +32,7 @@ def _save_driver(start: Path, study_id: str, state: dict) -> None:
 
 def configure_driver(start: Path, study_id: str, *, runtime: str, max_proposals: int) -> dict:
     """Record a separately explicit bounded candidate-generation authorization."""
-    if runtime not in {"codex", "claude", "opencode"} or max_proposals < 1:
+    if runtime not in {"antigravity", "codex", "claude", "opencode"} or max_proposals < 1:
         raise ValueError("Select a supported runtime and positive proposal cap")
     with project_state_lock(start):
         study = load_study(start, study_id)

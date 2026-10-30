@@ -1,7 +1,7 @@
 # Install, upgrade, uninstall, and recover
 
 These commands manage files installed by `waterology install`. They support
-Claude Code, Codex, OpenCode, and Pi, in project and user scopes. Native plugin
+Antigravity, Claude Code, Codex, OpenCode, and Pi, in project and user scopes. Native plugin
 marketplace registrations and the Python package have separate uninstall
 commands. The CLI reports that boundary after uninstall.
 

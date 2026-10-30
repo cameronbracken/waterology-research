@@ -21,6 +21,7 @@ pixi run waterology doctor
 Install the adapters needed by the current project:
 
 ```console
+pixi run waterology install antigravity
 pixi run waterology install claude
 pixi run waterology install codex
 pixi run waterology install opencode

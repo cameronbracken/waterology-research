@@ -27,6 +27,7 @@ class RuntimeCommand:
 
 class RuntimeAdapter(Protocol):
     name: str
+    default_executable: str | None
 
     def build_command(self, launch: RuntimeLaunch) -> RuntimeCommand: ...
 
@@ -37,6 +38,7 @@ class RuntimeAdapter(Protocol):
 
 class JsonEventAdapter:
     name = "runtime"
+    default_executable: str | None = None
 
     def parse_event(self, line: str) -> dict[str, object]:
         try:

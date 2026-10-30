@@ -2,7 +2,7 @@ from waterology.runtime.install import Runtime
 
 
 def runtime_mcp_config(runtime: Runtime) -> dict[str, object]:
-    if runtime in (Runtime.CLAUDE, Runtime.PI):
+    if runtime in (Runtime.ANTIGRAVITY, Runtime.CLAUDE, Runtime.PI):
         return {"mcpServers": {"waterology": {"command": "waterology-mcp"}}}
     if runtime is Runtime.CODEX:
         return {"mcp_servers": {"waterology": {"command": "waterology-mcp"}}}
@@ -20,6 +20,8 @@ def runtime_mcp_config(runtime: Runtime) -> dict[str, object]:
 
 
 def registration_command(runtime: Runtime) -> tuple[str, ...] | None:
+    if runtime is Runtime.ANTIGRAVITY:
+        return ("agy", "mcp", "add", "waterology", "waterology-mcp")
     if runtime is Runtime.CLAUDE:
         return (
             "claude",

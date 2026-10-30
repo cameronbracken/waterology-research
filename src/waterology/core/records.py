@@ -111,7 +111,7 @@ class AgentSessionRecord(BaseModel):
     id: str = Field(pattern=r"^session-[0-9a-f]{16}$")
     project_id: str = Field(min_length=1)
     experiment_id: str = Field(pattern=r"^exp-[a-z0-9][a-z0-9-]{0,62}$")
-    runtime: Literal["claude", "codex", "opencode"]
+    runtime: Literal["antigravity", "claude", "codex", "opencode"]
     role: str = Field(min_length=1)
     compute_profile: str = Field(min_length=1)
     worktree: str = Field(min_length=1)

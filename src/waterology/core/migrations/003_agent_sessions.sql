@@ -1,7 +1,7 @@
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
     experiment_id TEXT NOT NULL REFERENCES experiments(id),
-    runtime TEXT NOT NULL CHECK (runtime IN ('claude', 'codex', 'opencode')),
+    runtime TEXT NOT NULL CHECK (runtime IN ('antigravity', 'claude', 'codex', 'opencode')),
     role TEXT NOT NULL,
     compute_profile TEXT NOT NULL,
     worktree TEXT NOT NULL,

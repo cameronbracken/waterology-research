@@ -21,6 +21,7 @@ _LOCAL_ASSET_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".DS_Store")
 
 
 class Runtime(StrEnum):
+    ANTIGRAVITY = "antigravity"
     CLAUDE = "claude"
     CODEX = "codex"
     OPENCODE = "opencode"
@@ -1175,6 +1176,12 @@ def _installation_layout(
             trusted_root,
         )
     trusted_root = _absolute_lexical(Path.home())
+    if runtime is Runtime.ANTIGRAVITY:
+        base = trusted_root / ".gemini" / "config"
+        return {
+            "skills": base / "skills",
+            "agents": base / "agents",
+        }, trusted_root
     if runtime is Runtime.PI:
         base = trusted_root / ".pi" / "agent"
         return {
@@ -1186,6 +1193,11 @@ def _installation_layout(
 
 
 def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
+    if runtime is Runtime.ANTIGRAVITY:
+        return {
+            "skills": base / ".agent" / "skills",
+            "agents": base / ".agent" / "agents",
+        }
     if runtime is Runtime.CLAUDE:
         return {
             "skills": base / ".claude" / "skills",
@@ -1204,6 +1216,8 @@ def _runtime_directories(runtime: Runtime, base: Path) -> dict[str, Path]:
 
 
 def _agent_directory(runtime: Runtime) -> str | None:
+    if runtime is Runtime.ANTIGRAVITY:
+        return ".agent/agents"
     if runtime is Runtime.CLAUDE:
         return "agents"
     if runtime is Runtime.CODEX:
@@ -1256,7 +1270,7 @@ def _mcp_configuration_actions(
     scope: InstallScope,
     trusted_root: Path,
 ) -> tuple[InstallAction, ...]:
-    if scope is not InstallScope.PROJECT or runtime is Runtime.PI:
+    if scope is not InstallScope.PROJECT or runtime in {Runtime.ANTIGRAVITY, Runtime.PI}:
         return ()
     source_id, relative = {
         Runtime.CLAUDE: (".mcp.json", ".mcp.json"),

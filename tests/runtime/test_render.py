@@ -9,6 +9,7 @@ from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.render import (
     GeneratedAssetsStaleError,
     render_agents,
+    render_antigravity,
     render_assets,
     render_claude,
     render_claude_command,
@@ -49,6 +50,30 @@ def sample_skill(tmp_path: Path) -> SkillDefinition:
 def split_markdown_frontmatter(text: str) -> tuple[dict[str, object], str]:
     _, frontmatter, body = text.split("---", 2)
     return yaml.safe_load(frontmatter), body
+
+
+def test_antigravity_renderer_maps_capabilities(tmp_path: Path) -> None:
+    metadata, body = split_markdown_frontmatter(render_antigravity(sample_agent(tmp_path)))
+
+    assert metadata == {
+        "name": "researcher",
+        "description": "Gather primary evidence.",
+        "tools": [
+            "read_file",
+            "view_file",
+            "grep_search",
+            "find_by_name",
+            "list_dir",
+            "write_file",
+            "edit_file",
+            "run_command",
+            "manage_task",
+            "search_web",
+            "read_url_content",
+        ],
+    }
+    assert "Generated from agent-definitions/researcher.md" in body
+    assert "Gather evidence and cite it." in body
 
 
 def test_claude_renderer_maps_capabilities(tmp_path: Path) -> None:
@@ -167,6 +192,7 @@ def test_render_agents_writes_checks_and_detects_stale_outputs(tmp_path: Path) -
     )
     output_root = tmp_path / "output"
     expected_paths = {
+        output_root / ".agent/agents/researcher.md",
         output_root / "agents/researcher.md",
         output_root / ".codex/agents/researcher.toml",
         output_root / ".opencode/agents/researcher.md",

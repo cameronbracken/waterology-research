@@ -17,6 +17,36 @@ def launch(tmp_path: Path, runtime: str, native_id: str | None = None) -> Runtim
     )
 
 
+def test_antigravity_builds_structured_launch_and_native_resume(tmp_path: Path) -> None:
+    adapter = get_adapter("antigravity")
+
+    initial = adapter.build_command(launch(tmp_path, "agy"))
+    resumed = adapter.build_command(launch(tmp_path, "agy", "conv-123"))
+
+    assert initial.cwd == tmp_path
+    assert initial.arguments == (
+        "agy",
+        "-p",
+        "Inspect the experiment and record evidence.",
+        "--output-format",
+        "stream-json",
+        "--agent",
+        "researcher",
+    )
+    assert resumed.arguments == (
+        "agy",
+        "-p",
+        "Inspect the experiment and record evidence.",
+        "--output-format",
+        "stream-json",
+        "--agent",
+        "researcher",
+        "--conversation",
+        "conv-123",
+    )
+    assert resumed.cwd == tmp_path
+
+
 def test_claude_builds_structured_launch_and_native_resume(tmp_path: Path) -> None:
     adapter = get_adapter("claude")
 
@@ -90,6 +120,8 @@ def test_opencode_builds_structured_launch_and_native_resume(tmp_path: Path) -> 
 @pytest.mark.parametrize(
     ("runtime", "event", "expected"),
     [
+        ("antigravity", {"event": "init", "init": {"conversation_id": "conv-1"}}, "conv-1"),
+        ("antigravity", {"event": "result", "result": {"conversation_id": "conv-1"}}, "conv-1"),
         ("claude", {"type": "system", "subtype": "init", "session_id": "abc"}, "abc"),
         ("claude", {"type": "result", "session_id": "abc"}, "abc"),
         ("codex", {"type": "thread.started", "thread_id": "019c"}, "019c"),
@@ -106,6 +138,7 @@ def test_adapters_extract_native_session_ids(
 @pytest.mark.parametrize(
     ("runtime", "line"),
     [
+        ("antigravity", "not-json"),
         ("claude", "not-json"),
         ("codex", "[]"),
         ("opencode", json.dumps("text")),

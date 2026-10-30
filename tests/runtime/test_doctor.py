@@ -59,6 +59,7 @@ def test_doctor_json_reports_runtime_commands(monkeypatch, tmp_path: Path) -> No
     assert "\x1b" not in result.stdout
     payload = json.loads(result.stdout)
     assert payload["assets"]["status"] == "pass"
+    assert payload["runtimes"]["antigravity"]["status"] == "warn"
     assert payload["runtimes"]["codex"]["status"] == "pass"
     assert payload["runtimes"]["claude"]["status"] == "warn"
     assert payload["runtimes"]["pi"]["status"] == "warn"

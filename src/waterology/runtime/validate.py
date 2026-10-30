@@ -26,8 +26,15 @@ PI_PACKAGE_RESOURCES = {
     "skills": ["./pi-skills"],
     "prompts": ["./pi-prompts"],
 }
-GENERATED_AGENT_DIRECTORIES = (".codex/agents", "agents", ".opencode/agents", "pi-agents")
+GENERATED_AGENT_DIRECTORIES = (
+    ".agent/agents",
+    ".codex/agents",
+    "agents",
+    ".opencode/agents",
+    "pi-agents",
+)
 GENERATED_AGENT_SUFFIXES = {
+    ".agent/agents": ".md",
     ".codex/agents": ".toml",
     "agents": ".md",
     ".opencode/agents": ".md",
@@ -449,7 +456,7 @@ def _validate_generated_agents(
                         path.relative_to(catalog.root).as_posix(), "invalid-toml", str(error)
                     )
                 )
-    for directory in ("agents", ".opencode/agents", "pi-agents"):
+    for directory in (".agent/agents", "agents", ".opencode/agents", "pi-agents"):
         if directory not in directories:
             continue
         for path in sorted(directories[directory].glob("*.md")):

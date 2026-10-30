@@ -37,6 +37,7 @@ def test_distribution_name_preserves_waterology_cli() -> None:
 
 def test_readme_documents_all_runtimes_and_cli() -> None:
     readme = (ROOT / "README.md").read_text()
+    assert "Antigravity" in readme
     assert "Claude Code" in readme
     assert "Codex" in readme
     assert "OpenCode" in readme
@@ -64,6 +65,7 @@ def test_readme_documents_the_local_experiment_workflow() -> None:
 def test_readme_documents_install_scope_and_runtime_contracts() -> None:
     readme = (ROOT / "README.md").read_text()
     for command in (
+        "pixi run waterology install antigravity",
         "pixi run waterology install claude",
         "pixi run waterology install codex",
         "pixi run waterology install opencode",
@@ -109,7 +111,7 @@ def test_canonical_guidance_has_required_commands() -> None:
         assert heading in agents
     assert "Root `skills/` and `agent-definitions/` are canonical." in agents
     assert (
-        "`agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated."
+        "`.agent/agents/`, `agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated."
         in agents
     )
     assert "pixi run pytest" in agents
