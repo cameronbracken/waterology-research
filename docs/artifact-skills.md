@@ -13,8 +13,8 @@ deterministic keyword router. See the
 | Request | Base skill | Conditional additions |
 | --- | --- | --- |
 | Plot, chart, map, or image encoding data | [data-visualization](../skills/data-visualization/SKILL.md) | Scientific styling or publication panel composition only when needed |
-| Diagram, flow chart, schematic, architecture, or process flow | [diagrams](../skills/diagrams/SKILL.md) | Choose Mermaid, TikZ, or the existing editable source |
-| Report, summary report, or analysis report | [reports](../skills/reports/SKILL.md) | Visual creation only for new or revised figures |
+| Diagram, flow chart, schematic, architecture, or process flow | [diagrams](../skills/diagrams/SKILL.md) | TikZ flowchart by default; Mermaid, Graphviz, or existing editable source when explicitly requested |
+| Report, summary report, benchmark report, or analysis report | [reports](../skills/reports/SKILL.md) | Self-contained Markdown report bundle (`reports/<slug>-<YYYY-MM-DD>/`) by default; visual creation only for new or revised figures |
 | Note, meeting notes, todo, or short decision record | [markdown-notes](../skills/markdown-notes/SKILL.md) | Session handoff workflow only when explicitly requested |
 | README, usage guide, API reference, tutorial, or docstring | [documentation](../skills/documentation/SKILL.md) | Visual creation only for diagrams or plots being authored |
 | Interactive plot or interactive diagram | Matching visual base skill | [interactive-graphics](../skills/interactive-graphics/SKILL.md) |

@@ -75,7 +75,7 @@ Choose a format by who reads and edits the file:
 | Settings people edit by hand | TOML |
 | Configuration and ledgers read by people and tools | YAML |
 | Notes, skills, agent definitions and other plain text an LLM may read | Markdown |
-| Notes, ordinary reports, and code documentation | Markdown |
+| Notes, ordinary reports (`reports/<slug>-<YYYY-MM-DD>/`), and code documentation | Markdown, with TikZ for diagrams |
 | Polished PDF reports, manuscripts, and white papers | LaTeX, with TikZ for diagrams |
 | Reports that need interactive graphics | Quarto |
 | Output exchanged only between programs | JSON or JSONL |

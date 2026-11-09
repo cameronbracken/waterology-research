@@ -43,8 +43,7 @@ take precedence.
 - Figures: generate them from R/Python scripts and reference the saved file,
   rather than embedding heavy inline computation — keeps the document fast and
   the figure regenerable. Use the project or local palette.
-- Mermaid for flow charts, plotly for interactive plots, bokeh for richer
-  interactives, PNG or vector for static.
+- TikZ for flow charts and conceptual diagrams (unless Mermaid is explicitly requested), plotly for interactive plots, bokeh for richer interactives, PNG or vector for static.
 
 Load [reports](../skills/reports/SKILL.md) only when authoring a report, and
 [interactive-reports](../skills/interactive-reports/SKILL.md) only for requested

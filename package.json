@@ -1,6 +1,6 @@
 {
   "name": "waterology-research",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Research workflows for Antigravity, Claude Code, Codex, OpenCode, and Pi",
   "private": true,
   "keywords": [

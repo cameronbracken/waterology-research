@@ -1,0 +1,386 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{flowchart-tikz}[2026/11/08 General Earth-Tone TikZ Flowchart & Diagram Styles]
+
+\RequirePackage[T1]{fontenc}
+\RequirePackage[scaled=0.95]{helvet}
+\RequirePackage{sfmath}
+\renewcommand{\familydefault}{\sfdefault}
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shapes.symbols,shapes.misc,calc,fit,backgrounds,matrix}
+
+% Convenience macro for inline code/symbols inside nodes
+\providecommand{\code}[1]{\texttt{#1}}
+
+% ============================================================================
+% Color Palette:
+% - When \FLOWCHARTWEB is defined (web docs build), sentinel hex codes are
+%   emitted and rewritten by the build script into CSS custom properties
+%   (var(--m-...)) so a single inline SVG switches live between Light & Dark.
+% - When \FLOWCHARTWEB is not defined (LaTeX PDF / Beamer / standalone), the
+%   Earth-Tone Light Palette is used directly.
+% ============================================================================
+\ifdefined\FLOWCHARTWEB
+  \definecolor{resfill}{HTML}{100101}
+  \definecolor{resstroke}{HTML}{100102}
+  \definecolor{restext}{HTML}{100103}
+  \definecolor{reachfill}{HTML}{100201}
+  \definecolor{reachstroke}{HTML}{100202}
+  \definecolor{reachtext}{HTML}{100203}
+  \definecolor{juncfill}{HTML}{100301}
+  \definecolor{juncstroke}{HTML}{100302}
+  \definecolor{junctext}{HTML}{100303}
+  \definecolor{rulefill}{HTML}{100401}
+  \definecolor{rulestroke}{HTML}{100402}
+  \definecolor{ruletext}{HTML}{100403}
+  \definecolor{condfill}{HTML}{100501}
+  \definecolor{condstroke}{HTML}{100502}
+  \definecolor{condtext}{HTML}{100503}
+  \definecolor{equipfill}{HTML}{100601}
+  \definecolor{equipstroke}{HTML}{100602}
+  \definecolor{equiptext}{HTML}{100603}
+  \definecolor{iofill}{HTML}{100701}
+  \definecolor{iostroke}{HTML}{100702}
+  \definecolor{iotext}{HTML}{100703}
+  \definecolor{clusterfill}{HTML}{100801}
+  \definecolor{clusterstroke}{HTML}{100802}
+  \definecolor{clustertext}{HTML}{100803}
+  \definecolor{edgefill}{HTML}{100901}
+  \definecolor{edgestroke}{HTML}{100902}
+  \definecolor{edgetext}{HTML}{100903}
+  \definecolor{linecolor}{HTML}{100A01}
+\else
+  % Print / Paper / Beamer Earth-Tone Palette
+  % 1. Data / Storage / State: Slate River Blue
+  \definecolor{resfill}{HTML}{DBE7EE}
+  \definecolor{resstroke}{HTML}{2B5B7C}
+  \definecolor{restext}{HTML}{162E40}
+  % 2. Process / Transform / Channel: Riparian Sage-Teal
+  \definecolor{reachfill}{HTML}{DCEBE5}
+  \definecolor{reachstroke}{HTML}{2D6A58}
+  \definecolor{reachtext}{HTML}{15352B}
+  % 3. Junction / Merge / Output: Moss & Olive
+  \definecolor{juncfill}{HTML}{E3EAD9}
+  \definecolor{juncstroke}{HTML}{4D6B31}
+  \definecolor{junctext}{HTML}{223314}
+  % 4. Rule / Policy / Core Algorithm: Warm Terracotta / Sienna
+  \definecolor{rulefill}{HTML}{EFE3DC}
+  \definecolor{rulestroke}{HTML}{8C4A32}
+  \definecolor{ruletext}{HTML}{3D1D11}
+  % 5. Condition / Gate / Guard: Warm Sandstone / Ochre
+  \definecolor{condfill}{HTML}{F5EAD4}
+  \definecolor{condstroke}{HTML}{9C6B1B}
+  \definecolor{condtext}{HTML}{3D2806}
+  % 6. Stage / Module / Tool: Muted Heather / Slate-Plum
+  \definecolor{equipfill}{HTML}{E8E0EA}
+  \definecolor{equipstroke}{HTML}{6B4C75}
+  \definecolor{equiptext}{HTML}{2D1D33}
+  % 7. Exogenous I/O / Boundary / Artifact: Warm Limestone / Basalt
+  \definecolor{iofill}{HTML}{EFECE6}
+  \definecolor{iostroke}{HTML}{686259}
+  \definecolor{iotext}{HTML}{26231F}
+  % Subgraph / Container Group: Warm Parchment Stone
+  \definecolor{clusterfill}{HTML}{F7F5F0}
+  \definecolor{clusterstroke}{HTML}{B8B0A4}
+  \definecolor{clustertext}{HTML}{4A453E}
+  % Edge Annotation Pill & Connector Lines
+  \definecolor{edgefill}{HTML}{FAF8F5}
+  \definecolor{edgestroke}{HTML}{CEC7BC}
+  \definecolor{edgetext}{HTML}{38342E}
+  \definecolor{linecolor}{HTML}{575148}
+\fi
+
+% Customizable Legend Labels
+\providecommand{\fclegendstore}{Data / State}
+\providecommand{\fclegendproc}{Process / Transform}
+\providecommand{\fclegendjunc}{Junction / Output}
+\providecommand{\fclegendrule}{Rule / Policy}
+\providecommand{\fclegendcond}{Condition / Gate}
+\providecommand{\fclegendstage}{Stage / Module}
+\providecommand{\fclegendio}{I/O / Artifact}
+\providecommand{\fclegendflow}{Primary Flow}
+\providecommand{\fclegendsig}{Signal / Query}
+
+% ============================================================================
+% Node, Container, and Connector Styles
+% ============================================================================
+\tikzset{
+  every picture/.style={
+    >=Latex,
+    node distance=1.3cm and 2.2cm,
+    font=\small\sffamily
+  },
+  fc base/.style={
+    line width=1.15pt,
+    inner xsep=8pt,
+    inner ysep=6pt,
+    align=center
+  },
+  % Color mixins
+  res color/.style={fill=resfill, draw=resstroke, text=restext},
+  reach color/.style={fill=reachfill, draw=reachstroke, text=reachtext},
+  junc color/.style={fill=juncfill, draw=juncstroke, text=junctext},
+  rule color/.style={fill=rulefill, draw=rulestroke, text=ruletext},
+  cond color/.style={fill=condfill, draw=condstroke, text=condtext},
+  equip color/.style={fill=equipfill, draw=equipstroke, text=equiptext},
+  io color/.style={fill=iofill, draw=iostroke, text=iotext},
+  % 1. Data / Storage / State (inverted trapezoid)
+  store/.style={
+    fc base,
+    res color,
+    trapezium,
+    trapezium left angle=104,
+    trapezium right angle=104,
+    rounded corners=2pt
+  },
+  data/.style={store},
+  obs/.style={store},
+  res/.style={store},
+  % 2. Process / Transform / Channel (slanted prism)
+  proc/.style={
+    fc base,
+    reach color,
+    trapezium,
+    trapezium left angle=76,
+    trapezium right angle=104,
+    rounded corners=2pt
+  },
+  transform/.style={proc},
+  proxy/.style={proc},
+  reach/.style={proc},
+  % 3. Junction / Merge / Output (chamfered octagonal collector)
+  junc/.style={
+    fc base,
+    junc color,
+    chamfered rectangle,
+    chamfered rectangle sep=4.5pt
+  },
+  merge/.style={junc},
+  prod/.style={junc},
+  % 4. Rule / Policy / Model Block (double-pointed hexagon)
+  rule/.style={
+    fc base,
+    rule color,
+    signal,
+    signal to=east and west,
+    signal pointer angle=118
+  },
+  policy/.style={rule},
+  latent/.style={rule},
+  % 5. Condition / Gate / Guard (steep guard hexagon)
+  cond/.style={
+    fc base,
+    cond color,
+    signal,
+    signal to=east and west,
+    signal pointer angle=106
+  },
+  gate/.style={cond},
+  cut/.style={cond},
+  % 6. Stage / Module / Tool (asymmetric directional tag)
+  stage/.style={
+    fc base,
+    equip color,
+    signal,
+    signal to=east,
+    signal pointer angle=118
+  },
+  module/.style={stage},
+  equip/.style={stage},
+  % 7. Exogenous I/O / Boundary / Artifact (rounded pill)
+  io/.style={
+    fc base,
+    io color,
+    rectangle,
+    rounded corners=8pt
+  },
+  artifact/.style={io},
+  % Architectural / Rectangular variants (for class/module/timeline diagrams)
+  boxnode/.style={
+    fc base,
+    rectangle,
+    rounded corners=4pt
+  },
+  storebox/.style={boxnode, res color},
+  databox/.style={boxnode, res color},
+  obsbox/.style={boxnode, res color},
+  resbox/.style={boxnode, res color},
+  procbox/.style={boxnode, reach color},
+  proxybox/.style={boxnode, reach color},
+  reachbox/.style={boxnode, reach color},
+  juncbox/.style={boxnode, junc color},
+  prodbox/.style={boxnode, junc color},
+  rulebox/.style={boxnode, rule color},
+  latentbox/.style={boxnode, rule color},
+  condbox/.style={boxnode, cond color},
+  gatebox/.style={boxnode, cond color},
+  cutbox/.style={boxnode, cond color},
+  stagebox/.style={boxnode, equip color},
+  modulebox/.style={boxnode, equip color},
+  equipbox/.style={boxnode, equip color},
+  iobox/.style={boxnode, io color},
+  % Subgraph / Container Group (use on background layer with fit=...)
+  group/.style={
+    rectangle,
+    rounded corners=6pt,
+    dashed,
+    line width=1.0pt,
+    fill=clusterfill,
+    draw=clusterstroke,
+    inner sep=10pt
+  },
+  grouptitle/.style={
+    text=clustertext,
+    font=\footnotesize\sffamily\bfseries,
+    anchor=north west,
+    inner sep=4pt
+  },
+  % Connectors
+  flow/.style={
+    ->,
+    >=Latex,
+    line width=1.15pt,
+    draw=linecolor,
+    rounded corners=4pt
+  },
+  sig/.style={
+    ->,
+    >=Latex,
+    dashed,
+    line width=1.05pt,
+    draw=linecolor,
+    rounded corners=4pt
+  },
+  bidir/.style={
+    <->,
+    >=Latex,
+    line width=1.15pt,
+    draw=linecolor,
+    rounded corners=4pt
+  },
+  uconnect/.style={
+    -,
+    line width=1.15pt,
+    draw=linecolor,
+    rounded corners=4pt
+  },
+  % Edge Annotation Pill
+  elabel/.style={
+    fill=edgefill,
+    draw=edgestroke,
+    text=edgetext,
+    line width=0.6pt,
+    rounded corners=2.5pt,
+    inner xsep=3.5pt,
+    inner ysep=1.8pt,
+    font=\scriptsize\sffamily,
+    align=center
+  }
+}
+
+% ============================================================================
+% Compact Automatic Legend Bar (appended below each tikzpicture)
+% Use \begin{tikzpicture}[no legend] to suppress on a specific diagram.
+% ============================================================================
+\newif\iffc@legend \fc@legendtrue
+\newif\iffc@inlegend \fc@inlegendfalse
+\newif\iffc@used@res
+\newif\iffc@used@reach
+\newif\iffc@used@junc
+\newif\iffc@used@rule
+\newif\iffc@used@cond
+\newif\iffc@used@equip
+\newif\iffc@used@io
+\newif\iffc@used@flow
+\newif\iffc@used@sig
+
+\newcommand{\fc@reset@legend}{%
+  \global\fc@used@resfalse
+  \global\fc@used@reachfalse
+  \global\fc@used@juncfalse
+  \global\fc@used@rulefalse
+  \global\fc@used@condfalse
+  \global\fc@used@equipfalse
+  \global\fc@used@iofalse
+  \global\fc@used@flowfalse
+  \global\fc@used@sigfalse
+}
+
+\tikzset{
+  no legend/.code={\fc@legendfalse},
+  legend/.code={\fc@legendtrue},
+  res color/.append code={\iffc@inlegend\else\global\fc@used@restrue\fi},
+  reach color/.append code={\iffc@inlegend\else\global\fc@used@reachtrue\fi},
+  junc color/.append code={\iffc@inlegend\else\global\fc@used@junctrue\fi},
+  rule color/.append code={\iffc@inlegend\else\global\fc@used@ruletrue\fi},
+  cond color/.append code={\iffc@inlegend\else\global\fc@used@condtrue\fi},
+  equip color/.append code={\iffc@inlegend\else\global\fc@used@equiptrue\fi},
+  io color/.append code={\iffc@inlegend\else\global\fc@used@iotrue\fi},
+  flow/.append code={\iffc@inlegend\else\global\fc@used@flowtrue\fi},
+  bidir/.append code={\iffc@inlegend\else\global\fc@used@flowtrue\fi},
+  sig/.append code={\iffc@inlegend\else\global\fc@used@sigtrue\fi},
+  legend item/.style={
+    line width=0.75pt,
+    inner xsep=4pt,
+    inner ysep=1.8pt,
+    font=\scriptsize\sffamily,
+    anchor=west
+  },
+  every picture/.append style={
+    execute at begin picture={\iffc@inlegend\else\fc@reset@legend\fi},
+    execute at end picture={
+      \iffc@inlegend\else
+        \iffc@legend
+          \fc@inlegendtrue
+          \coordinate (fc@bb@south) at (current bounding box.south);
+          \node[anchor=north, fill=clusterfill, draw=clusterstroke, line width=0.6pt, rounded corners=4pt, inner xsep=7pt, inner ysep=3pt, font=\scriptsize\sffamily, text=clustertext] at ([yshift=-0.42cm]fc@bb@south) {
+            \begin{tikzpicture}[baseline=-0.5ex, every picture/.style={}, every node/.style={anchor=west, inner sep=0pt, font=\scriptsize\sffamily}]
+              \coordinate (leg@cur) at (0,0);
+              \node[text=clustertext, font=\scriptsize\sffamily\bfseries] (leg@lbl) at (leg@cur) {Legend:};
+              \coordinate (leg@cur) at ([xshift=0.22cm]leg@lbl.east);
+              \iffc@used@res
+                \node[store, legend item] (leg@n) at (leg@cur) {\fclegendstore};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@reach
+                \node[proc, legend item] (leg@n) at (leg@cur) {\fclegendproc};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@junc
+                \node[junc, legend item] (leg@n) at (leg@cur) {\fclegendjunc};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@rule
+                \node[rule, legend item] (leg@n) at (leg@cur) {\fclegendrule};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@cond
+                \node[cond, legend item] (leg@n) at (leg@cur) {\fclegendcond};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@equip
+                \node[stage, legend item] (leg@n) at (leg@cur) {\fclegendstage};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@io
+                \node[io, legend item, rounded corners=4pt] (leg@n) at (leg@cur) {\fclegendio};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@flow
+                \draw[->, >=Latex, line width=0.95pt, draw=linecolor] (leg@cur) -- ++(0.48,0) node[right=2pt, text=clustertext, font=\scriptsize\sffamily] (leg@n) {\fclegendflow};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+              \iffc@used@sig
+                \draw[->, >=Latex, dashed, line width=0.9pt, draw=linecolor] (leg@cur) -- ++(0.48,0) node[right=2pt, text=clustertext, font=\scriptsize\sffamily] (leg@n) {\fclegendsig};
+                \coordinate (leg@cur) at ([xshift=0.22cm]leg@n.east);
+              \fi
+            \end{tikzpicture}
+          };
+          \fc@inlegendfalse
+        \fi
+      \fi
+    }
+  }
+}
+\endinput
