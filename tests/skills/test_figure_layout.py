@@ -7,9 +7,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "skills/figure-style/scripts/check_plotly_layout.py"
+SCRIPT = ROOT / "skills/figures/scripts/check_plotly_layout.py"
 CONSTRAINT = ROOT / "constraints/plotly-text-overlap.py"
-REPORT_FIGURE_CSS = ROOT / "skills/figure-style/assets/report-figure.css"
+REPORT_FIGURE_CSS = ROOT / "skills/figures/assets/report-figure.css"
 
 
 def _load_checker():

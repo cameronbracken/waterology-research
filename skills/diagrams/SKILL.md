@@ -15,9 +15,7 @@ Make the entities, relationships, direction, and scope explicit before choosing
 the layout. A network showing conceptual dependencies belongs here; a network
 encoding measured quantities may also need data visualization guidance.
 
-Read [visual design](../data-visualization/references/visual-design.md).
-Use `waterology config context diagrams` for optional local guidance, or the
-[local resolver](../project-conventions/references/local-preferences.md).
+Read [visual design](../figures/references/visual-design.md) and apply [writing-style](../writing-style/SKILL.md) for captions and Markdown delivery.
 
 Use TikZ by default whenever creating or updating flowcharts, system
 architectures, pipelines, or technical diagrams unless the user explicitly asks
@@ -35,8 +33,7 @@ extending an existing editable SVG or Mermaid diagram source.
        ...
      \end{tikzpicture}
      ```
-   - For Markdown delivery, use
-     [Markdown delivery](../writing-style/references/markdown-artifacts.md). Save
+   - Follow the Markdown delivery rules in [writing-style](../writing-style/SKILL.md). Save
      the editable TikZ source alongside the rendered SVG or required export when
      the target Markdown renderer does not compile ```` ```tikz ```` blocks directly.
 2. **Sequential Figure Numbering**:
@@ -126,6 +123,4 @@ The verifier compiles ```` ```tikz ```` blocks (or inspects existing `.svg`/`.ht
 
 For integrating TikZ compilation, CSS theme variables, and sequential figure numbering into a Python or Julia documentation build script, see [`references/integration-patterns.md`](./references/integration-patterns.md).
 
-Only for requested interaction, load
-[interactive-graphics](../interactive-graphics/SKILL.md). A TikZ SVG or Mermaid
-block in an HTML page is not, by itself, an interactive diagram.
+Only when interactive node/edge exploration is explicitly requested, apply the interactive rules in [figures](../figures/SKILL.md) using a diagram-appropriate renderer. A static TikZ SVG or Mermaid block in HTML is not an interactive diagram.

@@ -13,7 +13,7 @@ def test_reproducibility_skill_and_passport_are_discoverable() -> None:
     skills = {skill.name: skill for skill in load_skills(catalog)}
     skill = skills["audit-reproducibility"]
 
-    assert "numeric claims" in skill.description.lower()
+    assert "numeric manuscript claims" in skill.description.lower()
     assert skill.claude_command is not None
     assert skill.claude_command.name == "audit-reproducibility"
     assert (ROOT / "skills/audit-reproducibility/references/passport-schema.md").is_file()
@@ -34,11 +34,6 @@ def test_passport_template_carries_the_provenance_and_status_contract() -> None:
     }
 
 
-def test_passport_workflow_is_documented_and_recorded_complete() -> None:
+def test_passport_workflow_is_documented() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    roadmap = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
-
     assert "/audit-reproducibility" in readme
-    assert "Claude plugin hook" not in readme
-    assert "Reproducibility passport (done 2026-08-25)" in roadmap
-    assert "flag affected claims\n  STALE" not in roadmap

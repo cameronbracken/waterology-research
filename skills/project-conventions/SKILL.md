@@ -1,205 +1,63 @@
 ---
 name: project-conventions
 description: >
-  Apply research coding and tool defaults when writing scripts, adding features,
-  or editing Python, R, Fortran, Quarto, or LaTeX. Also defines light and strict
-  reproducibility modes and when to run constraints.
+  Apply research coding, file format, and tool defaults when writing scripts,
+  adding features, or editing Python, R, Julia, Fortran, Quarto, or LaTeX.
+  Defines light and strict reproducibility modes and repository constraints.
 ---
 
-# waterology — project conventions
+# Waterology Project Conventions
 
-This skill is the entry point for the `waterology` plugin. It loads the right
-**conventions** (judgment guidance) for the file being edited. It defines the
-project **reproducibility mode** that other skills follow. It runs
-**constraints** (deterministic pass/fail checks) when the mode or the user calls
-for them.
+Entry point for shared coding, format, tool, and reproducibility defaults across research, simulation, and manuscript repositories. Explicit user instructions and a project's established style take precedence.
 
-## When to use
-
-Editing or reviewing any of: `.R` `.r` `.Rmd`, `.py`, `.f90` `.F90` `.f`,
-`.qmd`, `.tex` — in a research/analysis/simulation/paper context.
-
-## Package defaults and private context
-
-Waterology is an opinionated research package. Shared choices about tools,
-design, writing, and workflow belong in its skills and rules. Explicit user
-instructions, project requirements, and established project conventions take
-precedence. Optional local overrides choose among remaining open choices.
-
-When selecting tools or starting implementation, read
-[tool choices](references/tool-choices.md). For identity, machine details, or
-private overrides, use [local preferences](references/local-preferences.md).
-`waterology config context project-conventions` reads that optional local context;
-it is an internal helper, not a command the user must request. Private values,
-long-term goals, inventories, paths, accounts, and credentials stay outside the
-public package. Do not copy them into artifacts without the user's request.
+When selecting languages, package managers, or tools for new work, read [tool choices](references/tool-choices.md). For the boundary between shared defaults and private settings, see [local preferences](references/local-preferences.md).
 
 ## Reproducibility mode
 
-`waterology config context <skill>` reports the mode in its `reproducibility`
-field. It reads `reproducibility` from the nearest `waterology.toml`. A missing
-key or missing file means `light`. The mode applies to every Waterology skill and
-agent. A direct user request overrides it for that task.
+Default to **`light`** mode unless the user requests **`strict`** mode (used for publication submissions, formal DOE deliverables, and replication packages).
 
-**`light` (default).** Work is reproducible when the code is committed, the
-environment is pinned in a lockfile such as `pixi.lock` or `rv.lock`, and a
-README or task explains how to run it.
-
-- Run in the project environment without asking for an environment decision.
-- Do not create run archives, evidence or claim ledgers, RO-Crate exports, or
-  fresh directory reruns unless the user asks.
-- Report results in plain prose. Name anything material that was not checked.
-  Skip lifecycle labels such as `UNVERIFIED` or `STALE` and the
-  RED/YELLOW/GREEN audit verdict.
-- Work on a branch in the current checkout. Use a worktree only when another
-  session may edit the same checkout.
-- Run independent reviews, `project-learning` steps, and constraint checks only
-  on request or before a commit the user asked for.
-- Keep project paths portable and seed stochastic code as ordinary good
-  practice.
-
-**`strict`.** Follow every archive, ledger, gate, label, audit, review, and
-worktree step the skill or agent describes. Use it for replication packages,
-publication deliverables, and managed studies.
-
-When a skill or agent step is marked _strict only_, skip it in `light` mode.
+- **`light` (default):** Work is reproducible when code is committed, dependencies are pinned in a lockfile (`pixi.lock`, `uv.lock`, `rv.lock`), stochastic code sets a seed, paths are project-relative, and a README or task documents how to run it. Work on a descriptive branch in the current checkout (use a worktree only when concurrent writers or unrelated dirty changes require isolation). Run constraints and independent reviews on request or before a requested commit.
+- **`strict`:** Isolate code/skill changes in a worktree, validate citations (`bib-validate`), run applicable deterministic checks (`constraints/check-all.py`), audit numeric manuscript claims (`audit-reproducibility`), capture computational requirements (`setup-environment`), and run an independent `reviewer` pass when warranted.
 
 ## File formats
 
-Choose a format by who reads and edits the file:
-
 | Content | Format |
-|---------|--------|
-| Settings people edit by hand | TOML |
-| Configuration and ledgers read by people and tools | YAML |
-| Notes, skills, agent definitions and other plain text an LLM may read | Markdown |
-| Notes, ordinary reports (`reports/<slug>-<YYYY-MM-DD>/`), and code documentation | Markdown, with TikZ for diagrams |
-| Polished PDF reports, manuscripts, and white papers | LaTeX, with TikZ for diagrams |
-| Reports that need interactive graphics | Quarto |
-| Output exchanged only between programs | JSON or JSONL |
-
-Use JSON only when a protocol, specification or existing tool requires it. When a
-program writes output a person may open, prefer YAML. Do not introduce NestedText
-or other niche formats. Follow an established project format until the user
-approves a migration.
-
-## How it works
-
-### 1. Load the matching convention
-
-Before editing, read the rule file under `${CLAUDE_PLUGIN_ROOT}/rules/` that
-matches the file type, and follow it (it defers to a file's existing local
-style when they conflict):
-
-| Editing… | Read |
-|----------|------|
-| `.R` `.r` `.Rmd` | `rules/r-conventions.md` |
-| `.py` | `rules/python-conventions.md` |
-| `.f90` `.F90` `.f95` `.f` | `rules/fortran-conventions.md` |
-| `.qmd` `.tex` | `rules/quarto-conventions.md` |
-| `.stan` (and cmdstanr drivers) | `rules/stan-conventions.md` |
-| `Makevars*` `Makefile` `configure` `meson.build` | `rules/native-build-conventions.md` |
-
-When writing R, including chunks in Quarto or R Markdown, use
-[r-code-style](../r-code-style/SKILL.md).
-
-For authored artifacts, load only the skill for the requested work. Follow a
-linked skill or reference only when its stated condition applies, and do not
-reload guidance already read for the task. Reusing an existing visual does not
-require its creation workflow.
-
-| Requested work | Skill |
 | --- | --- |
-| Plots, charts, maps, or images encoding data | [data-visualization](../data-visualization/SKILL.md) |
-| Diagrams, schematics, or conceptual flows | [diagrams](../diagrams/SKILL.md) |
-| Narrative report with linked or embedded evidence | [reports](../reports/SKILL.md) |
-| Simple Markdown notes or todos | [markdown-notes](../markdown-notes/SKILL.md) |
-| Documentation accompanying code | [documentation](../documentation/SKILL.md) |
+| Settings people edit by hand (`pixi.toml`, `.zotero.toml`) | TOML |
+| Structured records, ledgers, and configurations read by people and tools | YAML |
+| Notes, skills, code documentation, and standalone report bundles (`reports/<slug>-<YYYY-MM-DD>/`) | Markdown, with TikZ for diagrams |
+| Polished PDF reports, manuscripts, and white papers | LaTeX, with TikZ for diagrams |
+| Reports requiring interactive graphics | Quarto HTML (`embed-resources: true`) |
+| Machine-to-machine interchange or single-source plot metric payloads | JSON or JSONL |
 
-Requested interaction adds [interactive-graphics](../interactive-graphics/SKILL.md)
-for plots or diagrams, or [interactive-reports](../interactive-reports/SKILL.md)
-for reports. Static work does not load these layers merely because it is HTML.
+Use JSON only when a tool, protocol, or plotting pipeline specifies it. Prefer YAML when a person will read structured records directly.
 
-Highlights you should not need to re-derive: R follows the project formatter and assignment style;
-Python matches the project environment; Fortran is `implicit none` + explicit kinds + `intent`;
-interactive reports use dual-theme Quarto, print is light, and computed numbers
-are imported from outputs rather than hand-typed.
+## Matching conventions and skills
 
-### 2. Run constraints when the mode calls for them
+Before editing code or documents, read the matching rule under `rules/` (relative to the Waterology installation root):
 
-The constraints are scriptable, deterministic checks. In `light` mode, run them
-on request or before a commit the user asked for. In `strict` mode, run them
-after the final edit when the current task creates or changes an applicable
-source, configuration, result, or rendered artifact. Target the changed paths:
+| File type | Rule / Skill |
+| --- | --- |
+| `.R`, `.r`, `.Rmd` | `rules/r-conventions.md` and [r-code-style](../r-code-style/SKILL.md) |
+| `.py` | `rules/python-conventions.md` |
+| `.f90`, `.F90`, `.f95`, `.f` | `rules/fortran-conventions.md` |
+| `.qmd`, `.tex` | `rules/quarto-conventions.md` (`scripts/myst_to_quarto.py` converts MyST Markdown to `.qmd`) |
+| `.stan` | `rules/stan-conventions.md` |
+| `Makevars*`, `Makefile`, `meson.build` | `rules/native-build-conventions.md` |
+
+Load artifact skills only for the deliverable requested: [figures](../figures/SKILL.md) for data plots, [diagrams](../diagrams/SKILL.md) for conceptual schematics, [reports](../reports/SKILL.md) for analysis/benchmark reports, [compile-latex](../compile-latex/SKILL.md) for LaTeX builds, and [research-software-quality](../research-software-quality/SKILL.md) for testing, debugging, and worktree decisions.
+
+## Deterministic constraints
+
+Run applicable checks on changed files before requested commits or in `strict` mode:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/constraints/check-all.py path/to/changed/files
+python3 <waterology-root>/constraints/check-all.py path/to/changed/files
 ```
 
-Do not run constraints for read only work, explanations, plans, or changes to
-unrelated file types. Do not repeat a successful run when the checked content
-has not changed, including on a later prompt. A passing run in the current task,
-a durable validation record for the same contents, or passing CI for the same
-commit establishes that state. If validation cannot be established for a
-changed applicable file, run the focused check once.
+Included checks: `no-absolute-paths`, `deterministic-seed`, `pixi-r-task-dollar`, `plotly-text-overlap`, `mc-has-mcse`, `conservation-tol`, `overfull-boxes`, and `no-hardcoded-results`. Fix violations rather than suppressing them (`# waterology: allow-abs-path` and `# waterology: allow-unseeded` are reserved for genuine exceptions).
 
-Use a whole project target only when the task changes a constraint, requests
-full repository validation, prepares a release, or otherwise needs repository
-wide evidence. Other test and repository instructions may still require their
-own checks; they do not make the Waterology constraint suite unconditional.
+## Repository hygiene
 
-Current checks:
-
-- **`no-absolute-paths`** — no machine-specific paths (`/Users/…`, `~/…`,
-  `C:\…`, cloud-storage roots) baked into source.
-- **`deterministic-seed`** — any script that draws random numbers sets a seed.
-- **`pixi-r-task-dollar`** — R commands in `pixi.toml` tasks contain no `$`
-  (deno_task_shell expands it even inside single quotes).
-- **`plotly-text-overlap`** — rendered Plotly widgets separate titles,
-  legends, facets, axes, and tick labels instead of relying on collision-prone
-  default layout.
-
-A check exits non-zero on a real violation and prints the offending lines. Fix
-the violation rather than suppressing it; the documented escape-hatch comments
-(`# waterology: allow-abs-path`, `# waterology: allow-unseeded`) exist for the
-genuine exceptions only.
-
-### 3. Apply repository hygiene
-
-- Exclude operating system debris such as `.DS_Store`, `._*`, `.Trashes`,
-  `.Spotlight-V100`, `.fseventsd`, and `Thumbs.db`.
-- Do not commit editor state such as `.vscode/` or `.positron/` without the user's
-  permission.
-- Never commit secret-bearing environment files such as `.env*`, `.Renviron`,
-  credentials, or access tokens. Inspect files before staging when their names
-  or contents may be sensitive.
-- Ensure the project `.gitignore` covers these local artifacts. Do not ignore
-  all dotfiles: project assets such as `.gitignore`, `.mcp.json`, and runtime
-  configuration directories may be intentional source files.
-
-### 4. Add a new check (no wiring)
-
-Drop a paired `constraints/<name>.md` (the rule) + `constraints/<name>.py` (a
-standalone script: target paths as argv, print findings, exit 0 pass / 1 fail).
-`check-all.py` discovers it automatically — adding the file is the whole step.
-
-Litmus test for where something belongs: **can you write a script that returns
-pass/fail?** Yes → a constraint (a paired `.md`/`.py`). No, it needs reading and
-judgment → a convention (a `rules/*.md` entry).
-
-## Sibling skills
-
-- **`setup-environment`** — scaffold or repair a project environment (pixi,
-  rv/renv, lockfile hygiene, relocation pitfalls).
-- **`publish-blog-post`** — the waterology-blog post workflow (webp media,
-  R2 uploads, publish checklist).
-- **research bundle** — source-grounded research agents (`researcher`, `research-syntesizer`,
-  `research-verifier`, `research-reviewer`), skills (`deep-research`, `literature-review`,
-  `figure-style`, ...), and slash workflows (`/deepresearch`,
-  `/lit`, `/review`, `/summarize`, ...).
-
-## Software quality
-
-Use `research-software-quality` for proportional testing, debugging,
-verification, review, persistence, and worktree isolation. Skill and agent
-instruction edits count as behavior changes even when the files are Markdown.
+- Exclude OS and build debris (`.DS_Store`, `._*`, `.pixi/`, `.waterology/`, LaTeX build files) in `.gitignore`.
+- Never commit `.env*`, `.Renviron`, credentials, or tokens.

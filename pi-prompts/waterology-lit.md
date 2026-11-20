@@ -1,7 +1,9 @@
 ---
 description: 'Alias for the `waterology-literature-review` skill: Run a literature
-  review using paper search and primary-source synthesis.'
-argument-hint: <topic-or-lab-or-author>
+  review, deep research investigation, ML/modeling recipe survey, or publication corpus
+  review using multi-provider paper search, Hugging Face Hub inspection, and Zotero
+  sync.'
+argument-hint: <topic, research question, or author/lab>
 ---
 
 <!-- Generated from skills/literature-review/SKILL.md. Do not edit. -->

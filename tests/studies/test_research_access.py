@@ -4,16 +4,21 @@ import pytest
 def test_access_reports_missing_names_without_values(monkeypatch):
     from waterology.core.research_access import research_access
 
-    monkeypatch.delenv("ZOTERO_API_KEY", raising=False)
-    monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
-    monkeypatch.delenv("SEMANTIC_SCHOLAR_API_KEY", raising=False)
-    monkeypatch.delenv("CORE_API_KEY", raising=False)
+    for var in (
+        "ZOTERO_API_KEY",
+        "OPENALEX_API_KEY",
+        "SEMANTIC_SCHOLAR_API_KEY",
+        "CORE_API_KEY",
+        "HF_TOKEN",
+    ):
+        monkeypatch.delenv(var, raising=False)
     missing = [w for w in research_access()["warnings"] if "is not available" in w]
-    assert len(missing) == 4
+    assert len(missing) == 5
     monkeypatch.setenv("ZOTERO_API_KEY", "SECRET-ZOTERO")
     monkeypatch.setenv("OPENALEX_API_KEY", "SECRET-OPENALEX")
     monkeypatch.setenv("SEMANTIC_SCHOLAR_API_KEY", "SECRET-S2")
     monkeypatch.setenv("CORE_API_KEY", "SECRET-CORE")
+    monkeypatch.setenv("HF_TOKEN", "SECRET-HF")
     result = research_access()
     assert result["warnings"] == []
     assert "SECRET" not in str(result)

@@ -4,7 +4,6 @@ import subprocess
 import pytest
 
 from waterology.core.formats import load_document, write_document
-from waterology.core.project import initialize_project
 from waterology.core.zotero import (
     configure_zotero,
     queue_reference,
@@ -13,13 +12,10 @@ from waterology.core.zotero import (
     sync_references,
 )
 
-LEGACY_SETTINGS = "library_id: 123\ncollection_name: Legacy fixture\ncollection_key: ABCDEFGH\n"
-
 
 @pytest.fixture
 def project(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    initialize_project(tmp_path)
     configure_zotero(tmp_path, {"library_id": "123", "collection_name": "Fixture"})
     return tmp_path
 
@@ -44,40 +40,12 @@ class Gateway:
 
 def test_configure_writes_canonical_hidden_settings_file(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    initialize_project(tmp_path)
 
     configure_zotero(tmp_path, {"library_id": "123", "collection_name": "Fixture"})
 
     assert (tmp_path / ".zotero.toml").is_file()
-    assert not (tmp_path / "zotero.nt").exists()
-
-
-def test_settings_read_legacy_file_when_canonical_file_is_absent(tmp_path):
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    initialize_project(tmp_path)
-    (tmp_path / "zotero.nt").write_text(LEGACY_SETTINGS)
-
-    assert settings_for(tmp_path).collection_name == "Legacy fixture"
-
-
-def test_settings_prefer_canonical_file_over_legacy_file(tmp_path):
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    initialize_project(tmp_path)
-    settings = {
-        "library_id": "123",
-        "collection_name": "Legacy fixture",
-        "collection_key": "ABCDEFGH",
-    }
-    (tmp_path / "zotero.nt").write_text(LEGACY_SETTINGS)
-    write_document(
-        tmp_path / ".zotero.toml",
-        {**settings, "library_id": "456", "collection_name": "Canonical fixture"},
-    )
-
-    loaded = settings_for(tmp_path)
-
-    assert loaded.library_id == "456"
-    assert loaded.collection_name == "Canonical fixture"
+    assert ".waterology/" in (tmp_path / ".gitignore").read_text()
+    assert settings_for(tmp_path).library_id == "123"
 
 
 def test_doi_dedup_caches_pdf_without_upload(project):

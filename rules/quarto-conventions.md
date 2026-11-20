@@ -6,23 +6,14 @@ paths:
   - "**/*.tex"
 ---
 
-# Quarto & LaTeX conventions
+# Quarto and LaTeX conventions
 
-Conventions for research writing output: Quarto documents/blogs, journal
-articles, and DOE reports.
-
-Read the optional local context using this rule name. If the CLI is unavailable,
-use the [local resolver](../skills/project-conventions/references/local-preferences.md).
+Conventions for Quarto documents/blogs, journal manuscripts, and technical PDF reports.
 
 ## Quarto
 
-Run `waterology config context quarto-conventions` for optional local guidance.
-The themes below are package defaults; project requirements and local overrides
-take precedence.
-
-- Use the project environment or discover `quarto` on PATH.
-- Standalone HTML uses `embed-resources: true` and a dual theme for a
-  light/dark toggle:
+- Use the project environment or `quarto` on `PATH`.
+- Standalone HTML uses `embed-resources: true` and a dual theme toggle (`darkly` default with `flatly` light switch):
   ```yaml
   format:
     html:
@@ -32,49 +23,18 @@ take precedence.
         dark: darkly
         light: flatly
   ```
-  The first entry makes Darkly the default while the Quarto switch retains
-  Flatly. Design figure palettes in light mode, then derive dark data colors
-  with Chameleon's luminance, color consistency, and adjacent color objectives.
-  Verify both palettes after rendering.
-  - Compile to html: `quarto render document.qmd --to html -M embed-resources=true`
-- **Light theme for anything print-bound** (PDF, journal, slides). Darkly is the
-  default for interactive HTML reports, with Flatly available from the theme
-  switch.
-- Figures: generate them from R/Python scripts and reference the saved file,
-  rather than embedding heavy inline computation — keeps the document fast and
-  the figure regenerable. Use the project or local palette.
-- TikZ for flow charts and conceptual diagrams (unless Mermaid is explicitly requested), plotly for interactive plots, bokeh for richer interactives, PNG or vector for static.
-
-Load [reports](../skills/reports/SKILL.md) only when authoring a report, and
-[interactive-reports](../skills/interactive-reports/SKILL.md) only for requested
-interactive reporting. For visual creation, choose
-[data-visualization](../skills/data-visualization/SKILL.md) for data displays or
-[diagrams](../skills/diagrams/SKILL.md) for conceptual relationships. An existing
-image or a static HTML document does not require all of these skills.
+- **Light theme for print** (PDF, journal, slides); Darkly/Flatly for interactive HTML.
+- Generate heavy analysis and figures in R/Python scripts and import saved outputs rather than embedding slow inline computation.
+- Use TikZ for flowcharts and conceptual diagrams unless Mermaid is explicitly requested ([diagrams](../skills/diagrams/SKILL.md)), [figures](../skills/figures/SKILL.md) for static or interactive plots, and [reports](../skills/reports/SKILL.md) when authoring a report deliverable.
+- To convert MyST Markdown into Quarto syntax, run `python3 <project-conventions-dir>/scripts/myst_to_quarto.py input.md output.qmd`, then verify citations, cross-references, and rendered output.
 
 ## No hand-typed computed numbers
 
-If a number was computed, it must be **imported**, not typed. A table or a
-statistic in the prose should come from `\input{}` / an inline code chunk /
-a generated `.tex` fragment — never copy-pasted from console output, which
-silently goes stale when the analysis changes. Hand-typed results are the
-single most common source of paper↔code drift.
+Computed numbers in prose or tables must be imported (`\input{}`, inline code chunks, or generated `.tex`/JSON fragments) rather than copy-pasted from console output (`no-hardcoded-results` constraint).
 
 ## LaTeX hygiene
 
-- Build through **`latexmk`** governed by a project `.latexmkrc`; let the rc
-  file pick the engine. Don't call bare `pdflatex`/`xelatex` (Beamer decks here
-  are often XeLaTeX, and a bare call ignores the rc file).
-- Never write BibTeX entries from memory — verify a reference exists before
-  citing it. A hallucinated citation is worse than a missing one.
-- Overfull/underfull boxes are **not** tagged `Warning`, so `grep Warning`
-  misses them. Detect with:
-  ```bash
-  grep -cE 'Overfull \\[hv]box \([0-9.]+pt too (wide|high)\)' out/file.log
-  ```
-  Severity: <1pt ignore, 1–10pt minor, >10pt fix. The only safe blanket fix is
-  adding `microtype`.
-- Keep LaTeX source separate from code/data — `paper/` holds `.tex`/`.bib`
-  only; `.R`/`.py`/`.csv`/`.rds` live elsewhere.
-- Don't commit LaTeX build artifacts (`.aux`, `.log`, `.synctex.gz`, generated
-  `.pdf`) — including archive directories.
+- Build through **`latexmk`** governed by `.latexmkrc` ([compile-latex](../skills/compile-latex/SKILL.md)), never bare single-pass `pdflatex`/`xelatex`.
+- Never write BibTeX entries from memory; validate keys and DOIs with [bib-validate](../skills/bib-validate/SKILL.md).
+- Check overfull boxes (`> 10pt` fix, `1-10pt` minor, `< 1pt` ignore) using `compile-latex/scripts/overfull_boxes.py` or `constraints/overfull-boxes.py`.
+- Keep LaTeX sources (`paper/`) separate from scripts/data and exclude `.aux`, `.log`, `.synctex.gz`, and build artifacts from Git.

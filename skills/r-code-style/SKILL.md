@@ -7,19 +7,12 @@ description: >
 
 # R Code Style
 
-Follow these defaults unless the user or an established project style specifies
-otherwise. Read optional local guidance with
-`waterology config context r-conventions`; use the
-[local resolver](../project-conventions/references/local-preferences.md) if the
-CLI is unavailable.
+Follow these defaults unless the user or an established project style specifies otherwise:
 
-- Follow tidyverse style and use dplyr with the native pipe operator `|>`.
-- Format with air. Default to line width 100 when establishing formatter
-  configuration, and preserve an existing project's configuration. Run
-  `air format` on edited source; exclude generated or tool-managed files.
-- Use `=` for variable assignment.
-- Put the variable assignment on the first line of a pipe chain and start the
-  pipeline on the next line:
+- Follow tidyverse style using `dplyr` and the native pipe `|>`.
+- Format with `air` (line width 100 by default when creating new config). Run `air format` on edited `.R` files while excluding tool-managed files (`rv` activate scripts).
+- Use `=` for assignment.
+- Put variable assignment on its own line and start multi-step pipe chains on the next line:
 
   ```r
   result =
@@ -28,9 +21,6 @@ CLI is unavailable.
       summarise(mean_flow = mean(flow, na.rm = TRUE))
   ```
 
-- Use `\(x)` for inline or single-line functions and `function(x)` for
-  multiline functions.
-- Keep file paths and settings in a dedicated section at the top of each script.
-
-For research reproducibility, numerical discipline, and package conventions,
-also follow [R conventions](../../rules/r-conventions.md).
+- Use `\(x)` for inline anonymous functions and `function(x)` for multiline functions.
+- Group file paths, constants, and seeds in a dedicated header section at the top of each script.
+- Also apply `rules/r-conventions.md` for numerical discipline, RNG seeding, and package checks.

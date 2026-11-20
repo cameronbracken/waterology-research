@@ -4,10 +4,9 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import Literal
 
-from waterology.core.profiles import MachineConfigError, load_machine_config
+from waterology.core.user_settings import UserConfigError, load_user_config
 from waterology.runtime.assets import AssetCatalog
 from waterology.runtime.validate import validate_assets
-from waterology.torc.gateway import TorcCliGateway, TorcError
 
 
 @dataclass(frozen=True)
@@ -29,8 +28,7 @@ _RUNTIME_COMMANDS: dict[str, str] = {
 def run_diagnostics(
     catalog: AssetCatalog,
     runtime: str | None = None,
-    machine_config_file: Path | None = None,
-    torc_profile: str | None = None,
+    user_config_file: Path | None = None,
 ) -> tuple[Diagnostic, ...]:
     issues = validate_assets(catalog)
     diagnostics = [
@@ -50,14 +48,6 @@ def run_diagnostics(
                 path or f"{command} command was not found",
             )
         )
-    torc_path = shutil.which("torc")
-    diagnostics.append(
-        Diagnostic(
-            "torc:binary",
-            "pass" if torc_path else "warn",
-            torc_path or "torc command was not found; direct execution remains available",
-        )
-    )
     mcp_available = find_spec("mcp") is not None
     diagnostics.append(
         Diagnostic(
@@ -74,70 +64,18 @@ def run_diagnostics(
             mcp_server or "waterology-mcp entry point was not found",
         )
     )
-    dashboard_dependencies = all(
-        find_spec(module) is not None for module in ("jinja2", "starlette", "uvicorn")
-    )
+    zotero_available = find_spec("pyzotero") is not None
     diagnostics.append(
         Diagnostic(
-            "dashboard:dependencies",
-            "pass" if dashboard_dependencies else "warn",
-            (
-                "Dashboard dependencies are installed"
-                if dashboard_dependencies
-                else "Install the dashboard package extra"
-            ),
+            "zotero:sdk",
+            "pass" if zotero_available else "warn",
+            "Pyzotero is installed" if zotero_available else "Install the zotero package extra",
         )
     )
     try:
-        machine = load_machine_config(machine_config_file)
-    except MachineConfigError as error:
-        diagnostics.append(Diagnostic("torc:profiles", "fail", str(error)))
+        load_user_config(user_config_file)
+    except UserConfigError as error:
+        diagnostics.append(Diagnostic("user:config", "fail", str(error)))
     else:
-        diagnostics.append(
-            Diagnostic(
-                "torc:profiles",
-                "pass" if machine.profiles else "warn",
-                (
-                    f"{len(machine.profiles)} compute profile(s) are valid"
-                    if machine.profiles
-                    else "No TORC compute profiles are configured"
-                ),
-            )
-        )
-        if torc_profile:
-            try:
-                profile = machine.profile(torc_profile)
-            except MachineConfigError as error:
-                diagnostics.append(Diagnostic("torc:requested_profile", "fail", str(error)))
-            else:
-                diagnostics.append(
-                    Diagnostic(
-                        "torc:requested_profile",
-                        "pass",
-                        f"Compute profile is valid: {torc_profile}",
-                    )
-                )
-                if torc_path:
-                    gateway = TorcCliGateway(profile.api_url, executable=torc_path)
-                    try:
-                        version = gateway.version(cwd=catalog.root)
-                        gateway.health(cwd=catalog.root)
-                    except TorcError as error:
-                        diagnostics.append(Diagnostic("torc:connectivity", "fail", str(error)))
-                    else:
-                        diagnostics.append(
-                            Diagnostic(
-                                "torc:connectivity",
-                                "pass",
-                                f"{version}; API is reachable",
-                            )
-                        )
-                else:
-                    diagnostics.append(
-                        Diagnostic(
-                            "torc:connectivity",
-                            "fail",
-                            "TORC connectivity requires the torc command",
-                        )
-                    )
+        diagnostics.append(Diagnostic("user:config", "pass", "User configuration is valid"))
     return tuple(diagnostics)

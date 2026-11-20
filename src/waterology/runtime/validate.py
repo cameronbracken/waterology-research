@@ -42,16 +42,8 @@ GENERATED_AGENT_SUFFIXES = {
 }
 REQUIRED_AGENT_NAMES = (
     "engineer",
-    "replication-coordinator",
-    "reproducibility-auditor",
-    "research-coordinator",
-    "research-reviewer",
-    "research-syntesizer",
-    "research-verifier",
     "researcher",
-    "simulation-code-reviewer",
-    "simulation-coordinator",
-    "simulation-reviewer",
+    "reviewer",
 )
 
 

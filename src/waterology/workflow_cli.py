@@ -1,31 +1,31 @@
-"""CLI adapters for durable study and evidence services."""
+"""CLI commands for scholarly discovery, Zotero reference sync, and Hugging Face Hub inspection."""
 
 import json
-import time
 from contextvars import ContextVar
 from pathlib import Path
 
 import typer
 
-from waterology.core.formats import readable
-from waterology.core.studies import (
-    advance_study,
-    enqueue_candidate,
-    list_studies,
-    load_study,
-    stop_study,
+from waterology.core.formats import load_document, readable
+from waterology.core.zotero import (
+    configure_zotero,
+    initialize_zotero,
+    queue_reference,
+    reference_status,
+    settings_for,
+    sync_references,
 )
 
 _PATH_OPTION = typer.Option(Path("."))
-WORKFLOW_OUTPUT_FORMAT = ContextVar("workflow_output_format", default="yaml")
+OUTPUT_FORMAT = ContextVar("waterology_output_format", default="yaml")
 
-study_app = typer.Typer(help="Bounded autonomous research and engineering through TORC.")
+zotero_app = typer.Typer(help="Manage a project .zotero.toml collection and local PDF cache.")
 
 
 def emit(value):
     if hasattr(value, "model_dump"):
         value = value.model_dump(mode="json")
-    output_format = WORKFLOW_OUTPUT_FORMAT.get()
+    output_format = OUTPUT_FORMAT.get()
     typer.echo(
         json.dumps(value, indent=2, allow_nan=False)
         if output_format == "json"
@@ -34,184 +34,58 @@ def emit(value):
     )
 
 
-@study_app.command("create")
-def create(
-    contract: Path,
-    authorized_by: str = typer.Option(..., "--authorized-by"),
-    profile: str | None = typer.Option(None),
+@zotero_app.command("init")
+def init_zotero(
+    collection_name: str,
+    group_id: str | None = typer.Option(None),
+    api_key_env: str = typer.Option("ZOTERO_API_KEY"),
     path: Path = _PATH_OPTION,
 ):
-    """Record already-given authorization and pin the TORC execution contract."""
-    from waterology.core.workflows import create_registered_study
-
-    emit(create_registered_study(path, contract, profile=profile, authorized_by=authorized_by))
-
-
-@study_app.command("list")
-def list_command(path: Path = _PATH_OPTION):
-    emit([r.model_dump(mode="json") for r in list_studies(path)])
-
-
-@study_app.command("show")
-def show(identifier: str, path: Path = _PATH_OPTION):
-    emit(load_study(path, identifier))
-
-
-@study_app.command("enqueue")
-def enqueue(identifier: str, experiment: str, path: Path = _PATH_OPTION):
-    emit(enqueue_candidate(path, identifier, experiment))
-
-
-@study_app.command("advance")
-def advance(identifier: str, path: Path = _PATH_OPTION):
-    emit(advance_study(path, identifier))
-
-
-@study_app.command("retry-submission")
-def retry_submission(identifier: str, run_id: str, path: Path = _PATH_OPTION):
-    """Recover a definitive create authorization rejection using live TORC inventory."""
-    from waterology.core.studies import retry_submission as recover
-
-    emit(recover(path, identifier, run_id))
-
-
-@study_app.command("stop")
-def stop(identifier: str, path: Path = _PATH_OPTION):
-    emit(stop_study(path, identifier))
-
-
-@study_app.command("watch")
-def watch(
-    identifier: str, path: Path = _PATH_OPTION, interval: float = typer.Option(10, min=1, max=60)
-):
-    """Drive queued evaluations until stopped, blocked, exhausted or complete."""
-    previous = None
+    """Create standalone .zotero.toml settings using the library associated with the API key."""
     try:
-        while True:
-            record = advance_study(path, identifier)
-            status = (record.state, len(record.attempts), len(record.queue), record.reason)
-            if status != previous:
-                emit(
-                    {
-                        "study_id": record.id,
-                        "state": record.state,
-                        "attempts": len(record.attempts),
-                        "queued": len(record.queue),
-                        "reason": record.reason,
-                    }
-                )
-                previous = status
-            if record.state in {"complete", "stopped", "exhausted", "blocked"}:
-                return
-            time.sleep(interval)
-    except KeyboardInterrupt:
-        emit(stop_study(path, identifier))
+        emit(initialize_zotero(path, collection_name, group_id=group_id, api_key_env=api_key_env))
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from None
 
 
-@study_app.command("conclude")
-def conclude(
-    identifier: str,
-    evidence: list[str],
-    conclusion: str = typer.Option(...),
-    author: str = typer.Option(...),
+@zotero_app.command("configure")
+def configure(document: Path, path: Path = _PATH_OPTION):
+    """Write .zotero.toml from an explicit TOML or YAML document."""
+    emit(configure_zotero(path, load_document(document)))
+
+
+@zotero_app.command("status")
+def status(path: Path = _PATH_OPTION):
+    """Inspect queued references and PDF download status."""
+    config = settings_for(path)
+    emit({"configured": config is not None, "references": reference_status(path)})
+
+
+@zotero_app.command("sync")
+def sync(limit: int = typer.Option(20, min=1, max=100), path: Path = _PATH_OPTION):
+    """Synchronize pending Zotero metadata and local PDF cache entries."""
+    emit(sync_references(path, limit=limit))
+
+
+@zotero_app.command("capture")
+def capture(
+    document: Path,
+    reason: str = typer.Option("Consulted during research"),
     path: Path = _PATH_OPTION,
 ):
-    from waterology.core.studies import conclude_study
-
-    emit(conclude_study(path, identifier, conclusion=conclusion, evidence=evidence, author=author))
-
-
-@study_app.command("driver")
-def driver(
-    identifier: str,
-    runtime: str = typer.Option(...),
-    max_proposals: int = typer.Option(..., min=1),
-    path: Path = _PATH_OPTION,
-):
-    """Authorize bounded candidate generation using an existing agent runtime."""
-    from waterology.core.study_driver import configure_driver
-
-    emit(configure_driver(path, identifier, runtime=runtime, max_proposals=max_proposals))
+    """Queue and sync a consulted citation from a YAML or TOML file."""
+    emit(queue_reference(path, load_document(document), reason=reason))
 
 
-@study_app.command("run")
-def run_driver(
-    identifier: str, path: Path = _PATH_OPTION, interval: float = typer.Option(10, min=1, max=60)
-):
-    """Resume the configured candidate driver and TORC controller without new authorization."""
-    from waterology.core.study_driver import drive_study
+def register_reference_commands(app: typer.Typer) -> None:
+    app.add_typer(zotero_app, name="zotero")
 
-    previous = None
-    try:
-        while True:
-            result = drive_study(path, identifier)
-            status = (
-                result["study"]["state"],
-                len(result["study"]["attempts"]),
-                result["driver"]["reason"],
-            )
-            if status != previous:
-                emit(result)
-                previous = status
-            if not result["driver"].get("draining") and (
-                status[0] in {"complete", "stopped", "exhausted", "blocked"} or status[2]
-            ):
-                return
-            time.sleep(interval)
-    except KeyboardInterrupt:
-        stop_study(path, identifier)
-        emit(drive_study(path, identifier))
+    @app.command("research-access")
+    def access():
+        """Check research API key availability without printing secrets or making requests."""
+        from waterology.core.research_access import research_access
 
-
-def register_workflow_commands(app: typer.Typer):
-    app.add_typer(study_app, name="study")
-    from waterology.engineering_cli import register_engineering_commands
-
-    register_engineering_commands(app)
-
-    @app.command("compare-runs")
-    def compare(run_ids: list[str], baseline: str = typer.Option(...), path: Path = _PATH_OPTION):
-        from waterology.core.comparison import compare_runs
-
-        emit(compare_runs(path, run_ids, baseline=baseline))
-
-    @app.command("claim")
-    def claim(
-        text: str,
-        run_id: str,
-        selector: str = typer.Option(""),
-        member: str = typer.Option("metrics.yaml"),
-        kind: str = typer.Option("observation"),
-        relation: str = typer.Option("supports"),
-        related_claim: str | None = typer.Option(None),
-        path: Path = _PATH_OPTION,
-    ):
-        from waterology.core.claims import register_claim
-
-        emit(
-            register_claim(
-                path,
-                claim=text,
-                run_id=run_id,
-                selector=selector,
-                member=member,
-                kind=kind,
-                relation=relation,
-                related_claim=related_claim,
-            )
-        )
-
-    @app.command("claim-assess")
-    def claim_assess(claim_id: str, status: str, author: str, note: str, path: Path = _PATH_OPTION):
-        from waterology.core.claims import assess_claim
-
-        emit(assess_claim(path, claim_id, status=status, author=author, note=note))
-
-    @app.command("claims")
-    def claims(path: Path = _PATH_OPTION):
-        from waterology.core.claims import list_claims, verify_claim
-
-        emit([verify_claim(path, c) for c in list_claims(path)])
+        emit(research_access())
 
     @app.command("discover")
     def discover(
@@ -228,6 +102,7 @@ def register_workflow_commands(app: typer.Typer):
         limit: int = typer.Option(20, min=1, max=100),
         path: Path = _PATH_OPTION,
     ):
+        """Search a scholarly provider, recording locally when .zotero.toml is configured."""
         from waterology.core.literature import search_literature
 
         emit(
@@ -236,11 +111,28 @@ def register_workflow_commands(app: typer.Typer):
             )
         )
 
+    @app.command("source-decision")
+    def decision(
+        search_id: str, source_id: str, decision: str, note: str, path: Path = _PATH_OPTION
+    ):
+        """Record an include, exclude, or unresolved decision for a recorded search hit."""
+        from waterology.core.literature import record_source_decision
+
+        emit(record_source_decision(path, search_id, source_id, decision=decision, note=note))
+
+    @app.command("source-add")
+    def source_add(title: str, locator: str, note: str = "", path: Path = _PATH_OPTION):
+        """Register a local or agency source and queue it to Zotero when configured."""
+        from waterology.core.literature import register_local_source
+
+        emit(register_local_source(path, title=title, locator=locator, note=note))
+
     @app.command("hf-dataset-info")
     def hf_dataset_info_command(
         repo_id: str,
         revision: str = typer.Option("main"),
     ):
+        """Inspect bounded Hugging Face Hub dataset metadata, splits, and license."""
         from waterology.core import huggingface
 
         emit(huggingface.hf_dataset_info(repo_id, revision=revision))
@@ -253,6 +145,7 @@ def register_workflow_commands(app: typer.Typer):
         subpath: str = typer.Option("", "--subpath"),
         limit: int = typer.Option(200, min=1, max=1000),
     ):
+        """List files and directories inside a Hugging Face Hub repository."""
         from waterology.core import huggingface
 
         emit(
@@ -269,6 +162,7 @@ def register_workflow_commands(app: typer.Typer):
         revision: str = typer.Option("main"),
         max_bytes: int = typer.Option(65536, min=1, max=262144),
     ):
+        """Read a bounded UTF-8 text file from a Hugging Face Hub repository."""
         from waterology.core import huggingface
 
         emit(
@@ -280,28 +174,3 @@ def register_workflow_commands(app: typer.Typer):
                 max_bytes=max_bytes,
             )
         )
-
-    @app.command("source-decision")
-    def decision(
-        search_id: str, source_id: str, decision: str, note: str, path: Path = _PATH_OPTION
-    ):
-        from waterology.core.literature import record_source_decision
-
-        emit(record_source_decision(path, search_id, source_id, decision=decision, note=note))
-
-    @app.command("source-add")
-    def source_add(title: str, locator: str, note: str = "", path: Path = _PATH_OPTION):
-        from waterology.core.literature import register_local_source
-
-        emit(register_local_source(path, title=title, locator=locator, note=note))
-
-    @app.command("report")
-    def report(
-        run_ids: list[str],
-        baseline: str = typer.Option(...),
-        destination: str = typer.Option(...),
-        path: Path = _PATH_OPTION,
-    ):
-        from waterology.core.reports import export_report
-
-        emit(export_report(path, run_ids, baseline=baseline, destination=destination))

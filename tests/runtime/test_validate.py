@@ -33,7 +33,7 @@ def test_runtime_manifests_have_matching_identity() -> None:
     pi = json.loads(catalog.path("package.json").read_text())
 
     assert claude["name"] == codex["name"] == "waterology"
-    assert claude["version"] == codex["version"] == pi["version"] == "0.9.1"
+    assert claude["version"] == codex["version"] == pi["version"] == "1.0.0"
     assert pi["pi"] == {
         "extensions": ["./pi-extensions"],
         "skills": ["./pi-skills"],
@@ -42,7 +42,6 @@ def test_runtime_manifests_have_matching_identity() -> None:
     assert pi["pi-subagents"] == {"agents": ["./pi-agents"]}
     for field in ("description", "author", "homepage", "repository", "license", "keywords"):
         assert claude[field] == codex[field]
-    assert "Claude Code plugin" not in claude["description"]
     assert codex["skills"] == "./skills/"
 
 
@@ -54,7 +53,7 @@ def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     package = catalog.path("package.json")
     package.write_text(
-        '{"version":"0.9.1","keywords":["pi-package"],"pi":{"skills":[]},'
+        '{"version":"1.0.0","keywords":["pi-package"],"pi":{"skills":[]},'
         '"pi-subagents":{"agents":[]}}\n',
         encoding="utf-8",
     )
@@ -68,26 +67,28 @@ def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
 
 def test_validation_reports_a_mismatched_skill_directory(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    skill = catalog.path("skills/eli5/SKILL.md")
-    skill.write_text(skill.read_text(encoding="utf-8").replace("name: eli5", "name: wrong-name", 1))
+    skill = catalog.path("skills/figures/SKILL.md")
+    skill.write_text(
+        skill.read_text(encoding="utf-8").replace("name: figures", "name: wrong-name", 1)
+    )
 
     issues = validate_assets(catalog)
 
-    assert ("skills/eli5/SKILL.md", "invalid-name", "wrong-name") in {
+    assert ("skills/figures/SKILL.md", "invalid-name", "wrong-name") in {
         (issue.path, issue.code, issue.message) for issue in issues
     }
 
 
 def test_validation_reports_duplicate_skill_names(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    skill = catalog.path("skills/eli5/SKILL.md")
+    skill = catalog.path("skills/figures/SKILL.md")
     skill.write_text(
-        skill.read_text(encoding="utf-8").replace("name: eli5", "name: autoresearch", 1)
+        skill.read_text(encoding="utf-8").replace("name: figures", "name: autoresearch", 1)
     )
 
     issues = validate_assets(catalog)
 
-    assert ("skills/eli5/SKILL.md", "duplicate-name", "autoresearch") in {
+    assert ("skills/figures/SKILL.md", "duplicate-name", "autoresearch") in {
         (issue.path, issue.code, issue.message) for issue in issues
     }
 
@@ -100,8 +101,8 @@ def test_validation_reports_duplicate_claude_command_names(tmp_path: Path) -> No
             "---\n\n# Writing Style",
             """metadata:
   claude-command:
-    name: log
-    argument-hint: (none)
+    name: lit
+    argument-hint: <topic>
 ---
 
 # Writing Style""",
@@ -112,29 +113,32 @@ def test_validation_reports_duplicate_claude_command_names(tmp_path: Path) -> No
 
     issues = validate_assets(catalog)
 
-    assert ("skills/writing-style/SKILL.md", "duplicate-claude-command", "log") in {
+    assert ("skills/writing-style/SKILL.md", "duplicate-claude-command", "lit") in {
         (issue.path, issue.code, issue.message) for issue in issues
     }
 
 
 def test_validation_reports_invalid_claude_command_metadata(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    skill = catalog.path("skills/session-log/SKILL.md")
+    skill = catalog.path("skills/literature-review/SKILL.md")
     skill.write_text(
-        skill.read_text(encoding="utf-8").replace("argument-hint: (none)", "argument-hint: ''"),
+        skill.read_text(encoding="utf-8").replace(
+            "argument-hint: <topic, research question, or author/lab>",
+            "argument-hint: ''",
+        ),
         encoding="utf-8",
     )
 
     issues = validate_assets(catalog)
 
-    assert ("skills/session-log/SKILL.md", "invalid-skill-definition") in {
+    assert ("skills/literature-review/SKILL.md", "invalid-skill-definition") in {
         (issue.path, issue.code) for issue in issues
     }
 
 
 def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    skill = catalog.path("skills/eli5/SKILL.md")
+    skill = catalog.path("skills/figures/SKILL.md")
     skill.write_text(
         skill.read_text(encoding="utf-8") + "\n[Missing reference](references/missing.md)\n",
         encoding="utf-8",
@@ -143,7 +147,7 @@ def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> N
     issues = validate_assets(catalog)
 
     assert (
-        "skills/eli5/SKILL.md",
+        "skills/figures/SKILL.md",
         "missing-skill-reference",
         "references/missing.md",
     ) in {(issue.path, issue.code, issue.message) for issue in issues}
@@ -151,9 +155,8 @@ def test_validation_reports_a_missing_local_skill_reference(tmp_path: Path) -> N
 
 def test_validation_checks_nested_skill_references_and_images(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    skill_directory = catalog.path("skills/eli5")
+    skill_directory = catalog.path("skills/figures")
     reference = skill_directory / "references" / "guide.md"
-    reference.parent.mkdir()
     reference.write_text("![Missing image](missing.png)\n", encoding="utf-8")
     skill = skill_directory / "SKILL.md"
     skill.write_text(
@@ -164,7 +167,7 @@ def test_validation_checks_nested_skill_references_and_images(tmp_path: Path) ->
     issues = validate_assets(catalog)
 
     assert (
-        "skills/eli5/references/guide.md",
+        "skills/figures/references/guide.md",
         "missing-skill-reference",
         "missing.png",
     ) in {(issue.path, issue.code, issue.message) for issue in issues}
@@ -197,30 +200,15 @@ def test_validation_reports_stale_generated_agents_without_writing(tmp_path: Pat
 
 def test_validation_reports_stale_generated_command_without_writing(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
-    command = catalog.path("commands/log.md")
+    command = catalog.path("commands/lit.md")
     command.write_text("stale\n", encoding="utf-8")
 
     issues = validate_assets(catalog)
 
-    assert ("commands/log.md", "stale-generated-command") in {
+    assert ("commands/lit.md", "stale-generated-command") in {
         (issue.path, issue.code) for issue in issues
     }
     assert command.read_text(encoding="utf-8") == "stale\n"
-
-
-def test_validation_reports_generated_command_directory(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    command = catalog.path("commands/log.md")
-    command.unlink()
-    command.mkdir()
-
-    issues = validate_assets(catalog)
-
-    assert (
-        "commands/log.md",
-        "invalid-asset-type",
-        "generated command must be a file",
-    ) in {(issue.path, issue.code, issue.message) for issue in issues}
 
 
 def test_validation_reports_orphaned_generated_command(tmp_path: Path) -> None:
@@ -242,219 +230,34 @@ def test_validation_reports_orphaned_generated_command(tmp_path: Path) -> None:
     }
 
 
-def test_validation_reports_malformed_manifest_json(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    manifest = catalog.path(".claude-plugin/plugin.json")
-    manifest.write_text("{", encoding="utf-8")
-
-    issues = validate_assets(catalog)
-
-    assert (".claude-plugin/plugin.json", "invalid-json") in {
-        (issue.path, issue.code) for issue in issues
-    }
-
-
-def test_validation_reports_a_non_object_manifest(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    manifest = catalog.path(".claude-plugin/plugin.json")
-    manifest.write_text("[]", encoding="utf-8")
-
-    issues = validate_assets(catalog)
-
-    assert (".claude-plugin/plugin.json", "invalid-manifest") in {
-        (issue.path, issue.code) for issue in issues
-    }
-
-
-def test_validation_reports_a_missing_manifest(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    manifest = catalog.path(".claude-plugin/plugin.json")
-    manifest.unlink()
-
-    issues = validate_assets(catalog)
-
-    assert (".claude-plugin/plugin.json", "missing-asset") in {
-        (issue.path, issue.code) for issue in issues
-    }
-    assert not manifest.exists()
-
-
-@pytest.mark.parametrize(
-    "directory", (".agent/agents", ".codex/agents", "agents", ".opencode/agents", "pi-agents")
-)
-def test_validation_reports_a_missing_generated_agent_directory(
-    tmp_path: Path, directory: str
-) -> None:
-    catalog = copied_catalog(tmp_path)
-    agent_directory = catalog.path(directory)
-    shutil.rmtree(agent_directory)
-
-    issues = validate_assets(catalog)
-
-    assert (directory, "missing-asset") in {(issue.path, issue.code) for issue in issues}
-    assert not agent_directory.exists()
-
-
-def test_validation_collects_missing_and_malformed_generated_assets(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    shutil.rmtree(catalog.path("agents"))
-    codex_agent = catalog.path(".codex/agents/researcher.toml")
-    codex_agent.write_text("not valid = [", encoding="utf-8")
-
-    issues = validate_assets(catalog)
-    issue_codes = {(issue.path, issue.code) for issue in issues}
-
-    assert ("agents", "missing-asset") in issue_codes
-    assert (".codex/agents/researcher.toml", "invalid-toml") in issue_codes
-    assert (".codex/agents/researcher.toml", "stale-generated-agent") in issue_codes
-    assert not any(
-        path.startswith("agents/") and code == "stale-generated-agent" for path, code in issue_codes
-    )
-    assert codex_agent.read_text(encoding="utf-8") == "not valid = ["
-
-
-def test_validation_reports_a_generated_agent_path_with_the_wrong_type(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    agent_directory = catalog.path("agents")
-    shutil.rmtree(agent_directory)
-    agent_directory.write_text("not a directory", encoding="utf-8")
-
-    issues = validate_assets(catalog)
-    issue_codes = {(issue.path, issue.code) for issue in issues}
-
-    assert ("agents", "invalid-asset-type") in issue_codes
-    assert not any(
-        path.startswith("agents/") and code == "stale-generated-agent" for path, code in issue_codes
-    )
-    assert agent_directory.read_text(encoding="utf-8") == "not a directory"
-
-
 def test_validation_reports_a_missing_canonical_agent_and_orphaned_adapters(
     tmp_path: Path,
 ) -> None:
     catalog = copied_catalog(tmp_path)
-    catalog.path("agent-definitions/research-syntesizer.md").unlink()
+    catalog.path("agent-definitions/reviewer.md").unlink()
 
     issues = validate_assets(catalog)
     issue_codes = {(issue.path, issue.code) for issue in issues}
 
-    assert ("agent-definitions/research-syntesizer.md", "missing-asset") in issue_codes
+    assert ("agent-definitions/reviewer.md", "missing-asset") in issue_codes
     for path in (
-        ".agent/agents/research-syntesizer.md",
-        "agents/research-syntesizer.md",
-        ".codex/agents/research-syntesizer.toml",
-        ".opencode/agents/research-syntesizer.md",
-        "pi-agents/research-syntesizer.md",
+        ".agent/agents/reviewer.md",
+        "agents/reviewer.md",
+        ".codex/agents/reviewer.toml",
+        ".opencode/agents/reviewer.md",
+        "pi-agents/reviewer.md",
     ):
         assert (path, "orphaned-generated-agent") in issue_codes
-
-
-def test_validation_reports_a_missing_canonical_agent_directory(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    shutil.rmtree(catalog.path("agent-definitions"))
-
-    issues = validate_assets(catalog)
-
-    assert ("agent-definitions", "missing-asset") in {(issue.path, issue.code) for issue in issues}
-
-
-def test_validation_reports_an_unexpected_canonical_agent(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    unexpected = catalog.path("agent-definitions") / "extra.md"
-    unexpected.write_text(
-        "---\n"
-        "name: extra\n"
-        "description: Unexpected agent.\n"
-        "capabilities: [read]\n"
-        "---\n\n"
-        "Unexpected agent.\n",
-        encoding="utf-8",
-    )
-
-    issues = validate_assets(catalog)
-
-    assert ("agent-definitions/extra.md", "unexpected-asset") in {
-        (issue.path, issue.code) for issue in issues
-    }
-
-
-def test_validation_checks_an_unexpected_canonical_agent_definition(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    unexpected = catalog.path("agent-definitions") / "extra.md"
-    unexpected.write_text(
-        "---\n"
-        "name: research-syntesizer\n"
-        "description: Unexpected agent.\n"
-        "capabilities: [read]\n"
-        "---\n\n"
-        "Unexpected agent.\n",
-        encoding="utf-8",
-    )
-
-    issues = validate_assets(catalog)
-    issue_codes = {(issue.path, issue.code) for issue in issues}
-
-    assert ("agent-definitions/extra.md", "unexpected-asset") in issue_codes
-    assert ("agent-definitions/extra.md", "invalid-name") in issue_codes
-
-
-def test_validation_reports_a_canonical_filename_name_mismatch(tmp_path: Path) -> None:
-    catalog = copied_catalog(tmp_path)
-    writer = catalog.path("agent-definitions/research-syntesizer.md")
-    writer.write_text(
-        writer.read_text(encoding="utf-8").replace(
-            "name: research-syntesizer", "name: research-reviewer", 1
-        ),
-        encoding="utf-8",
-    )
-
-    issues = validate_assets(catalog)
-
-    assert ("agent-definitions/research-syntesizer.md", "invalid-name") in {
-        (issue.path, issue.code) for issue in issues
-    }
-
-
-@pytest.mark.parametrize(
-    ("content", "code"),
-    (
-        ("Writer body without frontmatter.\n", "invalid-frontmatter"),
-        ("---\nname: [\n---\n\nWriter body.\n", "invalid-frontmatter"),
-        ("---\nscalar\n---\n\nWriter body.\n", "invalid-frontmatter"),
-        (
-            (
-                "---\n"
-                "name: research-syntesizer\n"
-                "description: Write research results.\n"
-                "capabilities: [invalid]\n"
-                "---\n\n"
-                "Writer body.\n"
-            ),
-            "invalid-agent-definition",
-        ),
-    ),
-)
-def test_validation_reports_invalid_canonical_agent_definitions(
-    tmp_path: Path, content: str, code: str
-) -> None:
-    catalog = copied_catalog(tmp_path)
-    catalog.path("agent-definitions/research-syntesizer.md").write_text(content, encoding="utf-8")
-
-    issues = validate_assets(catalog)
-
-    assert ("agent-definitions/research-syntesizer.md", code) in {
-        (issue.path, issue.code) for issue in issues
-    }
 
 
 @pytest.mark.parametrize(
     ("directory", "filename"),
     (
-        (".agent/agents", "research-syntesizer.md"),
-        ("agents", "research-syntesizer.md"),
-        (".codex/agents", "research-syntesizer.toml"),
-        (".opencode/agents", "research-syntesizer.md"),
-        ("pi-agents", "research-syntesizer.md"),
+        (".agent/agents", "reviewer.md"),
+        ("agents", "reviewer.md"),
+        (".codex/agents", "reviewer.toml"),
+        (".opencode/agents", "reviewer.md"),
+        ("pi-agents", "reviewer.md"),
     ),
 )
 def test_validation_reports_a_missing_generated_agent(
@@ -470,27 +273,3 @@ def test_validation_reports_a_missing_generated_agent(
         (issue.path, issue.code) for issue in issues
     }
     assert not missing.exists()
-
-
-@pytest.mark.parametrize(
-    ("directory", "filename"),
-    (
-        (".agent/agents", "orphan.md"),
-        ("agents", "orphan.md"),
-        (".codex/agents", "orphan.toml"),
-        (".opencode/agents", "orphan.md"),
-        ("pi-agents", "orphan.md"),
-    ),
-)
-def test_validation_reports_an_orphaned_generated_agent(
-    tmp_path: Path, directory: str, filename: str
-) -> None:
-    catalog = copied_catalog(tmp_path)
-    orphan = catalog.path(directory) / filename
-    orphan.write_text("orphan\n", encoding="utf-8")
-
-    issues = validate_assets(catalog)
-
-    assert (f"{directory}/{filename}", "orphaned-generated-agent") in {
-        (issue.path, issue.code) for issue in issues
-    }

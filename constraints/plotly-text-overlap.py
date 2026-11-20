@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CHECKER_PATH = ROOT / "skills/figure-style/scripts/check_plotly_layout.py"
+CHECKER_PATH = ROOT / "skills/figures/scripts/check_plotly_layout.py"
 SKIP_DIRS = {".git", ".pixi", ".venv", "__pycache__", "node_modules", "renv"}
 
 

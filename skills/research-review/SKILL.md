@@ -1,61 +1,36 @@
 ---
 name: research-review
 description: >
-  Run a tough but constructive internal critique of a research artifact: paper,
-  draft, analysis, or simulation study. Use when the user asks for a review,
-  critique, or feedback on a paper or draft, or wants weaknesses identified
-  before submission.
+  Run a rigorous, constructive critique of a paper, draft, report, analysis, or
+  simulation study, or reshape a manuscript's scientific narrative and figure
+  arc before submission.
 metadata:
   claude-command:
     name: review
-    argument-hint: <artifact>
+    argument-hint: <manuscript, report, or analysis path>
 ---
 
-# Research Review
+# Research Review and Manuscript Narrative
 
-Use the `writing-style` skill to check claim strength, terminology, and prose
-clarity without replacing the evidence review.
+Use [writing-style](../writing-style/SKILL.md) (`references/scientific-prose.md`) when evaluating prose clarity and claim calibration.
 
-The `research-reviewer` agent covers not only AI/ML work but hydrology model evaluations,
-statistical extremes analyses, and Monte Carlo studies, including the
-coverage-against-the-estimate error and dropped non-converged replicates.
+## Choose focus
 
-Derive a short slug from the artifact name. Create these artifacts:
+- **Internal peer critique (default):** Stress-test methods, baselines, statistical/physical assumptions, leakage, uncertainty, code-to-prose consistency, and conclusions across hydrology/energy modeling, statistics/extremes, Monte Carlo studies, or ML benchmarks.
+- **Narrative and figure arc:** Extract the central claim, target audience, section order, and figure sequence; identify figures that overclaim or redundant panels; propose concrete structural reordering before line-editing.
 
-- Plan: `docs/.plans/<slug>-review-plan.md`
-- Evidence notes: `docs/.drafts/<slug>-review-evidence.md`
-- Final review: `docs/<slug>-review.md`
+For large manuscripts or when the current session authored the draft, delegate the review to the `reviewer` subagent so it inspects the artifact with fresh context. Do not create intermediate `.plans/` or `.drafts/` files.
 
-Identify the artifact, intended use, and claims, then select relevant checks
-for methods, reasoning, evaluation design, reproducibility, and conclusions.
-Assess novelty only when claimed or required by the task. Request baselines,
-sensitivity checks, or simulation diagnostics when they address a specific
-claim or weakness. Briefly summarize the plan and continue unless the
-user asked to review it first.
+## Inspection rules
 
-Inspect local files directly. Fetch named remote sources and record their URLs.
-Extract PDFs with an available parser. If parsing or evidence retrieval fails,
-record the failure and continue with a partial review. Write evidence notes
-before conclusions, including observed claims, methods, metrics, baselines,
-reproducibility facts, and every inspected path or URL.
+- Read the actual manuscript, code, and produced tables/figures rather than trusting prose summaries or exit codes.
+- Distinguish observed methodological or numerical defects from blocked checks (`Verification: BLOCKED` when external data or full text is unavailable).
+- Tie every requested baseline, sensitivity check, or diagnostic to a specific claim weakness rather than padding a generic checklist.
 
-For a large artifact, delegate evidence gathering to the `researcher` and the
-critique to the `research-reviewer` through the runtime's available agent mechanism.
-Give each agent an explicit artifact, criteria, output path, and return
-contract. For a smaller artifact, review directly.
+## Output
 
-Write one final review with a concise assessment, prioritized findings,
-practical next steps, and unresolved checks. Each finding needs a location,
-severity, inspected evidence, consequence, and proposed remedy. Adapt headings
-and detail to the artifact. Include strengths, questions, or inline annotations
-when useful, without requiring manuscript sections or quotations for every
-artifact. Use the `research-verifier` log when supplied and inspect sources as
-needed to support findings rather than repeating its entire citation pass. If critical evidence is unavailable, keep the
-artifact, mark the affected checks `Verification: BLOCKED`, and distinguish
-blocked checks from observed weaknesses.
+Write a single concise review (`docs/<slug>-review.md` when a saved file is useful, or directly in chat for quick feedback):
 
-Confirm `docs/<slug>-review.md` exists before reporting completion. If the
-review cannot proceed, create that file as a blocked review with the reason.
-
-Agents used: `researcher`, `research-reviewer` (when the artifact is large enough to benefit).
-Output: `docs/<slug>-review.md`.
+1. **Overall assessment:** Central claim, main strengths, and decisive blockers.
+2. **Prioritized findings (`FATAL`, `MAJOR`, `MINOR`):** Location (section/figure/file:line), inspected evidence, consequence for the claim, and concrete remedy.
+3. **Revision plan:** Ordered, practical edits or analyses to resolve `FATAL` and `MAJOR` items.

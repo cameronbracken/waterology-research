@@ -1,86 +1,38 @@
 ---
 name: literature-review
 description: >
-  Run a literature review using paper search and primary-source synthesis. Use
-  when the user asks for a lit review, paper survey, state of the art, or the
-  research landscape on a topic, or a publication corpus review of a specific
-  lab, PI, or author.
+  Run a literature review, deep research investigation, ML/modeling recipe
+  survey, or publication corpus review using multi-provider paper search,
+  Hugging Face Hub inspection, and Zotero sync.
 metadata:
   claude-command:
     name: lit
-    argument-hint: <topic-or-lab-or-author>
+    argument-hint: <topic, research question, or author/lab>
 ---
 
-# Literature Review
+# Literature Review and Deep Research
 
-Use `writing-style` for the review and source synthesis.
+Use [writing-style](../writing-style/SKILL.md) for prose and Markdown delivery, and read [source-coverage.md](references/source-coverage.md) to pick the right scholarly, dataset, and web tools.
 
-At entry, run `waterology research-access` or MCP `research_access`. Use
-`OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`, `CORE_API_KEY` and `ZOTERO_API_KEY` from the environment when present. Warn
-clearly when the relevant key is missing. Do not print keys, request them in
-chat, or treat their presence as verified provider access.
+## 1. Check access and Zotero setup
 
-Derive a short slug from the topic. Write `docs/.plans/<slug>.md` with the
-questions, source types, period, expected themes, task ledger, and verification
-log. For a lab, PI, author, or institution, plan a publication corpus review:
-resolve the identity, collect the reachable publication list, then map the
-research trajectory. Briefly summarize the plan and continue unless the user
-asked to review it first.
+1. Call MCP `research_access` (`wgy research-access`) once to check `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`, `CORE_API_KEY`, `ZOTERO_API_KEY`, and `HF_TOKEN`. Warn briefly if relevant keys are missing; never print secret values.
+2. Check `zotero_status` (`wgy zotero status`). When `.zotero.toml` is configured, queue relevant consulted sources via `literature_decision` (`decision: "include"`) or `zotero_capture` (`wgy zotero capture`) as you read or cite them, and run `zotero_sync` before finishing.
 
-When working in an initialized Waterology project, record retrieval through
-`waterology discover "QUERY"` or MCP `literature_search`. Select Semantic Scholar
-with `--provider semantic-scholar` or MCP `provider="semantic-scholar"` for an
-additional search pass. Select CORE with `--provider core` to reach repository
-copies, theses and reports that publisher indexes miss. Select alphaXiv with
-`--provider alphaxiv` for semantic arXiv search or `--provider alphaxiv-keyword`
-for exact terms in full text. OpenAlex remains the default. Save explicit date
-bounds only when the question calls for them. The service retains exact queries,
-provider failures and DOI provenance. Use `source-decision` to append inclusion
-or exclusion reasons, and `source-add` for agency reports or local sources.
-Search records establish retrieval history, not full-text access or claim support.
-Use existing bibliography validation for DOI checks before citation.
+## 2. Scale the search without intermediate draft churn
 
-Build the project Zotero collection as sources become relevant. An include
-decision and `source-add` automatically queue the source and sync when configured.
-For papers found through another search tool, call MCP `zotero_capture` or
-`waterology zotero capture source.yaml` when reading or citing them. Supply DOI,
-title, authors, publication date, stable URL, and a lawful PDF URL or an existing
-project-relative PDF path when available. The configured library applies across
-iterations without further approval. Do not substitute a different library.
+Match effort to scope without creating `.plans/` or `.drafts/` copies:
 
-By default, raw search hits remain discovery records until selected. A project
-can explicitly use `capture: discovered` to save every returned source. Before
-delivery, run `waterology zotero sync` and retain pending metadata/PDF states in
-the handoff. A downloaded PDF is not proof it was read or supports a claim.
+- **Focused question or literature survey (default):** Search directly in hops:
+  1. Query 2 to 3 distinct phrasings across `openalex`, `semantic-scholar`, `core`, or `alphaxiv` (`alphaxiv-keyword` for exact method names).
+  2. Read decisive primary papers/PDFs directly (`openalex works download <doi>` or CORE/arXiv PDF URLs) rather than relying on titles or abstracts alone.
+  3. Follow citations, benchmarks, and domain terms into a second hop until no material new work appears.
+- **Broad multi-domain investigation:** Fan out 2 to 4 parallel `researcher` subagents only when sub-questions are genuinely disjoint, giving each an explicit sub-question and notes path, then synthesize directly in the main context.
+- **ML / forecasting recipe lookup:** Capture concrete benchmark results, dataset splits/licenses (`hf_dataset_info`), hyperparameters, compute requirements, and repository entry points, ranked by feasibility.
+- **Author, lab, or PI corpus review:** Resolve author/ORCID identity first, gather the publication list, and map research trajectories and turning-point papers.
 
-Search in hops rather than stopping after one query pass:
+## 3. Synthesize, verify citations, and deliver
 
-1. Use two or three topic phrasings. Read the most relevant primary papers.
-2. Extract cited papers, authors, methods, benchmarks, and field terms that were
-   absent from the initial plan. Turn them into the next hop's queries.
-3. Repeat until a hop finds nothing relevantly new. Track papers already read
-   and mark assigned questions `done`, `blocked`, or `superseded`.
-
-Delegate wide triage to the `researcher` through the runtime's available agent
-mechanism. For a publication corpus review, the lead owns identity resolution
-and writes `notes/<slug>-publications.md` before delegating trajectory work.
-
-Synthesize by theme, not by paper. Separate consensus, disagreement, and open
-questions. Identify the papers that carry each theme and end with a three to
-five item `Start Here` list. For a publication corpus, identify the research
-trajectories and papers that changed its direction based on originality,
-methodology, and relationship to prior work rather than author prestige.
-
-After drafting, use the `research-verifier` for inline citations and source URL checks,
-then the `research-reviewer` for unsupported claims, logical gaps, incomplete sections,
-and critical findings supported by only one source. Run these sequentially. Fix
-fatal findings before delivery and record unresolved major findings as open
-questions.
-
-Save the review to `docs/<slug>.md` and provenance to
-`docs/<slug>.provenance.md`. Record consulted, accepted, and rejected sources,
-verification status, intermediate files, and unresolved gaps. Confirm both
-files exist before reporting completion.
-
-Agents used: `researcher`, `research-verifier`, `research-reviewer`.
-Output: `docs/<slug>.md` with `docs/<slug>.provenance.md`.
+- Synthesize **by theme, mechanism, or trade-off**, never as a paper-by-paper list. Separate consensus, active disagreements, dataset/evaluation caveats, and open gaps, and include a concise `Start Here` reading list when surveying a field.
+- Verify DOIs and bibliography keys with [bib-validate](../bib-validate/SKILL.md) (`validate_bib.py --verify-doi`) when producing `.bib` references. In `strict` mode or for major syntheses, run one `reviewer` pass to catch overclaimed conclusions or single-source bottlenecks.
+- Write **one** clean deliverable (`docs/<slug>.md`, or inline in chat for short lookups), ending with direct source links/DOIs and a brief note on providers queried and any paywall/access limits.

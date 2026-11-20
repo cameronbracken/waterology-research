@@ -7,61 +7,27 @@ description: Use when changing research software or agent behavior, diagnosing f
 
 # Research Software Quality
 
-Match the workflow to the change's risk, size, and isolation needs. Preserve
-evidence, reproducibility, and user intent without imposing a fixed ceremony.
-Run `waterology config context research-software-quality` and follow its
-`reproducibility` mode as defined in `waterology-project-conventions`. The table below
-describes `strict` mode. In `light` mode, work on a branch in the current
-checkout unless [worktrees.md](references/worktrees.md) says otherwise, run
-focused checks, and request reviews only when the user asks.
+Match testing, verification, and isolation to the size and risk of the change. Follow the project's reproducibility mode (`light` by default, `strict` when requested) as defined in [project-conventions](../waterology-project-conventions/SKILL.md).
 
 ## Route the task
 
-- For code changes, bugs, test failures, or unexpected behavior, read
-  [testing-and-debugging.md](references/testing-and-debugging.md).
-- Before any success claim, and when deciding whether independent review adds
-  value, read [verification-and-review.md](references/verification-and-review.md).
-- Before editing a repository, inspect the current isolation state and apply
-  [worktrees.md](references/worktrees.md).
+- Code changes, bugs, test failures, or unexpected behavior: read [testing-and-debugging.md](references/testing-and-debugging.md).
+- Before any completion claim, or when deciding whether an independent `reviewer` pass adds value: read [verification-and-review.md](references/verification-and-review.md).
+- Before editing a repository with concurrent writers, dirty unrelated state, or `strict` isolation: read [worktrees.md](references/worktrees.md).
 
 ## Proportional workflow
 
 | Change | Expected process |
 | --- | --- |
-| Read-only inspection or explanation | Gather enough evidence to support the answer. Do not create a worktree. |
-| Documentation, comments, formatting, or one small non-generated file | Work in place only if every optional-worktree condition passes. Run focused checks. |
-| Executable code, tests, dependencies, build, CI, schema, manifest, agent, skill, hook, or generated asset | Use an isolated worktree and test the changed behavior when practical. |
-| Broad, risky, or publication-facing deliverable | Add full relevant verification and an independent review when available and authorized. |
+| Read-only inspection or explanation | Gather direct evidence from files/commands. No worktree. |
+| Documentation, comments, formatting, or small isolated edit | Work on a branch in the current checkout; run focused checks. |
+| Executable code, tests, dependencies, schemas, skills, or agents | Write or update focused tests where practical; use a worktree when concurrent sessions share the checkout or in `strict` mode. |
+| Broad, risky, or publication-facing deliverable | Run full validation, deterministic constraints, and an independent `reviewer` pass when authorized. |
 
-Skills and agent instructions change behavior even when their files are
-Markdown. Treat them as behavior changes.
+Skills and agent definitions change runtime behavior even though they are Markdown; validate them after edits.
 
-## Verification and Validation 
+## Scientific validation and persistence
 
-Analysis should be compared against known baselines (eg. existing data, 
-physical relationships, expert knowledge). Modeling decisions need to be 
-similarly justified through literature citations and/or sound scientific 
-reasoning.
-
-## Persistence
-
-In `strict` mode, for substantial work in an initialized project, use
-`waterology-project-learning` to retrieve relevant verified lessons before planning. In
-`light` mode, use it when the user asks. After verification or a
-meaningful failure recovery, record the supported lesson and its evidence.
-Keep shared workflow changes as reviewable proposals. This completes
-plan -> test -> implement -> review -> verify -> remember -> improve without
-requiring every phase for a trivial change.
-
-Continue while the requested outcome and the next safe action are clear. A
-failed command is evidence to investigate, not a reason to stop. Stop when
-progress requires user input, new authority, external coordination, or a change
-in scope. Do not invent permission or hide an unresolved failure behind a
-completion claim.
-
-## Boundaries
-
-This skill does not require brainstorming, a specification, an implementation
-plan, test driven development, a worktree, subagents, or separate reviews for
-every task. It requires only the parts justified by the task and the worktree
-cutoff.
+- Compare model and analysis outputs against known baselines, conservation/physical relationships, and domain expectations. Justify modeling choices with literature citations or explicit physical/statistical reasoning.
+- Continue autonomously while the objective and next safe step are clear. Investigate command failures as evidence rather than stopping immediately; pause when progress requires user input, compute/remote authority, or a scope change.
+- Record durable repository-specific lessons directly in the project's `AGENTS.md` when asked or after resolving a recurring project pitfall.

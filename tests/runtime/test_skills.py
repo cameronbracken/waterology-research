@@ -75,18 +75,12 @@ def test_primary_entrypoints_are_exposed_for_implicit_invocation() -> None:
     for name in (
         "project-conventions",
         "r-code-style",
-        "data-visualization",
+        "figures",
         "diagrams",
         "reports",
-        "interactive-graphics",
-        "interactive-reports",
-        "markdown-notes",
-        "documentation",
         "writing-style",
         "setup-environment",
         "publish-blog-post",
-        "figure-style",
-        "figure-composer",
     ):
         source = skills[name].source_path
         policy = yaml.safe_load((source.parent / "agents/openai.yaml").read_text())

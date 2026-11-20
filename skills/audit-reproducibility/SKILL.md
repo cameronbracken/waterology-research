@@ -1,149 +1,41 @@
 ---
 name: audit-reproducibility
 description: >
-  Audit numeric claims in manuscripts against produced R, Python, Fortran, and
-  text outputs. Use before submission, after analysis changes, or when a
-  reproducibility passport needs to be created or refreshed.
+  Audit numeric manuscript claims against produced R, Python, and Fortran
+  outputs, check paper-to-code method parity, or map a project's script-to-figure
+  pipeline manifest.
 metadata:
   claude-command:
     name: audit-reproducibility
-    argument-hint: <manuscript> [output path] [passport]
+    argument-hint: <manuscript or repo path> [outputs path]
 ---
 
-# Audit Reproducibility
+# Audit Reproducibility, Paper-Code Parity, and Pipelines
 
-Use `writing-style` for the audit report. Read
-[references/passport-schema.md](references/passport-schema.md) before creating
-or updating a passport.
+Use [writing-style](../writing-style/SKILL.md) for the audit report.
 
-Compare numeric claims in a manuscript with the current analysis outputs. A
-mismatch is not automatically a failure. The manuscript is not the oracle.
-Treat the computed value as a challenger, not as ground truth, and identify
-which artifact needs correction through evidence.
+- For **script-to-output pipeline mapping** (`pipeline.md` and `run-all.sh`), read [pipeline-manifest.md](references/pipeline-manifest.md).
+- For **`strict` mode reproducibility passports** (`quality_reports/passports/<slug>.yaml`), read [passport-schema.md](references/passport-schema.md).
 
-## Mode
+## 1. Numeric claim-to-output audit
 
-Run `waterology config context audit-reproducibility` and follow its
-`reproducibility` mode as defined in `project-conventions`.
+Compare every quantitative claim in a manuscript or report (point estimates, intervals/SEs, sample sizes, percentages, table cells, p-values) against produced artifacts without assuming either the prose or code is automatically right:
 
-In `light` mode, compare each numeric claim with the current outputs and write
-one report listing matches, mismatches with their likely cause, and claims with
-no matching output. Use `PASS`, `FAIL`, `EXPLAINED`, and `UNMATCHED` as plain
-labels. Skip the passport, the `STALE` and `UNVERIFIED` lifecycle states, archive
-seals, and RO-Crate references unless the user asks for them.
+1. **Extract produced values** in priority order: `.rds` -> labeled `.tex` fragments -> `.csv`/`.parquet` -> Fortran/model `.dat`/`.log` -> `.json`/`.yaml`, recording exact file, field, and producing script:line.
+2. **Apply tolerances** (unless overridden): exact for integers/counts, `< 0.01` for point estimates, `< 0.05` for standard errors, `<= 0.1` percentage points for percentages, and matching significance band for p-values.
+3. **Assign dispositions:**
+   - `PASS`: matched (>= 0.7 confidence) and within tolerance.
+   - `FAIL`: outside tolerance with no verified alternative specification (blocks audit).
+   - `EXPLAINED`: outside tolerance due to a named, verified specification difference.
+   - `UNMATCHED`: no confident output match found (incomplete evidence, never treated as `PASS`).
 
-In `strict` mode, follow the full workflow below.
+## 2. Paper-to-code implementation audit
 
-## Inputs and boundaries
+When comparing a paper (internal or external) against a codebase, inspect source code, configs, and tests directly rather than trusting the README:
 
-Require a manuscript path. Accept one or more output files or directories and
-an optional passport at `quality_reports/passports/<paper-slug>.yaml`. If the
-output location is omitted, discover plausible project output directories and
-show the selected scope before auditing.
+- Check equations, loss/objective terms, boundary conditions, hyperparameter defaults, data splits/filtering, units, and RNG seeds against the paper's methods section.
+- Flag missing scripts, silent default overrides, hardcoded paths, or unseeded stochastic steps.
 
-The audit reads existing outputs. It does not silently run an analysis,
-replace a manuscript value, or choose between conflicting specifications. If
-current outputs are missing and a rerun is authorized, launch a long command in
-the background, preserve its log, and poll it at short intervals. Do not assume
-that a runtime provides a dedicated monitoring tool.
+## Output
 
-## Audit workflow
-
-### 1. Establish the contract
-
-- Read project guidance and any recorded tolerance overrides.
-- Confirm that the manuscript, output scope, and optional passport exist.
-- Record output modification times, available environment captures, sealed run
-  archives, and `.waterology/ro-crates/RUN_ID/` metadata when present.
-- Mark missing data, unreadable formats, and unavailable environments as
-  limitations. Do not turn absent evidence into a pass.
-
-### 2. Extract manuscript claims
-
-Find point estimates with standard errors or confidence intervals, table
-cells, counts, sample sizes, percentages, summary statistics, and p-values.
-Record a stable claim identifier, manuscript location, kind, reported value,
-uncertainty, and surrounding context. Save the extraction to
-`quality_reports/reproducibility-claims-<paper-slug>.json` so it can be
-inspected separately from the matching step.
-
-### 3. Extract produced results
-
-Use this priority when more than one representation exists:
-
-1. `.rds`, with a precise R lookup.
-2. `.tex`, using row and column labels rather than cell position alone.
-3. `.csv` or `.parquet`, using named fields.
-4. `.dat`, fixed-width text, or `.log` from Fortran and simulation programs.
-5. `.json`, using a complete field path.
-
-For each result, record the output path, lookup field, value, uncertainty, and
-the source script and line when known. Preserve raw output rather than copying
-untraceable values into the report.
-
-### 4. Match claims to results
-
-Prefer explicit passport fields and mechanical manuscript inputs. Otherwise
-compare labels, table context, units, and nearby descriptions. Magnitude can
-help rank candidates but cannot establish identity by itself.
-
-Assign a confidence from 0 to 1 and explain ambiguous matches. A confidence
-below 0.7 is `UNMATCHED`; it never passes and cannot be downgraded to
-`EXPLAINED`.
-
-### 5. Apply tolerances and dispositions
-
-Use a claim's override when present. Otherwise apply:
-
-| Claim kind | Default tolerance |
-| --- | --- |
-| Integer or sample size | Exact |
-| Point estimate | Absolute difference `< 0.01` |
-| Standard error | Absolute difference `< 0.05` |
-| P-value | Same reported significance level |
-| Percentage | Absolute difference `<= 0.1` percentage points |
-
-Assign one audit disposition:
-
-- `PASS`: the matched result is within tolerance.
-- `FAIL`: it is outside tolerance and no concrete alternative is recorded.
-  This blocks the audit.
-- `EXPLAINED`: it is outside tolerance, but `notes` names the exact alternative
-  specification that accounts for the difference. Surface it without blocking.
-- `UNMATCHED`: no result was matched with at least 0.7 confidence.
-
-`STALE` and `UNVERIFIED` are lifecycle states. `STALE` means a tracked source
-or output changed after verification and must be audited again. `UNVERIFIED`
-means the claim has never completed this audit.
-
-Downgrade `FAIL` to `EXPLAINED` only for a specific named alternative tied to
-that claim. Blank notes, `unclear`, `looks fine`, rounding without a quantified
-comparison, and general assurances do not qualify. Record whether the eventual
-resolution was `PAPER-CORRECTED`, `CODE-CORRECTED`, or
-`DEFENSIBLE-ALTERNATIVE`.
-
-### 6. Report and update the passport
-
-Write `quality_reports/reproducibility-audit-<paper-slug>.md` with:
-
-- manuscript and output provenance;
-- the tolerance source and any overrides;
-- counts for every disposition and lifecycle state;
-- reported value, computed value, difference, tolerance, match confidence,
-  and source fields for each claim;
-- limitations, environment evidence, and concrete next actions.
-
-In passport mode, update each audited claim's status, `last_verified_on`, and
-`last_verified_by`. Update claim anchor coverage and the conformance ladder.
-When claims reference archived runs, prefer the archive's `seal.yaml`,
-`checksums.sha256`, and derived RO-Crate metadata over ad hoc path notes. Update
-`paper.last_audit`. Do not delete claims that
-disappear from the manuscript. Leave them `STALE` for a person to retract or
-relocate. Warn about manuscript claims that have no passport entry.
-
-The overall audit fails when any claim is `FAIL`. `EXPLAINED` remains visible
-but does not fail. Report `UNMATCHED`, `STALE`, and `UNVERIFIED` as incomplete
-evidence and do not describe the manuscript as fully verified while any remain.
-
-Output: claim extraction, updated passport when present, reproducibility audit
-report, and references to any sealed archive or RO-Crate export used as evidence.
+In `light` mode, write one concise report (`quality_reports/reproducibility-audit-<slug>.md` or `docs/<slug>-audit.md`) listing summary counts, a claim/method comparison table with exact file:line locators, and prioritized fixes (`PAPER-CORRECTED`, `CODE-CORRECTED`, or `DEFENSIBLE-ALTERNATIVE`). Update a YAML passport only in `strict` mode or when requested.

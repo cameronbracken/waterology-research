@@ -64,9 +64,6 @@ Inspect the state and command options before any merge or removal because those
 operations may also change branches or commits. If Worktrunk is unavailable,
 use Git worktree fallback commands with an explicit `.worktrees/<name>` path.
 
-Waterology experiment worktrees under `.waterology/worktrees/` belong to the
-experiment runtime. Do not use that directory for agent development worktrees.
-
 ## Safety checks
 
 - Do not overwrite an existing branch or directory.

@@ -8,14 +8,13 @@ from typer.testing import CliRunner
 from waterology.cli import app
 from waterology.core import literature
 from waterology.core.atomic import read_record
-from waterology.core.project import initialize_project
-from waterology.core.zotero import reference_status
+from waterology.core.zotero import configure_zotero, reference_status
 
 
 @pytest.fixture
 def project(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    initialize_project(tmp_path)
+    configure_zotero(tmp_path, {"library_id": "123", "collection_name": "Fixture"})
     return tmp_path
 
 

@@ -1,160 +1,42 @@
 # waterology-research
 
-Waterology is a set of tools for computationally focused research with a heavy focus on reproducibility. 
-It is also a worflow that helps you build software to a specification, 
-optimize under fixed constraints, or answer scientific questions. This repo provides skills, agents, and
-dynamic workflows for
-[Antigravity](https://antigravity.google/),
-[Claude Code](https://claude.com/claude-code),
-[Codex](https://openai.com/codex/),
-[OpenCode](https://opencode.ai/), and
-[Pi](https://pi.dev/). It supports reproducible research using R, Python, Julia,
-Fortran, and Rust with documentation using Markdown, Quarto, and LaTeX.
+Waterology is a lightweight set of research conventions, deliverable templates, deterministic verifiers, and scholarly reference tools for [Antigravity](https://antigravity.google/), [Claude Code](https://claude.com/claude-code), [Codex](https://openai.com/codex/), [OpenCode](https://opencode.ai/), and [Pi](https://pi.dev/). It supports reproducible computational research across Python, R, Julia, Fortran, Quarto, Markdown, and LaTeX without adding database ceremony or token overhead.
 
-The package deliberately ships opinionated choices about tools, design, prose,
-and workflow. Private values, machine details, accounts, and local overrides
-stay in [personal configuration](docs/local-configuration.md).
+Research workflows are runtime neutral. Private machine details, accounts, and credentials stay in [personal configuration](docs/local-configuration.md).
 
-To get started, consider your research goals and what it would take to get there.
-Use skills for planning, implementation, literature review, review, and writing.
-When the work needs measured candidate evaluations, use a registered workflow
-and a bounded study to connect committed changes to results.
-Research workflows are runtime neutral.
+## What Waterology provides
 
-## Intended workflow
+1. **Consistent conventions and output templates:** Shared language defaults (`project-conventions`, `setup-environment`, `r-code-style`, path-scoped `rules/`), concise technical prose (`writing-style`), standalone Markdown report bundles (`reports/<topic>-<YYYY-MM-DD>/`), earth-tone multi-panel plots (`figures`), and 7-role TikZ flowcharts (`diagrams`).
+2. **Fast deterministic verifiers:** Standard-library Python checks (`constraints/check-all.py`, `check_tikz_svg.py`, `verify_report_bundle.py`, `check_plotly_layout.py`, `overfull_boxes.py`, `validate_bib.py`, `myst_to_quarto.py`) that catch path leaks, unseeded RNGs, hardcoded numbers, SVG/Plotly text collisions, LaTeX overflow, and fabricated DOIs at zero prompt cost until run.
+3. **Reference and dataset tooling (`wgy` CLI and `waterology-mcp`):** 10 bounded tools covering 11 scholarly providers (`openalex`, `semantic-scholar`, `core`, `alphaxiv`, `alphaxiv-keyword`, `arxiv`, `pubmed`, `europepmc`, `biorxiv`, `medrxiv`, `crossref`), standalone `.zotero.toml` collection sync with local SHA-256 PDF caching, and Hugging Face Hub dataset/file inspection.
+4. **Lightweight autonomous loops:** Git-backed iterative `autoresearch` over a frozen evaluation command and flat `results.yaml` ledger (scaling to native [TORC](https://github.com/NatLabRockies/torc) when distributed or Slurm execution is needed), plus optional [SoL-Pi](https://github.com/NVlabs/SoL-Pi) coding delegation (`sol-pi`).
 
-| Starting point | Define success before execution | Entry point |
-| --- | --- | --- |
-| Build or repair software | Specification and protected acceptance checks | [`engineering-workflow`](skills/engineering-workflow/SKILL.md) and [`waterology engineering`](docs/engineering.md) |
-| Optimize under constraints | A target plus correctness, resource, and regression limits that must all pass | [`waterology engineering`](docs/engineering.md#optimize-under-fixed-constraints) |
-| Investigate a research question | Evaluation protocol, metrics, and evidence needed for a conclusion | [Research workflows](#research-workflows) and [managed studies](docs/managed-studies.md) |
+## Layout
 
-The engineering workflow does not require a scientific question or literature review. A
-literature review, code review, or report can also use skills directly without
-starting a compute study.
-
-For work that needs execution, the shared path is:
-
-```mermaid
-flowchart TD
-    E[Engineering specification or optimization target] --> P[Define evaluation, constraints, and evidence]
-    R[Research question] --> P
-    P --> W[Register workflow and commit source and environment]
-    W --> B[Evaluate baseline through TORC]
-    B --> A[Inspect archived evidence]
-    A --> D{Outcome and next step?}
-    D -->|Continue within authorized bounds| C[Commit a candidate in an isolated worktree]
-    C --> T[Evaluate through TORC]
-    T --> A
-    D -->|Requirements met or conclusion supported| S[Explicitly select a deliverable]
-    S --> V[Reproduce and check against the reference run]
-    D -->|Budget exhausted or blocked| U[Retain partial results and unresolved checks]
-```
-
-_Each sealed run preserves logs, metrics, declared outputs, and provenance.
-RO-Crate packages that evidence for exchange. Failed attempts remain part of
-the record._
-
-1. __Define the evaluation.__ Declare inputs, outputs, environment restoration,
-   metrics, and acceptance or assessment criteria. Keep evaluation checks outside
-   the source paths a candidate may change.
-2. __Establish a baseline.__ Register a named workflow and run the committed
-   project. Pixi, uv, or rv manages the environment; TORC runs jobs and their
-   dependencies, including on a local machine.
-3. __Iterate within a contract.__ For repeated candidate work, save the objective,
-   allowed paths, evaluation, and authorized budget in a study contract. Candidates
-   can be written manually or proposed by an agent. The study keeps the evaluation
-   fixed and records attempts and assessments.
-4. __Decide from evidence.__ Engineering acceptance requires every declared rule
-   to pass. Research needs an explicit assessment of what the evidence supports.
-   An improved metric alone does not establish either outcome.
-5. __Select and reproduce.__ Choose a reference run and declare the deliverable's
-   comparison checks. Reproduction restores and executes the workflow again, then
-   compares the new outputs with that reference.
-
-The records have distinct roles: a __workflow__ is the evaluation recipe, an
-__experiment__ identifies a committed candidate, a __run__ is an execution
-attempt, a __study__ controls bounded iterations, and a __deliverable__ names a
-selected reference run and its reproduction checks.
-
-See [execute and reproduce a project](docs/workflow-execution.md) for registration
-and commands, [engineering](docs/engineering.md) for build and optimization
-contracts, and the [workflow guide](docs/workflow-guide.md) for component diagrams.
-
-### Evidence and RO-Crate
-
-Waterology archives run evidence and derives an RO-Crate package when a run is
-sealed. You can inspect archive integrity and export the crate:
-
-```console
-waterology archive verify RUN_ID
-waterology archive export-crate RUN_ID exports/run-crate
-```
-
-Archive integrity, RO-Crate conformance, engineering acceptance, scientific
-support, and successful reproduction are separate checks. Packaging failure is
-recorded separately from execution. Export creates a local package; it does not
-publish it. See [RO-Crate integration](docs/ro-crate.md) for supported profiles,
-validation, and export contents.
-
-The installed `wgy` command is an alias for `waterology` and accepts the same
-subcommands and options, for example `wgy workflow list`.
-
-## Personal settings
-
-Installations contain shared house defaults and public writing examples, but
-no private user identity, machine inventory, values, or service configuration.
-Use `waterology config init` to create optional private user settings. Existing
-machine profiles remain in the same global file. See
-[Personal configuration](docs/local-configuration.md) for preferences, writing
-examples, local guidance, and the configurable dashboard launcher.
-
-## What's here
-
-The package includes research skills and agent definitions in the repository and
-installs runtime adapters for each supported harness. Claude slash commands are
-wrappers that invoke the underlying skills. Pi loads skills directly and exposes
-generated agents through the optional `pi-subagents` integration declared in the
-root package manifest.
-
-```
-skills/             canonical research skills
-agent-definitions/  canonical agent definitions
+```text
+skills/             17 canonical research, figure, report, and verification skills
+agent-definitions/  3 canonical subagents (researcher, reviewer, engineer)
 .agent/agents/      generated Antigravity agents
-agents/              generated Claude Code agents
+agents/             generated Claude Code agents
 .codex/agents/      generated Codex agents
 .opencode/agents/   generated OpenCode agents
 pi-agents/          generated pi-subagents agents
-package.json        Pi package manifest for skills and pi-subagents agents
-commands/           Claude Code compatibility commands
-rules/              path scoped conventions
-constraints/        paired checks run by check-all.py
-templates/          reproducibility record templates
+pi-skills/          generated Pi skills
+pi-prompts/         generated Pi command prompts
+commands/           generated Claude Code command shims
+rules/              path-scoped language and document conventions
+constraints/        deterministic pass/fail checks run by check-all.py
+templates/          latexmk, pipeline, and reproducibility passport templates
 .mcp.json           Claude Code and Codex plugin MCP registration
 .codex/config.toml  Codex project MCP registration
 opencode.json       OpenCode project MCP registration
+package.json        Pi package manifest
 ATTRIBUTION.md      citation ledger for adapted upstream material
 ```
 
-## Documentation
-
-The [documentation index](docs/README.md) links the maintained user guides:
-
-- [Engineering: build, repair, and optimize](docs/engineering.md)
-- [Workflow guide with diagrams](docs/workflow-guide.md)
-- [Getting started](docs/getting-started.md)
-- [Execute and reproduce a project](docs/workflow-execution.md)
-- [Managed studies](docs/managed-studies.md)
-- [RO-Crate integration](docs/ro-crate.md)
-- [Configuration](docs/configuration.md)
-- [TORC execution](docs/torc.md)
-
-Files under `docs/superpowers/` are design and implementation records rather than setup guides.
-
 ## Install
 
-Install the development environment, then install the runtime adapters needed
-by the current project:
+Install the development environment and runtime adapters:
 
 ```console
 pixi install
@@ -167,11 +49,7 @@ pixi run waterology install all --dry-run
 pixi run waterology doctor
 ```
 
-Project scope is the default. Use `--scope user` for user configuration.
-`--target` is available only for project installs. Both `install` and `doctor` support `--json`.
-
-For uninstall, upgrades, dry runs, and interrupted-operation recovery, see
-[installation lifecycle](docs/install-lifecycle.md).
+Project scope is the default. Use `--scope user` for user configuration. `--target` is available only for project installs. Both `install` and `doctor` support `--json`. See [installation lifecycle](docs/install-lifecycle.md) for upgrades, `--mode link`, uninstall, and recovery.
 
 For a user-scoped Codex install:
 
@@ -179,410 +57,116 @@ For a user-scoped Codex install:
 pixi run waterology install codex --scope user
 ```
 
-Root `skills/` is canonical. Codex gets skills and the MCP server from the
-plugin manifest `.codex-plugin/plugin.json`. Install it with
-`pixi run reinstall-plugins --runtime codex`. Codex plugins cannot carry
-agents, so `waterology install codex` installs the generated agents in
-`.codex/agents/` and nothing in `.agents/skills/`. Pi also reads
-`.agents/skills/`, so skill copies there would clash with Pi packages. See the
-official [Codex plugin documentation](https://developers.openai.com/plugins/concepts/plugins).
+Root `skills/` is canonical. Codex loads skills and MCP from `.codex-plugin/plugin.json` (`pixi run reinstall-plugins --runtime codex`), while `waterology install codex` installs generated agents in `.codex/agents/`. See the [Codex plugin documentation](https://developers.openai.com/plugins/concepts/plugins), [OpenCode skills documentation](https://opencode.ai/docs/skills), and [OpenCode agent documentation](https://opencode.ai/v2/docs/agents).
 
-OpenCode installs project files under `.opencode/`, including agents and
-skills. See the official [OpenCode skills documentation](https://opencode.ai/docs/skills)
-and [OpenCode agent documentation](https://opencode.ai/v2/docs/agents).
+Antigravity installs skills and agents under `.agent/skills/` and `.agent/agents/` (or `~/.gemini/config/skills/` and `~/.gemini/config/agents/` with `--scope user`). Register the MCP server with `agy mcp add waterology waterology-mcp`, or print registration snippets with `waterology mcp config <runtime>`.
 
-Antigravity installs project skills and agents under `.agent/skills/` and
-`.agent/agents/`, or user assets under `~/.gemini/config/skills/` and
-`~/.gemini/config/agents/`. Register the MCP server with
-`agy mcp add waterology waterology-mcp`.
+Pi loads `package.json` directly (`pi install /path/to/waterology-research` and `pi install npm:pi-subagents`), including `pi-extensions/waterology-mcp.ts`.
 
-Pi installs project skills and agents under `.pi/skills/` and `.pi/agents/`, or
-user assets under `~/.pi/agent/skills/` and `~/.pi/agent/agents/`. The root
-`package.json` is also a native Pi package, so a checkout can be registered
-directly with `pi install /path/to/waterology-research` (or add `-l` for project
-scope). Pi also exposes each workflow as `/skill:<name>` for explicit invocation.
-Ordinary prompts can select skills through their descriptions without a special
-command. The package's [artifact guide](docs/artifact-skills.md) gives examples.
-
-Pi core has no built-in subagent definition format. Install
-[`pi-subagents`](https://github.com/nicobailon/pi-subagents) to discover the
-namespaced `waterology.*` agents declared by the package manifest:
-
-```console
-pi install npm:pi-subagents
-```
-
-Agents with web capabilities also require the web tools documented by
-`pi-subagents`.
-
-The package also loads `pi-extensions/waterology-mcp.ts`, which registers the
-`waterology-mcp` stdio server with Pi's built-in MCP support (Pi 1.0 or later).
-Its tools appear as `mcp__waterology__<tool>` and use Pi's default `codemode`
-exposure. Check the connection with `/mcp` inside a session. Without the
-package, add the server to the project's `.pi/mcp.json`:
-
-```console
-pi mcp add --local waterology -- waterology-mcp
-```
-
-Remove `pi-mcp-adapter` and any `"-builtin:mcp"` entry in Pi's `extensions`
-setting, because either one disables the built-in MCP support.
-
-### Claude Code plugin
-
-The Claude Code marketplace remains available for local development. Add the
-repository as a marketplace, then install the plugin:
+For Claude Code marketplace installs from the local checkout or canonical remote:
 
 ```text
 /plugin marketplace add ~/projects/waterology-research
-/plugin install waterology@waterology
-```
-
-Reload Claude Code after installation so `.claude-plugin/`, `agents/`,
-`commands/`, and `skills/` register. Verify the marketplace with `/plugin`.
-
-The canonical remote is a private Codeberg repository. Install from the Git URL
-when working from the remote:
-
-```text
 /plugin marketplace add ssh://git@codeberg.org/waterology/waterology-research.git
 /plugin install waterology@waterology
 ```
 
-Troubleshooting: `.waterology-install.lock` may remain after a crash. Remove it
-only after confirming that no Waterology install process is running.
+Troubleshooting: remove a stale `.waterology-install.lock` only after confirming that no Waterology install process is running.
 
-### Development runtime refresh
-
-Reinstall the editable MCP server and the Waterology plugin in each runtime where it is already
-installed:
+Refresh the editable CLI/MCP tool (`wgy`, `waterology`, `waterology-mcp`) and installed Claude/Codex plugins during development with:
 
 ```console
 pixi run reinstall-plugins --dry-run
 pixi run reinstall-plugins
 ```
 
-The script installs the source checkout as an isolated `uv` tool with the MCP and Zotero extras. It then detects
-Codex and Claude installations, preserves Claude's scope and persistent plugin data, and refreshes a
-stale local marketplace path. It uses a temporary development version to avoid stale plugin caches,
-then restores the tracked manifests. Use `--runtime codex`, `--runtime claude`, or `--runtime all`
-for a first install. Start a new Codex thread or restart Claude Code after the refresh.
+## Reference management and dataset discovery
 
-## Single-command experiment API
-
-For named workflows, engineering acceptance, and bounded studies, start with
-[execute and reproduce a project](docs/workflow-execution.md). The older
-single-command API below remains available for manually managed research
-experiments.
-
-Waterology manages local experiments as committed Git variants. Initialize a
-repository, then edit `waterology.toml` to set the fixed command, declared
-outputs, artifact roots, environment files, metric extractors, and any regular
-expressions that should redact sensitive log text before archive sealing:
+The `wgy` alias and `waterology-mcp` expose the same 10 bounded operations. Check configured API keys (`ZOTERO_API_KEY`, `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`, `CORE_API_KEY`, `HF_TOKEN`) without printing secret values:
 
 ```console
-pixi run waterology init
-git add waterology.toml .gitignore
-git commit -m "Configure Waterology"
-pixi run waterology experiment create "Test a longer calibration window" --owner cam
+wgy research-access
 ```
 
-The create command returns an experiment identifier and worktree path. Make
-the scientific change in that worktree and commit it before starting a run:
+Search scholarly providers anywhere (returns `recorded: false` outside `.zotero.toml` workspaces without creating local state):
 
 ```console
-pixi run waterology worktree open <experiment-id>
-pixi run waterology run start <experiment-id>
-pixi run waterology run status <run-id>
-pixi run waterology archive verify <run-id>
+wgy discover "streamflow forecasting" --provider openalex --limit 20
+wgy discover "reservoir operations" --provider core --limit 20
+wgy discover "LSTM" --provider alphaxiv-keyword
 ```
 
-Record a scientific conclusion after inspecting the archive. An `answer`
-freezes the experiment at the run commit. Two consecutive `no_answer`
-assessments require a decision before further repair:
+To bind a repository or paper folder to a Zotero collection with local SHA-256 PDF caching (`.waterology/references/pdfs/`), initialize standalone `.zotero.toml`:
 
 ```console
-pixi run waterology run assess <run-id> answer "The evidence supports the hypothesis" \
-  --author cam --evidence .waterology/runs/<run-id>/metrics.yaml
+wgy zotero init "Streamflow paper references"
+wgy discover "ensemble streamflow prediction" --provider semantic-scholar
+wgy source-decision <search-id> <source-id> include "Baseline benchmark"
+wgy zotero capture source.yaml
+wgy zotero sync
+wgy zotero status
 ```
 
-SQLite is a rebuildable index. Durable experiment records, run archives, and
-assessment records remain readable without it:
+Inspect Hugging Face Hub datasets, file trees, and small text files without downloading binary blobs:
 
 ```console
-pixi run waterology repair-index
+wgy hf-dataset-info cameronbracken/example-dataset
+wgy hf-repo-files cameronbracken/example-dataset
+wgy hf-repo-read-file cameronbracken/example-dataset README.md
 ```
 
-Project status and all experiment, worktree, run, archive, assessment, and
-repair commands support structured JSON where automation needs it.
+## Skills, agents, and constraints
 
-## TORC managed execution
+### Core skills (17) and command shims
 
-Named workflows and managed studies use TORC, including for local execution.
-The older single-command API also supports direct execution without TORC.
-Managed execution requires TORC 0.40.0 or newer
-and a running TORC server. Define machine profiles in `$HOME/.config/waterology/config.toml`:
+| Skill | Command shim | Purpose |
+| --- | --- | --- |
+| `project-conventions` | - | Language/tool defaults, file formats, `light` vs `strict` reproducibility modes, MyST converter |
+| `setup-environment` | - | Pixi, uv, rv, system R on macOS, direnv, and `strict` environment capture |
+| `writing-style` | - | Concise technical prose, scientific writing, and Markdown delivery rules |
+| `research-software-quality` | - | Proportional testing, debugging, verification, and Git worktree cutoff |
+| `figures` | - | Scientific plots, earth-tone styling, multi-panel assembly, and Plotly layout checks |
+| `diagrams` | - | 7-role TikZ flowcharts (`flowchart-tikz.sty`) and `check_tikz_svg.py` overlap verification |
+| `reports` | - | Standalone Markdown report bundles (`reports/<slug>-<YYYY-MM-DD>/`) and interactive Quarto HTML |
+| `compile-latex` | `/compile-latex` | Verified `latexmk` + XeLaTeX builds and overfull-box diagnostics |
+| `publish-blog-post` | - | Quarto blog post drafting, WebP media preparation, and deployment checks |
+| `literature-review` | `/lit` | Multi-provider literature review, deep research, ML recipe lookup, and Zotero sync |
+| `bib-validate` | `/bib-validate` | BibTeX key typo detection and OpenAlex/Crossref DOI verification |
+| `simulation-study` | `/simulation-study` | Monte Carlo study design, parallel RNG streams, failure accounting, and MCSE reporting |
+| `research-review` | `/review` | Constructive peer critique and manuscript narrative/figure-arc restructuring |
+| `audit-reproducibility` | `/audit-reproducibility` | Numeric claim-to-output audit, paper-code parity, and `pipeline.md` manifests |
+| `r-code-style` | - | Tidyverse + `air` formatting, `=` assignment, and pipe layout |
+| `autoresearch` | `/autoresearch` | Lightweight Git + frozen-evaluator iteration loop for research and engineering optimization |
+| `sol-pi` | - | Delegate bounded coding subtasks to SoL-Pi (`sol-pi-run`) |
 
-```toml
-[profiles.local]
-provider = "torc"
-mode = "local"
-api_url = "http://localhost:8080/torc-service/v1"
+### Subagents (3)
 
-[profiles.cluster]
-provider = "torc"
-mode = "slurm"
-api_url = "http://cluster-control:8085/torc-service/v1"
-torc_profile = "kestrel"
-slurm_account = "your-project"
-target_shell = "posix"
-dashboard_url = "http://localhost:8090"
-```
+- `researcher`: Parallel primary-source gatherer across scholarly APIs, web, repositories, and Hugging Face Hub.
+- `reviewer`: Independent peer reviewer and reproducibility/statistical auditor with fresh context.
+- `engineer`: Isolated implementation, bug-fix, and constrained-optimization worker.
 
-Remote profiles use `mode = "remote"` with an `ssh_alias` and a server URL reachable from the
-worker. Remote profiles cannot use a loopback API URL. An optional `access_group_id` lets
-Waterology share new workflows with separately authenticated workers while TORC access control
-remains enabled. Keep passwords, tokens, SSH settings, and TORC credentials outside this file. Set
-`WATEROLOGY_CONFIG` to use another machine configuration path.
-
-List profiles and start a managed run with:
-
-```console
-pixi run waterology compute profile list
-pixi run waterology run start <experiment-id> --profile local
-pixi run waterology run watch <run-id>
-pixi run waterology run cancel <run-id>
-```
-
-The first remote or Slurm launch requires `--confirm-remote`. Waterology then
-records the trusted profile name in machine configuration. Project
-configuration cannot grant this trust.
-
-Waterology generates and validates a TORC workflow from the committed command
-and resource request. TORC handles local workers, remote workers, Slurm
-generation, scheduling, and retries. Waterology records workflow and job IDs,
-maps executor state, collects terminal logs and declared artifacts, then seals
-the standard run archive. Time series resource databases are retained and
-summarized in the archive metrics. An unreachable TORC service reports
-`unknown`; it does not turn the run into a failure.
-
-TORC submits from the experiment worktree and the generated job changes to
-`TORC_WORKFLOW_SUBMISSION_DIR` before running the fixed command. Remote workers
-therefore need the experiment worktree at the same shared path. Waterology does
-not add a separate SSH file transfer layer.
-
-Use `waterology compute inspect <profile>` for the configured TUI command, or add `--dashboard` to
-print the dashboard URL. Run `waterology doctor --torc-profile <profile>` to check the installed
-version and API connection. The [TORC guide](docs/torc.md) covers installation, server services,
-remote PATH requirements, network security, upgrades, and troubleshooting.
-
-## Agent sessions and MCP
-
-Waterology can launch Antigravity, Claude Code, Codex, or OpenCode in an experiment worktree. Each top level
-session receives a task brief, role, compute profile, artifact location, project guidance, and MCP
-instructions. The database prevents two active sessions from writing to the same worktree.
-
-```console
-pixi run waterology agent start <experiment-id> "Compare the calibration variants" \
-  --runtime codex --role researcher
-pixi run waterology agent list
-pixi run waterology agent status <session-id>
-pixi run waterology agent logs <session-id>
-pixi run waterology agent resume <session-id> "Check the residual diagnostics"
-pixi run waterology agent stop <session-id>
-```
-
-Antigravity, Claude Code, Codex, and OpenCode keep their native sessions and structured events. Waterology stores
-the native identifier, process metadata, task brief, attempt logs, timestamps, and resulting commits
-under `.waterology/sessions/<session-id>/`. Resume uses the runtime's native mechanism. A missing
-process becomes `lost`, while its worktree and logs remain available. `waterology repair-index`
-rebuilds session, note, evidence, and artifact reference rows from these durable records.
-
-Install the optional MCP dependency when Waterology is installed outside the Pixi development
-environment:
-
-```console
-pip install 'waterology-research[mcp]'
-waterology-mcp
-```
-
-For a source checkout that must expose the bare command to Codex, install it as
-an isolated editable tool:
-
-```console
-uv tool install --editable '.[mcp]'
-```
-
-MCP log tools return bounded pages with optional literal search. See
-[log-reading arguments and response changes](docs/mcp-log-reading.md).
-
-The server uses local stdio and offers bounded tools for experiments, runs, archives, metrics,
-evidence, artifact references, and session notes. It does not expose shell execution, arbitrary file
-reads, Git publication, or remote deletion. The plugin `.mcp.json` registers the server for Claude
-Code and Codex plugins. `.codex/config.toml` and `opencode.json` contain project registrations for
-Codex and OpenCode. A project scoped `waterology install` copies the matching registration when its
-destination is absent or already owned by Waterology. Print a machine neutral registration snippet
-or supported CLI command with:
-
-```console
-waterology mcp config antigravity
-waterology mcp config claude
-waterology mcp config codex
-waterology mcp config opencode
-```
-
-The runtime command must be able to find `waterology-mcp` on `PATH`. The installer refuses to replace
-project configuration it does not own. Merge the printed snippet manually when another configuration
-already owns the destination.
-
-## Research dashboard
-
-Install the optional dashboard dependencies and start the local research view from an initialized
-project:
-
-```console
-pip install 'waterology-research[dashboard]'
-waterology dashboard
-```
-
-The server binds to `127.0.0.1:8127` and opens a browser by default. Use `--no-open` for a headless
-session or SSH port forwarding. The Overview puts experiment lineage, active agents, recent
-evidence, archives, and compute state together. Separate Experiments, Agents, Evidence, Archives,
-and Compute views provide hypotheses, commits, worktree ownership, logs, metrics, artifacts,
-assessments, and TORC links.
-
-Pages are rendered on the server and remain useful without JavaScript. A small checked in script
-updates summary counts and stores the light, dark, or system theme choice in the browser. Guarded
-forms create experiments, start or resume agents, start or cancel runs, record assessments, and
-export verified archives through the same service functions used by the CLI and MCP server.
-
-For remote access, prefer SSH forwarding while the dashboard remains bound to loopback:
-
-```console
-ssh -L 8127:127.0.0.1:8127 research-host
-waterology dashboard --no-open
-```
-
-A non-loopback bind requires both `--allow-remote` and an access token. Set the token through the
-environment so it does not appear in shell history:
-
-```console
-WATEROLOGY_DASHBOARD_TOKEN='replace-with-a-long-random-value' \
-  waterology dashboard --host 0.0.0.0 --allow-remote --no-open
-```
-
-The token protects every route and becomes an HTTP only same site cookie after browser bootstrap.
-Open `http://<host>:8127/?token=<access-token>` once, then the server redirects to a clean URL.
-The dashboard is a local project tool. It does not publish results, push Git state, or provide a
-hosted collaboration service.
-
-## Constraints
-
-| Check | What it enforces |
-| --- | --- |
-| `no-absolute-paths` | No paths specific to one machine in source |
-| `deterministic-seed` | Stochastic scripts set a seed |
-| `pixi-r-task-dollar` | R commands in `pixi.toml` tasks contain no `$` |
-| `mc-has-mcse` | Monte Carlo summaries report uncertainty for headline metrics |
-| `conservation-tol` | Declared conservation evidence closes within tolerance |
-| `overfull-boxes` | TeX overflow of at least 1 pt is reported by severity |
-| `no-hardcoded-results` | Recognizable computed prose values are imported, not copied |
-
-Run the checks with:
+### Deterministic constraints (`constraints/check-all.py`)
 
 ```bash
 python3 constraints/check-all.py [PATH ...]
-python3 constraints/check-all.py --only deterministic-seed src/
 ```
 
-Run constraints after changing content they cover and target the changed paths.
-Do not repeat a successful check for unchanged content. Use `.` when changing a
-constraint, validating the full repository, or preparing a release.
+Enforces `no-absolute-paths`, `deterministic-seed`, `pixi-r-task-dollar`, `plotly-text-overlap`, `mc-has-mcse`, `conservation-tol`, `overfull-boxes`, and `no-hardcoded-results`.
 
-## Research workflows
+## Documentation
 
-The bundle provides eleven agents: `research-coordinator`, `researcher`,
-`research-syntesizer`, `research-verifier`, `research-reviewer`, `engineer`,
-`simulation-coordinator`, `simulation-code-reviewer`, `simulation-reviewer`,
-`replication-coordinator`, and `reproducibility-auditor`.
-It also installs research skills and Claude Code compatibility commands.
-
-Use `research-coordinator` to hand off a complete investigation. It follows
-`deep-research`, maintains the plan and task ledger, inspects specialist outputs,
-and returns the final brief and provenance. Supply the recorded plan approval
-or expect a planning checkpoint before investigation begins. Where nested
-agents are unavailable, the coordinator returns briefs for the parent to
-dispatch and resumes from their artifacts. This role does not add a runtime
-agent launcher or change compute and approval boundaries.
-
-Use `simulation-coordinator` to hand off a Monte Carlo study using its existing
-language and toolchain. It follows `simulation-study`, coordinates implementation
-and statistical reviews, and resumes from Waterology run records. Its brief
-names the execution owner and allowed compute; delegation does not grant extra
-compute or permit changing the study's acceptance criteria.
-
-Use `replication-coordinator` to hand off a paper, benchmark, or deliverable
-replication. It follows `replication`, owns the claim ledger and audit handoff,
-and distinguishes restoration of an existing deliverable from a new
-implementation. Recorded environment and compute authority remain in force;
-completed work may report disagreement rather than successful reproduction.
-
-The `writing-style` skill supplies shared prose guidance and a scientific
-writing layer. The `research-software-quality` skill scales testing, debugging,
-verification, review, and worktree isolation to the task.
-The `agent-delegation` skill defines portable task briefs, worktree ownership,
-compute authorization, and return contracts. `source-summarization` keeps long
-source text on disk and reads it in bounded windows.
-The `sol-pi` skill hands a coding task to
-[SoL-Pi](https://github.com/NVlabs/SoL-Pi) and reports its changes and cost. It
-needs the upstream `sol-pi-run` launcher on PATH. The optional upstream prompt
-hooks are not bundled. Install them from the SoL-Pi checkout if you want
-`/sol-pi` and `$sol-pi` handled without a host model turn.
-
-The `audit-reproducibility` skill compares numeric manuscript claims with R,
-Python, Fortran, and text outputs. It records provenance and tolerance results
-in `quality_reports/passports/`.
-
-The completed research feature set adds Monte Carlo design and review,
-environment capture, bibliography validation, pipeline manifests with Fortran
-support, MyST to Quarto conversion, and verified LaTeX builds.
-
-| Command | Does |
-| --- | --- |
-| `/engineering` | Build or repair to a specification, or optimize under constraints |
-| `/deepresearch` | Multi source investigation to a cited brief with provenance |
-| `/lit` | Literature review or a publication corpus review |
-| `/review` | Internal critique with severity and a revision plan |
-| `/audit` | Compare paper claims with a codebase |
-| `/audit-reproducibility` | Check numeric claims against produced outputs |
-| `/simulation-study` | Design and review a Monte Carlo experiment |
-| `/capture-environment` | Record R, Python, and Fortran environments |
-| `/bib-validate` | Check citation keys and optional DOI metadata |
-| `/pipeline-manifest` | Trace scripts, outputs, and document artifacts |
-| `/myst-to-quarto` | Convert common MyST constructs to Quarto |
-| `/compile-latex` | Build and verify LaTeX with latexmk and XeLaTeX |
-| `/compare` | Build a grounded comparison matrix across sources |
-| `/replicate` | Plan, then run a replication after an environment choice |
-| `/recipe` | Rank implementable ML training recipes |
-| `/summarize` | Summarize a long source and keep the result on disk |
-| `/watch`, `/log`, `/autoresearch` | Monitor a field, log a session, or run an experiment loop |
-
-## Status
-
-The platform and research feature roadmaps are complete. The platform includes cross runtime
-packaging, research methods, experiment state, TORC execution, agent sessions and MCP, and the
-local research dashboard. The research roadmap is in [ROADMAP.md](ROADMAP.md). Adapted sources are credited in
-[ATTRIBUTION.md](ATTRIBUTION.md).
+- [Documentation index](docs/README.md)
+- [Getting started](docs/getting-started.md)
+- [Choosing artifact skills](docs/artifact-skills.md)
+- [Personal configuration](docs/local-configuration.md)
+- [Installation lifecycle](docs/install-lifecycle.md)
+- [Native TORC setup](docs/torc.md)
+- [Apptainer environments](docs/apptainer.md)
 
 ## AI use
 
-GPT-6 through Codex assisted with the 0.8.2 skill consolidation, documentation,
-runtime link handling, and tests.
+Claude and Gemini models through Codex, Claude Code, and Antigravity assisted with skill consolidation, reference provider integration, documentation, and tests.
 
 ## License
 
-MIT Copyright Cameron Bracken. Adapted material is credited in
-[ATTRIBUTION.md](ATTRIBUTION.md).
-
-Named workflow registration and final-deliverable verification are described in
-[Execute and reproduce a project](docs/workflow-execution.md).
+MIT Copyright Cameron Bracken. Adapted material is credited in [ATTRIBUTION.md](ATTRIBUTION.md).

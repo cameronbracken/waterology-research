@@ -38,9 +38,9 @@ def test_project_claude_plan_keeps_command_shims(tmp_path: Path) -> None:
     )
 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
-    assert ".claude/skills/deep-research" in destinations
+    assert ".claude/skills/literature-review" in destinations
     assert ".claude/agents/researcher.md" in destinations
-    assert ".claude/commands/deepresearch.md" in destinations
+    assert ".claude/commands/lit.md" in destinations
     assert ".mcp.json" in destinations
     assert next(
         action for action in plan.actions if action.destination.name == ".mcp.json"
@@ -187,7 +187,7 @@ def test_user_claude_plan_uses_home_directories(tmp_path: Path, monkeypatch) -> 
     destinations = {action.destination.relative_to(tmp_path).as_posix() for action in plan.actions}
     assert ".claude/skills/project-conventions" in destinations
     assert ".claude/agents/researcher.md" in destinations
-    assert ".claude/commands/deepresearch.md" in destinations
+    assert ".claude/commands/lit.md" in destinations
 
 
 def test_user_antigravity_plan_uses_gemini_config_directory(

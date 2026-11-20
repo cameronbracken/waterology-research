@@ -6,42 +6,17 @@ description: >
   blog media, or diagnosing why media does not render in a blog post.
 ---
 
-# Publishing a blog post
+# Publishing a Blog Post
 
-Use `writing-style` for prose and captions. Run
-`waterology config context publish-blog-post` for optional local site guidance.
-Read the site's own instructions and configuration before choosing paths,
-frontmatter, image sizes, commands, or upload destinations. Prefer Quarto,
-WebP for inline media, and the package's
-[blog defaults](references/blog-defaults.md) when the site leaves choices open.
-Discover the actual site, bucket, domain, and installed utilities rather than
-embedding account details or machine paths in the workflow.
-
-If the CLI is unavailable, use the shared
-[local preferences resolver](../project-conventions/references/local-preferences.md)
-with this skill name, including common preferences and matching local guidance.
+Use [writing-style](../writing-style/SKILL.md) for prose and captions. Inspect the site's own configuration before choosing paths, frontmatter, image dimensions, build commands, or upload targets. Prefer Quarto, WebP for inline media, and [blog defaults](references/blog-defaults.md) when the site leaves choices open.
 
 ## Prepare the post
 
-1. Use the site's post layout and frontmatter. Supply descriptive image alt text.
-2. Follow its media references, including any preview/production URL mapping.
-3. Choose available image tools and the site's size and format requirements.
-   Check pixel dimensions and aspect ratio after cropping. Confirm social-card
-   format support separately from inline images.
-4. Run the configured preview and build commands. Inspect the rendered post,
-   captions, links, and media at the expected viewing sizes.
-
-Use [diagrams](../diagrams/SKILL.md) only when creating conceptual illustrations,
-[data-visualization](../data-visualization/SKILL.md) only for new data figures,
-and an available image creation tool for other image work. Reusing existing
-media does not require those creation workflows.
+1. Match the site's post directory layout and YAML frontmatter, and supply descriptive alt text on every image.
+2. Follow the site's preview/production media URL mapping. Check pixel dimensions, aspect ratio after cropping, and social-card format support separately from inline WebP images.
+3. Use [diagrams](../diagrams/SKILL.md) only when creating new conceptual schematics and [figures](../figures/SKILL.md) only when creating new data plots.
+4. Run the site's preview/render command and inspect rendered layout, links, and media before proposing publication.
 
 ## Upload and publish
 
-Use the configured upload command and destination. Supply the correct MIME
-type and verify the served response after an authorized upload. Keep credentials
-in the provider's credential store or environment, never in site guidance.
-
-Prepare the concrete post and media before requesting publication approval.
-Follow existing user authorization. After an authorized deployment, verify the
-actual post and media URLs. Record any remaining build or access failures.
+Keep bucket/deployment credentials in the environment or provider credential store, never in repository files. Upload with explicit MIME types and deploy only with user authorization, then verify live post and media URLs.

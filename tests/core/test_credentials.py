@@ -16,14 +16,19 @@ def _write(path, text, mode=0o600):
 def test_fills_only_missing_provider_keys(tmp_path):
     source = _write(
         tmp_path / "research.env",
-        "export ZOTERO_API_KEY=from-file\nOPENALEX_API_KEY='quoted'\nUNRELATED=ignored\n",
+        "export ZOTERO_API_KEY=from-file\nOPENALEX_API_KEY='quoted'\nHF_TOKEN=hf-secret\nUNRELATED=ignored\n",
     )
     environment = {"OPENALEX_API_KEY": "from-shell"}
     result = load_credentials(source, environment)
-    assert environment == {"OPENALEX_API_KEY": "from-shell", "ZOTERO_API_KEY": "from-file"}
-    assert result.loaded == ("ZOTERO_API_KEY",)
+    assert environment == {
+        "OPENALEX_API_KEY": "from-shell",
+        "ZOTERO_API_KEY": "from-file",
+        "HF_TOKEN": "hf-secret",
+    }
+    assert set(result.loaded) == {"ZOTERO_API_KEY", "HF_TOKEN"}
     assert result.problem is None
     assert "from-file" not in str(result.summary())
+    assert "hf-secret" not in str(result.summary())
 
 
 def test_skips_file_when_every_key_is_set(tmp_path):
@@ -48,7 +53,7 @@ def test_rejects_file_readable_by_others(tmp_path):
     assert environment == {}
 
 
-def test_path_comes_from_machine_config(tmp_path, monkeypatch):
+def test_path_comes_from_user_config(tmp_path, monkeypatch):
     config = tmp_path / "config.toml"
     config.write_text('[credentials]\nfile = "secrets/research.env"\n')
     monkeypatch.setenv("WATEROLOGY_CONFIG", str(config))
@@ -57,13 +62,13 @@ def test_path_comes_from_machine_config(tmp_path, monkeypatch):
     assert credentials_file_path() is None
 
 
-def test_invalid_machine_config_is_reported_not_raised(tmp_path, monkeypatch):
+def test_invalid_user_config_is_reported_not_raised(tmp_path, monkeypatch):
     config = tmp_path / "config.toml"
     config.write_text("[credentials]\nunknown = 1\n")
     monkeypatch.setenv("WATEROLOGY_CONFIG", str(config))
     result = load_credentials(environment={})
     assert result.path is None
-    assert "Invalid machine configuration" in result.problem
+    assert "Invalid user configuration" in result.problem
 
 
 def test_research_access_explains_missing_keys(tmp_path, monkeypatch):

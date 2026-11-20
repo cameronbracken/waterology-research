@@ -7,7 +7,7 @@ python = ">=3.11"
 pip = ">=25"
 
 [pypi-dependencies]
-waterology-research = { path = ".", editable = true, extras = ["dashboard", "mcp", "zotero", "constraints"] }
+waterology-research = { path = ".", editable = true, extras = ["mcp", "zotero", "constraints"] }
 
 [feature.dev.dependencies]
 python-build = ">=1.3"
@@ -16,22 +16,15 @@ pytest-cov = ">=6.2"
 ruff = ">=0.12"
 hatchling = ">=1.27"
 
-[feature.dev.pypi-dependencies]
-httpx = ">=0.28,<1"
-
 [feature.reports.dependencies]
 quarto = ">=1.6"
 
 [feature.reports.pypi-dependencies]
 plotly = ">=6,<7"
 
-[feature.rocrate.pypi-dependencies]
-roc-validator = "==0.11.4"
-
 [environments]
 default = { features = ["dev"], solve-group = "default" }
 reports = { features = ["dev", "reports"], solve-group = "reports" }
-rocrate = { features = ["dev", "rocrate"], solve-group = "rocrate" }
 
 [tasks]
 test = "pytest"

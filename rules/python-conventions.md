@@ -7,46 +7,26 @@ paths:
 
 # Python conventions
 
-Conventions, not mechanically-checked constraints. Match an existing file's
-local style first.
-
-Read the optional local context using this rule name. If the CLI is unavailable,
-use the [local resolver](../skills/project-conventions/references/local-preferences.md).
+Conventions, not mechanically-checked constraints. Match an existing file's local style first.
 
 ## Interpreter and environments
 
-Run `waterology config context python-conventions` for optional local guidance.
-Discover the interpreter and environment from the project configuration.
-Use the existing manager (such as Pixi, uv, conda, or venv) and its documented
-commands. Do not mix dependency managers or assume personal shell aliases.
-For remote systems, inspect their documented module/environment requirements.
+Discover the interpreter and environment from the project configuration. Use the existing manager (Pixi, uv, conda, or venv) and its documented commands. Do not mix dependency managers or assume personal shell aliases.
 
-For new work, use Pixi for mixed-language or system dependencies and uv for pure
-Python. In a Pixi project, run through `pixi run` and declare dependencies with
-`pixi add`; do not use an ad hoc `pip install` to mutate the environment. Use
-`python3` outside a managed environment, and the environment's interpreter
-inside it. Reuse a project's existing virtual environment rather than creating
-a competing one. Machine-specific aliases and HPC modules stay in local guidance.
+For new work, use Pixi for mixed-language or system dependencies and uv for pure Python. In a Pixi project, run through `pixi run` and declare dependencies with `pixi add`; do not mutate the environment with ad hoc `pip install` calls.
 
 ## Style
 
-- Format with **ruff** or **black**. Prefer `ruff` for lint + format.
-- Type hints at public boundaries; schema-validate external/untrusted input.
-- Prefer `pathlib` over string path-joining.
+- Format and lint with **ruff**.
+- Add type hints at public boundaries and schema-validate external or untrusted input.
+- Prefer `pathlib` over string path joining.
 
 ## Reproducibility
 
-- Seed every stochastic path (`np.random.default_rng(<int>)` preferred over the
-  legacy global `np.random.seed`); enforced by the `deterministic-seed`
-  constraint.
-- Project-relative paths only (`no-absolute-paths` constraint).
-- Pin the environment for anything that produces a paper result — `pixi.toml` /
-  `requirements.txt` / `environment.yml` with version constraints, not bare
-  names.
+- Seed every stochastic path (`np.random.default_rng(<int>)` preferred over legacy global `np.random.seed`), enforced by the `deterministic-seed` constraint.
+- Use project-relative paths only (`no-absolute-paths` constraint).
+- Pin dependencies in a committed lockfile (`pixi.lock` or `uv.lock`) for any analysis result.
 
-## Model wrappers / scientific stack
+## Model wrappers and scientific stack
 
-- This toolchain wraps Fortran/C hydrology models (SAC-SMA/Snow-17, NWSRFS,
-  VIC, `mosartwmpy`) from Python. Keep the wrapper thin; do not silently change
-  a model's numerical defaults — a defaults change is an experiment, not a
-  refactor, and needs an A/B comparison.
+- When wrapping Fortran or C hydrology models (SAC-SMA/Snow-17, NWSRFS, VIC, `mosartwmpy`) from Python, keep the wrapper thin. Never silently change a model's numerical defaults; changing defaults is an experiment that requires an explicit comparison.

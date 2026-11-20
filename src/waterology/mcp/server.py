@@ -1,3 +1,5 @@
+"""Bounded MCP server for scholarly discovery, Zotero synchronization, and Hugging Face Hub inspection."""
+
 import inspect
 import logging
 from collections.abc import Callable
@@ -7,7 +9,7 @@ from typing import ParamSpec, TypeVar, cast
 
 from mcp.server import MCPServer
 
-from waterology import __version__, services
+from waterology import __version__
 from waterology.core.errors import WaterologyError
 
 P = ParamSpec("P")
@@ -49,227 +51,118 @@ def _bounded_tool(server: MCPServer) -> Callable[[Callable[P, R]], object]:
 def create_server() -> MCPServer:
     server = MCPServer(
         "waterology",
-        title="Waterology research workflows",
-        description="Bounded local research operations over durable Waterology project state.",
+        title="Waterology reference and dataset tools",
+        description="Bounded scholarly search, Zotero reference sync, and Hugging Face Hub inspection.",
         instructions=(
-            "Use these tools for experiments, runs, evidence, archives, and session notes. "
-            "No shell or publication operation is available."
+            "Use these tools for multi-provider literature search, Zotero collection sync, "
+            "and bounded Hugging Face Hub metadata and file inspection."
         ),
         version=__version__,
     )
 
     @_bounded_tool(server)
-    def project_status(project_path: str = ".") -> dict[str, object]:
-        """Inspect project counts and local index state without changing files."""
-        return services.project_status(Path(project_path))
+    def research_access() -> dict[str, object]:
+        """Check Zotero, OpenAlex, Semantic Scholar, CORE, and Hugging Face credential presence; never expose values."""
+        from waterology.core.research_access import research_access as check
+
+        return check()
 
     @_bounded_tool(server)
-    def create_experiment(
-        hypothesis: str,
+    def literature_search(
+        query: str,
+        provider: str = "openalex",
+        after: str | None = None,
+        before: str | None = None,
+        limit: int = 20,
         project_path: str = ".",
-        parent_ref: str = "HEAD",
-        parent_experiment_id: str | None = None,
-        owner: str | None = None,
-        experiment_id: str | None = None,
-        workflow: str | None = None,
     ) -> dict[str, object]:
-        """Create a hypothesis branch and isolated worktree; this changes Git and local state."""
-        return services.create_experiment_record(
-            Path(project_path),
-            hypothesis=hypothesis,
-            parent_ref=parent_ref,
-            parent_experiment_id=parent_experiment_id,
-            owner=owner,
-            experiment_id=experiment_id,
-            workflow=workflow,
+        """Query a scholarly provider (openalex, semantic-scholar, core, alphaxiv, alphaxiv-keyword, arxiv, pubmed, europepmc, biorxiv, medrxiv, or crossref). Records locally when .zotero.toml is configured and returns unrecorded results otherwise."""
+        from waterology.core.literature import search_literature
+
+        return search_literature(
+            Path(project_path), query, after=after, before=before, limit=limit, provider=provider
         )
 
     @_bounded_tool(server)
-    def inspect_experiment(experiment_id: str, project_path: str = ".") -> dict[str, object]:
-        """Read one experiment record and its derived scientific state."""
-        return services.experiment_status(Path(project_path), experiment_id)
-
-    @_bounded_tool(server)
-    def experiment_tree(project_path: str = ".") -> list[dict[str, object]]:
-        """List experiments with their parent identifiers and worktrees."""
-        return services.experiment_tree(Path(project_path))
-
-    @_bounded_tool(server)
-    def start_run(
-        experiment_id: str,
-        project_path: str = ".",
-        profile: str | None = None,
-        confirm_remote: bool = False,
+    def literature_decision(
+        search_id: str, source_id: str, decision: str, note: str, project_path: str = "."
     ) -> dict[str, object]:
-        """Start a validated run; this executes the committed project command."""
-        return services.start_run(
-            Path(project_path),
-            experiment_id,
-            profile=profile,
-            confirm_remote=confirm_remote,
+        """Record an include, exclude, or unresolved decision for a recorded search hit and queue included papers to Zotero."""
+        from waterology.core.literature import record_source_decision
+
+        return record_source_decision(
+            Path(project_path), search_id, source_id, decision=decision, note=note
         )
 
     @_bounded_tool(server)
-    def inspect_run(run_id: str, project_path: str = ".") -> dict[str, object]:
-        """Inspect a terminal archive or reconcile a managed TORC run."""
-        return services.run_status(Path(project_path), run_id)
-
-    @_bounded_tool(server)
-    def cancel_run(run_id: str, project_path: str = ".") -> dict[str, object]:
-        """Request cancellation of a managed TORC run; this changes executor state."""
-        return services.cancel_run(Path(project_path), run_id)
-
-    @_bounded_tool(server)
-    def assess_run(
-        run_id: str,
-        kind: str,
-        conclusion: str,
-        author: str,
-        project_path: str = ".",
-        evidence: list[str] | None = None,
-        note: str | None = None,
+    def literature_source_add(
+        title: str, locator: str, note: str = "", project_path: str = "."
     ) -> dict[str, object]:
-        """Append a scientific assessment; an answer freezes the experiment."""
-        return services.assess_run_record(
-            Path(project_path),
-            run_id,
-            kind=kind,
-            conclusion=conclusion,
-            author=author,
-            evidence=tuple(evidence or ()),
-            note=note,
+        """Record a local or agency source and queue it to the configured Zotero collection."""
+        from waterology.core.literature import register_local_source
+
+        return register_local_source(Path(project_path), title=title, locator=locator, note=note)
+
+    @_bounded_tool(server)
+    def zotero_capture(
+        source: dict[str, object], reason: str, project_path: str = "."
+    ) -> dict[str, object]:
+        """Queue a consulted citation and synchronize to the configured .zotero.toml collection."""
+        from waterology.core.zotero import queue_reference
+
+        return queue_reference(Path(project_path), source, reason=reason)
+
+    @_bounded_tool(server)
+    def zotero_sync(limit: int = 20, project_path: str = ".") -> dict[str, object]:
+        """Retry bounded pending Zotero metadata and local PDF caching."""
+        from waterology.core.zotero import sync_references
+
+        return sync_references(Path(project_path), limit=limit)
+
+    @_bounded_tool(server)
+    def zotero_status(project_path: str = ".") -> list[dict[str, object]]:
+        """Inspect queued Zotero citations and local PDF download states."""
+        from waterology.core.zotero import reference_status
+
+        return reference_status(Path(project_path))
+
+    @_bounded_tool(server)
+    def hf_dataset_info(repo_id: str, revision: str = "main") -> dict[str, object]:
+        """Inspect bounded Hugging Face Hub dataset metadata, configs, features, splits, and license."""
+        from waterology.core import huggingface
+
+        return huggingface.hf_dataset_info(repo_id, revision=revision)
+
+    @_bounded_tool(server)
+    def hf_repo_files(
+        repo_id: str,
+        repo_type: str = "dataset",
+        revision: str = "main",
+        path: str = "",
+        limit: int = 200,
+    ) -> dict[str, object]:
+        """List files and directories at a path in a Hugging Face Hub dataset, model, or space repository."""
+        from waterology.core import huggingface
+
+        return huggingface.hf_repo_files(
+            repo_id, repo_type=repo_type, revision=revision, path=path, limit=limit
         )
 
     @_bounded_tool(server)
-    def read_run_logs(
-        run_id: str,
-        project_path: str = ".",
-        stream: str = "stdout",
-        offset: int = 0,
-        max_bytes: int = 8192,
-        query: str | None = None,
-        snapshot: str | None = None,
+    def hf_repo_read_file(
+        repo_id: str,
+        file_path: str,
+        repo_type: str = "dataset",
+        revision: str = "main",
+        max_bytes: int = 65536,
     ) -> dict[str, object]:
-        """Read one bounded log page. Choose stdout/stderr. Follow next_offset until null.
+        """Read a bounded small UTF-8 text file from a Hugging Face Hub repository without downloading binary blobs."""
+        from waterology.core import huggingface
 
-        query seeks a case-sensitive literal match, scanning at most 1 MiB per call.
-        A search with no match can still have a next_offset. Pass snapshot on later
-        pages to reject changed files. Defaults to the start, not the log tail.
-        """
-        return services.run_log_excerpt(
-            Path(project_path),
-            run_id,
-            stream=stream,
-            offset=offset,
-            max_bytes=max_bytes,
-            query=query,
-            snapshot=snapshot,
+        return huggingface.hf_repo_read_file(
+            repo_id, file_path, repo_type=repo_type, revision=revision, max_bytes=max_bytes
         )
 
-    @_bounded_tool(server)
-    def read_run_metrics(run_id: str, project_path: str = ".") -> dict[str, object]:
-        """Read normalized metrics from a sealed run archive."""
-        return services.run_metrics(Path(project_path), run_id)
-
-    @_bounded_tool(server)
-    def list_archives(project_path: str = ".") -> list[dict[str, object]]:
-        """List sealed immutable run archives."""
-        return services.archives(Path(project_path))
-
-    @_bounded_tool(server)
-    def list_sessions(project_path: str = ".") -> list[dict[str, object]]:
-        """List durable top level agent session records."""
-        return services.sessions(Path(project_path))
-
-    @_bounded_tool(server)
-    def inspect_session(session_id: str, project_path: str = ".") -> dict[str, object]:
-        """Read one durable top level agent session record."""
-        return services.session_status(Path(project_path), session_id)
-
-    @_bounded_tool(server)
-    def read_session_logs(
-        session_id: str,
-        project_path: str = ".",
-        stream: str = "events",
-        attempt: int | None = None,
-        offset: int = 0,
-        max_bytes: int = 8192,
-        query: str | None = None,
-        snapshot: str | None = None,
-    ) -> dict[str, object]:
-        """Read one bounded page from events/stderr; defaults to the latest attempt.
-
-        Select an earlier attempt explicitly. Follow next_offset until null.
-        query seeks a case-sensitive literal match within a 1 MiB scan; no match
-        can still have a continuation. Pass snapshot to reject changed files.
-        """
-        return services.session_log_excerpt(
-            Path(project_path),
-            session_id,
-            stream=stream,
-            attempt=attempt,
-            offset=offset,
-            max_bytes=max_bytes,
-            query=query,
-            snapshot=snapshot,
-        )
-
-    @_bounded_tool(server)
-    def register_evidence(
-        experiment_id: str,
-        claim: str,
-        project_path: str = ".",
-        kind: str = "note",
-        path: str | None = None,
-        run_id: str | None = None,
-        session_id: str | None = None,
-    ) -> dict[str, object]:
-        """Register a claim and optional validated local evidence path; this appends a record."""
-        return services.register_evidence_record(
-            Path(project_path),
-            experiment_id=experiment_id,
-            claim=claim,
-            kind=kind,
-            path=path,
-            run_id=run_id,
-            session_id=session_id,
-        )
-
-    @_bounded_tool(server)
-    def register_artifact(
-        experiment_id: str,
-        path: str,
-        project_path: str = ".",
-        label: str | None = None,
-        run_id: str | None = None,
-        session_id: str | None = None,
-    ) -> dict[str, object]:
-        """Register an existing artifact inside an owned worktree or sealed archive."""
-        return services.register_artifact_record(
-            Path(project_path),
-            experiment_id=experiment_id,
-            path=path,
-            label=label,
-            run_id=run_id,
-            session_id=session_id,
-        )
-
-    @_bounded_tool(server)
-    def record_session_note(
-        session_id: str,
-        text: str,
-        project_path: str = ".",
-        author: str | None = None,
-    ) -> dict[str, object]:
-        """Append a durable note to an agent session."""
-        return services.record_session_note(Path(project_path), session_id, text, author)
-
-    from waterology.mcp.workflows import register_workflow_tools
-
-    register_workflow_tools(server, _bounded_tool)
-    from waterology.mcp.execution import register_execution_tools
-
-    register_execution_tools(server, _bounded_tool)
     return server
 
 

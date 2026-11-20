@@ -9,55 +9,30 @@ paths:
 
 # R conventions
 
-Conventions (ex-ante judgment guidance), not mechanically-checked constraints.
-When editing R, follow these unless the surrounding file clearly does otherwise
-— match an existing file's local style first.
-
-Read the optional local context using this rule name. If the CLI is unavailable,
-use the [local resolver](../skills/project-conventions/references/local-preferences.md).
+Follow these defaults unless the surrounding file clearly uses another established project style.
 
 ## Style
 
-Run `waterology config context r-conventions` for optional local style.
-
-- Use [r-code-style](../skills/r-code-style/SKILL.md) for assignment, pipes,
-  formatter defaults, function syntax, and script organization.
-- Use `# %%` section markers for editor cell navigation (VSCode / Positron).
+- Use [r-code-style](../skills/r-code-style/SKILL.md) for `=` assignment, native `|>` pipes, `air` formatting, function syntax, and script layout.
+- Use `# %%` section markers for editor cell navigation (VSCode / Positron / Zed).
 
 ## Reproducibility
 
-- One `set.seed()` near the top of any script that draws random numbers
-  (enforced by the `deterministic-seed` constraint). For parallel work use
-  `RNGkind("L'Ecuyer-CMRG")` and `furrr_options(seed = TRUE)`.
+- Put one `set.seed()` near the top of any script that draws random numbers (`deterministic-seed` constraint). For parallel work use `RNGkind("L'Ecuyer-CMRG")` and `furrr_options(seed = TRUE)`.
 - Use `library()` (loud failure), not `require()` (silent).
-- Project-relative paths only — `here::here()` / `file.path()`, never absolute
-  (enforced by the `no-absolute-paths` constraint). Never write to `data/raw/`.
-- Routed outputs: tables and figures go to a paper/figures area, not next to
-  the script. Save the underlying object (`saveRDS`) alongside any figure so it
-  can be regenerated.
+- Use project-relative paths only (`here::here()` or `file.path()`, enforced by `no-absolute-paths`). Never write to `data/raw/`.
+- Route tables and figures to the project's figures/results directory rather than next to scripts, and save underlying data objects (`saveRDS` or JSON/CSV) so figures regenerate cleanly.
 
 ## Numerical discipline
 
 - Never compare doubles with `==`; use `abs(x - y) < tol` or `all.equal()`.
-- Clamp probabilities to an open interval before `qnorm()`/`q*()`:
-  `eps = 1e-12; p = pmin(1 - eps, pmax(eps, p))` — exact 0/1 give ±Inf.
+- Clamp probabilities to an open interval before `qnorm()`/`q*()`: `eps = 1e-12; p = pmin(1 - eps, pmax(eps, p))`.
 - Use integer literals (`1L`, `0L`) for counts and indices.
-- Pre-allocate; never grow a vector with `c()`/`append()` inside a loop.
-- Always pass `na.rm =` explicitly to `mean`/`sum`/`var`/`sd`.
-- Avoid `T`/`F` (re-assignable); write `TRUE`/`FALSE`.
+- Pre-allocate vectors rather than growing with `c()` or `append()` inside loops.
+- Always pass `na.rm =` explicitly to `mean`, `sum`, `var`, and `sd`.
+- Write `TRUE`/`FALSE`, never `T`/`F`.
 
-## Visualization
+## Visualization and packages
 
-- Only when creating or revising a data visual, use
-  [data-visualization](../skills/data-visualization/SKILL.md). It loads scientific
-  figure or interactive guidance only as needed. General R editing does not
-  require plotting skills.
-- Set explicit `ggsave` dimensions; use `bg = "transparent"` for figures
-  dropped into Beamer when the slide design needs transparency.
-
-## Packages
-
-- `package.skeleton` for new packages. Treat `man/` and `NAMESPACE`
-  as generated — `devtools::document()`, never hand-edit. Ship CRAN-clean
-  (`R CMD check --as-cran`: 0 errors, 0 warnings, every note justified).
-- Use ppm to install binary packages: https://packagemanager.posit.co/cran/latest
+- When creating or revising a data figure, load [figures](../skills/figures/SKILL.md). Set explicit `ggsave` dimensions and `bg = "transparent"` only when slide layouts require transparency.
+- Treat `man/` and `NAMESPACE` in R packages as generated via `devtools::document()`. Ship CRAN-clean (`R CMD check --as-cran`: 0 errors, 0 warnings). Use Posit Package Manager (`https://packagemanager.posit.co/cran/latest`) for binary packages where supported.

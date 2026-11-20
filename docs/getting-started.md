@@ -1,12 +1,6 @@
 # Getting started
 
-Waterology records research experiments as committed Git variants. Each run keeps its command,
-environment evidence, logs, metrics, outputs, and assessment together.
-
-For a map of the pieces and when to use them, read the
-[workflow guide](workflow-guide.md). The walkthrough below uses the single-command
-experiment API. For existing project tasks and reproducible deliverables, use
-[named workflows](workflow-execution.md).
+Waterology installs opinionated research skills, 3 focused subagents (`researcher`, `reviewer`, `engineer`), deterministic verifiers, and 10 bounded reference/dataset MCP and CLI tools.
 
 ## Install
 
@@ -18,70 +12,41 @@ pixi run waterology --help
 pixi run waterology doctor
 ```
 
-Install the adapters needed by the current project:
+Install the adapters needed by your project or user configuration (`--scope user`):
 
 ```console
-pixi run waterology install antigravity
+pixi run waterology install antigravity --scope user
 pixi run waterology install claude
 pixi run waterology install codex
 pixi run waterology install opencode
 pixi run waterology install pi
 ```
 
-The Pi adapter installs canonical skills and generated agents under
-`.pi/skills/` and `.pi/agents/` (project scope), or under
-`~/.pi/agent/skills/` and `~/.pi/agent/agents/` (user scope). A checkout is also
-a native Pi package and can be registered with
-`pi install /path/to/waterology-research`. Install `npm:pi-subagents` separately
-to run the namespaced `waterology.*` agents; Pi core does not load agent
-definitions itself. The package also registers the Waterology MCP server with
-Pi's built-in MCP support. Without the package, run
-`pi mcp add --local waterology -- waterology-mcp`.
-
-Use `--scope user` for user configuration. Preview changes with `--dry-run` when the command
-supports it.
-
-## Initialize a research project
-
-Run the initializer at the repository root:
+To expose `waterology`, `wgy`, and `waterology-mcp` globally on `PATH` and refresh Claude/Codex plugins:
 
 ```console
-waterology init
+pixi run reinstall-plugins
 ```
 
-Initialization creates a small project configuration without copying native tasks. Register the
-tasks Waterology should execute, or run `waterology config refresh --check` to inspect available
-discoveries. See the [named workflow guide](workflow-execution.md).
-For the legacy single-command interface below, set `command`, `environment_files`,
-and `outputs` in the generated `waterology.toml`.
-See [Configuration](configuration.md) for every field.
+## Configure research API keys
 
-Commit the configuration before creating an experiment:
+Create optional private user settings (`~/.config/waterology/config.toml`) pointing at your `0600` dotenv file (default `~/.config/secrets/research.env`) so both CLI commands and stdio MCP servers receive `ZOTERO_API_KEY`, `OPENALEX_API_KEY`, `SEMANTIC_SCHOLAR_API_KEY`, `CORE_API_KEY`, and `HF_TOKEN`:
 
 ```console
-git add waterology.toml .gitignore
-git commit -m "Configure Waterology"
-waterology experiment create "Test a longer calibration window" --owner cam
+wgy config init
+wgy research-access
 ```
 
-## Run and assess an experiment
+## Track references in a paper or project repository
 
-Open the experiment worktree, make one scientific change, and commit it. Waterology will not run an
-uncommitted variant.
+Initialize `.zotero.toml` at the repository root (no `waterology.toml` needed):
 
 ```console
-waterology worktree open <experiment-id>
-waterology run start <experiment-id>
-waterology run watch <run-id>
-waterology archive verify <run-id>
+wgy zotero init "Project reference library"
+wgy discover "hydrologic drought" --provider openalex
+wgy source-decision <search-id> <source-id> include "Core method reference"
+wgy zotero sync
+wgy zotero status
 ```
 
-After reviewing the archive, record an assessment with evidence paths:
-
-```console
-waterology run assess <run-id> answer "The evidence supports the hypothesis" \
-  --author cam --evidence .waterology/runs/<run-id>/metrics.yaml
-```
-
-Use `direct` execution for the simplest setup. Use [TORC execution](torc.md) when a run needs managed
-local processes, remote workstations, or Slurm.
+Outside `.zotero.toml` repositories, `wgy discover` and `wgy hf-*` run cleanly without writing local `.waterology/` state (`recorded: false`).

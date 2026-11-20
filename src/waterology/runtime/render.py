@@ -33,6 +33,9 @@ CLAUDE_TOOLS = {
         "mcp__kagi__kagi_extract",
         "mcp__waterology__research_access",
         "mcp__waterology__literature_search",
+        "mcp__waterology__literature_decision",
+        "mcp__waterology__literature_source_add",
+        "mcp__waterology__zotero_capture",
         "mcp__waterology__hf_dataset_info",
         "mcp__waterology__hf_repo_files",
         "mcp__waterology__hf_repo_read_file",
@@ -284,12 +287,16 @@ def _expected_commands(catalog: AssetCatalog, output_root: Path) -> dict[Path, s
     }
 
 
+def _agent_roots(output_root: Path) -> tuple[Path, ...]:
+    return tuple(output_root / directory for directory, _, _ in DESTINATIONS.values())
+
+
 def render_agents(
     catalog: AssetCatalog,
     output_root: Path,
     check: bool = False,
 ) -> tuple[Path, ...]:
-    return _render_expected(_expected_agents(catalog, output_root), check)
+    return _render_expected(_expected_agents(catalog, output_root), check, frozenset(), _agent_roots(output_root))
 
 
 def render_commands(
@@ -297,7 +304,12 @@ def render_commands(
     output_root: Path,
     check: bool = False,
 ) -> tuple[Path, ...]:
-    return _render_expected(_expected_commands(catalog, output_root), check)
+    return _render_expected(
+        _expected_commands(catalog, output_root),
+        check,
+        frozenset(),
+        (output_root / "commands",),
+    )
 
 
 def _expected_pi(
@@ -347,4 +359,9 @@ def render_assets(
         **_expected_commands(catalog, output_root),
         **pi_expected,
     }
-    return _render_expected(expected, check, executable, _pi_roots(output_root))
+    owned = (
+        *_agent_roots(output_root),
+        output_root / "commands",
+        *_pi_roots(output_root),
+    )
+    return _render_expected(expected, check, executable, owned)

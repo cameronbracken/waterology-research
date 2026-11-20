@@ -1,8 +1,8 @@
 ---
-description: 'Alias for the `waterology-research-review` skill: Run a tough but constructive
-  internal critique of a research artifact: paper, draft, analysis, or simulation
-  study.'
-argument-hint: <artifact>
+description: 'Alias for the `waterology-research-review` skill: Run a rigorous, constructive
+  critique of a paper, draft, report, analysis, or simulation study, or reshape a
+  manuscript''s scientific narrative and figure arc before submission.'
+argument-hint: <manuscript, report, or analysis path>
 ---
 
 <!-- Generated from skills/research-review/SKILL.md. Do not edit. -->

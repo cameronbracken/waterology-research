@@ -15,7 +15,7 @@ The check rejects these predictable collision risks in rendered HTML:
 
 Place the figure title and caption in the document. Put interactive legends
 below or to the right of the plotting domain, reserve their margin, and enable
-axis automargins. The `figure-style` skill includes a reusable R helper and a
+axis automargins. The `figures` skill includes a reusable R helper and a
 standalone checker for this layout contract.
 
 For `.Rmd` and `.qmd` sources, the scanner detects Plotly references in executable

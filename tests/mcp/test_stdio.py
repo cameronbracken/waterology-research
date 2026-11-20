@@ -14,6 +14,7 @@ def test_stdio_entry_point_completes_protocol_handshake(tmp_path: Path) -> None:
         )
         async with Client(parameters) as client:
             tools = await client.list_tools()
-        assert any(tool.name == "project_status" for tool in tools.tools)
+        assert any(tool.name == "research_access" for tool in tools.tools)
+        assert len(tools.tools) == 10
 
     asyncio.run(exercise())

@@ -16,90 +16,57 @@ ROOT = Path(__file__).resolve().parents[2]
 runner = CliRunner()
 
 
-def test_wheel_contains_cross_runtime_assets(tmp_path: Path) -> None:
+def test_wheel_contains_cross_runtime_assets_without_retired_subsystems(tmp_path: Path) -> None:
     wheel = Path(ProjectBuilder(ROOT).build("wheel", tmp_path))
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
 
     required = {
-        "waterology/core/migrations/001_initial.sql",
-        "waterology/core/migrations/002_torc_execution.sql",
-        "waterology/core/migrations/003_agent_sessions.sql",
-        "waterology/dashboard/app.py",
-        "waterology/dashboard/server.py",
-        "waterology/dashboard/static/dashboard.css",
-        "waterology/dashboard/static/dashboard.js",
-        "waterology/dashboard/templates/dashboard.html",
         "waterology/mcp/server.py",
+        "waterology/core/literature.py",
+        "waterology/core/literature_providers.py",
+        "waterology/core/zotero.py",
+        "waterology/core/huggingface.py",
         "waterology_assets/.mcp.json",
         "waterology_assets/opencode.json",
         "waterology_assets/package.json",
         "waterology_assets/skills/project-conventions/SKILL.md",
-        "waterology_assets/skills/project-conventions/references/local-preferences.md",
+        "waterology_assets/skills/project-conventions/scripts/myst_to_quarto.py",
         "waterology_assets/skills/writing-style/SKILL.md",
-        "waterology_assets/skills/writing-style/references/scientific-prose.md",
         "waterology_assets/skills/research-software-quality/SKILL.md",
-        "waterology_assets/skills/research-software-quality/references/worktrees.md",
-        "waterology_assets/skills/research-software-quality/references/worktree-cases.yaml",
-        "waterology_assets/skills/agent-delegation/SKILL.md",
-        "waterology_assets/skills/autoresearch/references/experiment-tree.md",
+        "waterology_assets/skills/figures/SKILL.md",
+        "waterology_assets/skills/figures/scripts/check_plotly_layout.py",
+        "waterology_assets/skills/diagrams/SKILL.md",
+        "waterology_assets/skills/diagrams/scripts/check_tikz_svg.py",
+        "waterology_assets/skills/reports/SKILL.md",
+        "waterology_assets/skills/reports/scripts/verify_report_bundle.py",
         "waterology_assets/skills/audit-reproducibility/SKILL.md",
-        "waterology_assets/skills/audit-reproducibility/references/passport-schema.md",
+        "waterology_assets/skills/audit-reproducibility/templates/run-all.sh",
         "waterology_assets/skills/bib-validate/scripts/validate_bib.py",
-        "waterology_assets/skills/capture-environment/SKILL.md",
         "waterology_assets/skills/compile-latex/SKILL.md",
         "waterology_assets/skills/compile-latex/scripts/overfull_boxes.py",
-        "waterology_assets/skills/compile-latex/templates/latexmkrc",
-        "waterology_assets/skills/deep-research/references/workflow.md",
-        "waterology_assets/skills/myst-to-quarto/scripts/myst_to_quarto.py",
-        "waterology_assets/skills/pipeline-manifest/SKILL.md",
-        "waterology_assets/skills/pipeline-manifest/templates/run-all.sh",
+        "waterology_assets/skills/literature-review/SKILL.md",
         "waterology_assets/skills/simulation-study/SKILL.md",
-        "waterology_assets/skills/simulation-study/references/simulation-conventions.md",
-        "waterology_assets/skills/source-summarization/SKILL.md",
-        "waterology_assets/skills/source-summarization/references/workflow.md",
-        "waterology_assets/commands/deepresearch.md",
+        "waterology_assets/commands/lit.md",
         "waterology_assets/commands/simulation-study.md",
-        "waterology_assets/commands/summarize.md",
-        "waterology_assets/agents/simulation-code-reviewer.md",
-        "waterology_assets/agent-definitions/research-coordinator.md",
-        "waterology_assets/.agent/agents/research-coordinator.md",
-        "waterology_assets/agents/research-coordinator.md",
-        "waterology_assets/.codex/agents/research-coordinator.toml",
-        "waterology_assets/.opencode/agents/research-coordinator.md",
-        "waterology_assets/pi-agents/research-coordinator.md",
+        "waterology_assets/agent-definitions/engineer.md",
+        "waterology_assets/agent-definitions/researcher.md",
+        "waterology_assets/agent-definitions/reviewer.md",
         "waterology_assets/.agent/agents/researcher.md",
+        "waterology_assets/.agent/agents/reviewer.md",
         "waterology_assets/agents/researcher.md",
-        "waterology_assets/agent-definitions/replication-coordinator.md",
-        "waterology_assets/.agent/agents/replication-coordinator.md",
-        "waterology_assets/agents/replication-coordinator.md",
-        "waterology_assets/.codex/agents/replication-coordinator.toml",
-        "waterology_assets/.opencode/agents/replication-coordinator.md",
-        "waterology_assets/pi-agents/replication-coordinator.md",
-        "waterology_assets/agents/reproducibility-auditor.md",
-        "waterology_assets/agent-definitions/simulation-coordinator.md",
-        "waterology_assets/.agent/agents/simulation-coordinator.md",
-        "waterology_assets/agents/simulation-coordinator.md",
-        "waterology_assets/.codex/agents/simulation-coordinator.toml",
-        "waterology_assets/.opencode/agents/simulation-coordinator.md",
-        "waterology_assets/pi-agents/simulation-coordinator.md",
-        "waterology_assets/agents/simulation-reviewer.md",
         "waterology_assets/.codex/agents/researcher.toml",
-        "waterology_assets/.codex/config.toml",
         "waterology_assets/.opencode/agents/researcher.md",
         "waterology_assets/pi-agents/researcher.md",
-        "waterology_assets/templates/passport.yaml",
-        "waterology_assets/templates/run-all.sh",
-        "waterology_assets/templates/latexmkrc",
-        "waterology_assets/constraints/conservation-tol.py",
-        "waterology_assets/constraints/mc-has-mcse.py",
-        "waterology_assets/constraints/no-hardcoded-results.py",
-        "waterology_assets/constraints/overfull-boxes.py",
+        "waterology_assets/constraints/check-all.py",
         "waterology_assets/.claude-plugin/plugin.json",
         "waterology_assets/.codex-plugin/plugin.json",
         "waterology_assets/ATTRIBUTION.md",
     }
     assert required <= names
+    assert not any(name.startswith("waterology/dashboard/") for name in names)
+    assert not any(name.startswith("waterology/torc/") for name in names)
+    assert not any(name.startswith("waterology/agents/") for name in names)
 
 
 def _assert_manifest_covers_installed_destinations(manifest_path: Path) -> None:
@@ -153,19 +120,9 @@ def test_project_install_smoke(
         assert yaml.safe_load(installed_agent.read_text(encoding="utf-8").split("---", 2)[1])
 
     skills_root = (tmp_path / skill_path).parent
-    resources = (
-        "simulation-study/references/simulation-conventions.md",
-        "pipeline-manifest/templates/run-all.sh",
-        "compile-latex/templates/latexmkrc",
-        "compile-latex/scripts/overfull_boxes.py",
-        "bib-validate/scripts/validate_bib.py",
-        "myst-to-quarto/scripts/myst_to_quarto.py",
-    )
-    for relative in resources:
-        assert (skills_root / relative).is_file()
     for relative in (
         "bib-validate/scripts/validate_bib.py",
-        "myst-to-quarto/scripts/myst_to_quarto.py",
+        "project-conventions/scripts/myst_to_quarto.py",
     ):
         completed = subprocess.run(
             [sys.executable, str(skills_root / relative), "--help"],
@@ -192,7 +149,7 @@ def test_project_install_smoke(
         _assert_manifest_covers_installed_destinations(manifest)
 
     if runtime == "claude":
-        assert (tmp_path / ".claude/commands/deepresearch.md").is_file()
+        assert (tmp_path / ".claude/commands/lit.md").is_file()
 
 
 def test_pi_project_install_smoke(tmp_path: Path) -> None:
@@ -200,7 +157,7 @@ def test_pi_project_install_smoke(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.stdout
     assert (tmp_path / ".pi/skills/waterology-project-conventions/SKILL.md").is_file()
-    assert (tmp_path / ".pi/prompts/waterology-deepresearch.md").is_file()
+    assert (tmp_path / ".pi/prompts/waterology-lit.md").is_file()
     agent = tmp_path / ".pi/agents/researcher.md"
     assert agent.is_file()
     metadata = yaml.safe_load(agent.read_text(encoding="utf-8").split("---", 2)[1])

@@ -2,12 +2,13 @@
 
 ## Purpose
 
-Waterology is a research workflow package for Antigravity, Claude Code, Codex, OpenCode, and Pi.
+Waterology is a lightweight research workflow, deliverable, and reference package for Antigravity, Claude Code, Codex, OpenCode, and Pi.
 
 ## Source layout
 
 Root `skills/` and `agent-definitions/` are canonical. Runtime agent files in
-`.agent/agents/`, `agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/` are generated.
+`.agent/agents/`, `agents/`, `.codex/agents/`, `.opencode/agents/`, and `pi-agents/`
+(along with `commands/`, `pi-skills/`, and `pi-prompts/`) are generated.
 Do not edit generated runtime files.
 
 ## Development
@@ -35,38 +36,39 @@ Match completion claims to fresh evidence.
 
 ## File formats
 
-Follow the format table in `skills/project-conventions/SKILL.md`. Authored
-contracts and definitions are YAML, loaded through `waterology.core.formats` so
-scalars stay strings until schema validation. Records Waterology writes, such as
-run archives and state ledgers, are typed YAML through `write_record` and
-`read_record` in `waterology.core.atomic`. Settings are TOML. Use `write_json`
-only for files another tool or specification fixes, such as RO-Crate metadata.
+Follow the format table in `skills/project-conventions/SKILL.md`. Hand-edited
+settings (such as `.zotero.toml` and `~/.config/waterology/config.toml`) are TOML.
+Structured records Waterology writes (under `.waterology/literature/` and
+`.waterology/references/`) are YAML through `waterology.core.atomic` and
+`waterology.core.formats`. Use JSON only where another tool or specification
+requires it.
 
 ## Skill edits
 
 Use `writing-style` for prose. Treat skill and agent instruction edits as
 behavior changes. Make them on a named branch, and use a worktree when another
-session may edit this checkout. Validate each changed skill.
+session may edit this checkout. Validate each changed skill with `pixi run waterology validate`.
 
 ## Reproducibility mode
 
-`reproducibility` in `waterology.toml` selects `light` (the default) or
-`strict`. `skills/project-conventions/SKILL.md` defines both modes. Other skills
-and agents point to that definition rather than restating it.
+`skills/project-conventions/SKILL.md` defines `light` (the default) and `strict`
+modes. Other skills and agents point to that definition rather than restating it.
 
 ## Attribution
 
-For adapted work, update the file header and `ATTRIBUTION.md`.
+For adapted work, update the agent header (for canonical agents) and `ATTRIBUTION.md`.
+Skills and rules keep upstream attribution in `ATTRIBUTION.md` rather than inline comments.
 
 ## Git
 
 Sign commits with the personal identity on personal machine. Do not add coauthor trailers. Do not
 push without permission.
 
-Create descriptive branchnames eg. `feature/my-feature`, `bug/my-bug`, NOT `codex/my-feature`.
+Create descriptive branchnames eg. `feature/my-feature`, `fix/my-bug`, NOT `codex/my-feature`.
 
 ## Scope
 
-Experiment storage, TORC, agent sessions, MCP, and the dashboard are implemented.
-Extend their shared service and durable record layers. See docs/managed-studies.md
-for bounded autonomous execution and its validation boundaries.
+Keep Waterology focused on conventions, deliverable templates, deterministic verifiers,
+and bounded scholarly/Zotero/Hugging Face reference tools (`waterology.core` and
+`waterology.mcp`). Avoid adding heavy state databases, process supervisors, or
+shell round-trips to routine skill execution.

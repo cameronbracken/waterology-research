@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from waterology.cli import app
 from waterology.core import literature
 from waterology.core.atomic import read_record
-from waterology.core.project import ProjectInitializationError, initialize_project
+from waterology.core.zotero import configure_zotero
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def project(tmp_path):
     root = tmp_path / "initialized"
     root.mkdir()
     subprocess.run(["git", "init", "-q", str(root)], check=True)
-    initialize_project(root)
+    configure_zotero(root, {"library_id": "123", "collection_name": "Fixture"})
     return root
 
 
@@ -70,10 +70,10 @@ def test_uninitialized_directory_search_succeeds_without_persisting_state(tmp_pa
     assert len(result["sources"]) == 1
     assert not (plain / ".waterology").exists()
 
-    # Repo with committed waterology.toml but no local .waterology directory also works unrecorded.
+    # Git repo without .zotero.toml also works unrecorded without creating .waterology.
     cloned = tmp_path / "cloned_repo"
     cloned.mkdir()
-    (cloned / "waterology.toml").write_text('name = "cloned"\n', encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(cloned)], check=True)
     cloned_result = literature.search_literature(
         cloned,
         "hydropower",
@@ -83,16 +83,16 @@ def test_uninitialized_directory_search_succeeds_without_persisting_state(tmp_pa
     assert cloned_result["recorded"] is False
     assert not (cloned / ".waterology").exists()
 
-    # Symlinked .waterology state directory must still fail validation rather than fall back.
-    outside = tmp_path / "outside"
-    outside.mkdir()
-    (cloned / ".waterology").symlink_to(outside)
-    with pytest.raises(ProjectInitializationError):
+    # Symlinked .zotero.toml must fail validation rather than fall back.
+    outside = tmp_path / "outside.toml"
+    outside.write_text('library_id = "1"\ncollection_name = "X"\ncollection_key = "ABCDEFGH"\n')
+    (cloned / ".zotero.toml").symlink_to(outside)
+    with pytest.raises(ValueError, match="symlink"):
         literature.search_literature(
             cloned, "hydropower", fetcher=lambda *a, **kw: {"results": []}
         )
 
-    # Initialized project records state and keeps saved == result parity.
+    # Workspace with .zotero.toml records state and keeps saved == result parity.
     recorded = literature.search_literature(
         project,
         "hydropower",

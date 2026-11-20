@@ -1,6 +1,5 @@
 """Human-readable YAML and TOML, with explicit typed validation at service boundaries."""
 
-import hashlib
 import json
 import tomllib
 from pathlib import Path
@@ -13,16 +12,6 @@ from waterology.core.atomic import write_text
 YAML_SUFFIXES = {".yaml", ".yml"}
 
 
-def _legacy_nestedtext(path: Path):
-    # Read-only support so existing projects can migrate. Remove with the dependency.
-    import nestedtext as nt
-
-    try:
-        return nt.loads(path.read_text(encoding="utf-8"), top="dict")
-    except nt.NestedTextError as error:
-        raise ValueError(f"Invalid NestedText document: {path.name}") from error
-
-
 def load_document(path: Path) -> dict:
     if path.suffix in YAML_SUFFIXES:
         try:
@@ -33,15 +22,12 @@ def load_document(path: Path) -> dict:
             raise ValueError(f"Invalid YAML document: {path.name}") from error
     elif path.suffix == ".toml":
         value = tomllib.loads(path.read_text(encoding="utf-8"))
-    elif path.suffix == ".nt":
-        value = _legacy_nestedtext(path)
     elif path.suffix == ".json":
         value = json.loads(path.read_text(encoding="utf-8"))
     else:
         raise ValueError("Use a .yaml or .toml document")
     if not isinstance(value, dict):
         raise TypeError("Document must contain a mapping")
-    # A schema version is typed metadata, never a domain identifier.
     if value.get("schema_version") == "1":
         value["schema_version"] = 1
     return value
@@ -71,19 +57,3 @@ def write_document(path: Path, value: dict) -> None:
         write_text(path, readable(value))
     else:
         raise ValueError("Write a .yaml or .toml document")
-
-
-def migrate_nestedtext(directory: Path) -> dict[str, str]:
-    """Convert legacy .nt state records in place. Returns old to new SHA-256 by file stem."""
-    hashes = {}
-    for legacy in sorted(directory.glob("*.nt")):
-        if legacy.is_symlink():
-            raise ValueError("State record must not be a symlink")
-        target = legacy.with_suffix(".yaml")
-        if not target.exists():
-            write_document(target, load_document(legacy))
-        hashes[hashlib.sha256(legacy.read_bytes()).hexdigest()] = hashlib.sha256(
-            target.read_bytes()
-        ).hexdigest()
-        legacy.unlink()
-    return hashes

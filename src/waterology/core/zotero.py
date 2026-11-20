@@ -14,13 +14,19 @@ from urllib.parse import parse_qsl, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import uuid4
 
-import tomlkit
 from pydantic import BaseModel, ConfigDict, Field
 
-from waterology.core.atomic import exclusive_file_lock, write_text
-from waterology.core.config import _portable_project_path
-from waterology.core.formats import load_document, migrate_nestedtext, write_document
-from waterology.core.project import discover_project
+from waterology.core.atomic import exclusive_file_lock
+from waterology.core.formats import load_document, write_document
+from waterology.core.workspace import (
+    STATE_DIR_NAME,
+    ZOTERO_SETTINGS_NAME,
+    ensure_gitignore_state,
+    find_zotero_root,
+    portable_project_path,
+    resolve_workspace_root,
+    state_directory,
+)
 
 
 class ZoteroSettings(BaseModel):
@@ -34,17 +40,9 @@ class ZoteroSettings(BaseModel):
     download_pdfs: bool = True
 
 
-_SETTINGS_NAME = ".zotero.toml"
-_LEGACY_SETTINGS_NAMES = (".zotero.nt", "zotero.nt")
-
-
 def _directory(start: Path) -> Path:
-    path = discover_project(start).paths.state / "references"
-    if path.is_symlink():
-        raise ValueError("Reference state must not be a symlink")
-    path.mkdir(exist_ok=True)
-    migrate_nestedtext(path)
-    return path
+    root = resolve_workspace_root(start)
+    return state_directory(root, "references")
 
 
 def _key(seed: str) -> str:
@@ -57,42 +55,32 @@ def configure_zotero(start: Path, settings: dict) -> dict:
     settings = {**settings}
     settings.setdefault("collection_key", _key(uuid4().hex))
     config = ZoteroSettings.model_validate(settings)
-    root = discover_project(start).root
-    path = root / _SETTINGS_NAME
-    with exclusive_file_lock(_directory(start) / "sync.lock"):
-        if any(
-            (root / name).exists() or (root / name).is_symlink()
-            for name in (_SETTINGS_NAME, *_LEGACY_SETTINGS_NAMES)
-        ):
+    root = resolve_workspace_root(start)
+    path = root / ZOTERO_SETTINGS_NAME
+    with exclusive_file_lock(_directory(root) / "sync.lock"):
+        if path.exists() or path.is_symlink():
             raise ValueError(
                 "Zotero settings exist; edit them deliberately to change library settings"
             )
         write_document(path, config.model_dump())
+        ensure_gitignore_state(root)
     return config.model_dump()
 
 
 def settings_for(start: Path) -> ZoteroSettings | None:
-    project = discover_project(start)
-    root = project.root
-    configured = project.config.zotero
-    if configured:
-        path = root / configured.settings_file
-        if path.is_symlink():
+    root = find_zotero_root(start)
+    if root is None:
+        candidate = resolve_workspace_root(start) / ZOTERO_SETTINGS_NAME
+        if candidate.is_symlink():
             raise ValueError("Zotero settings must not be a symlink")
-        if not path.is_file():
-            raise ValueError("Configured Zotero settings file is missing")
-        return ZoteroSettings.model_validate(load_document(path))
-    path = next(
-        (
-            root / name
-            for name in (_SETTINGS_NAME, *_LEGACY_SETTINGS_NAMES)
-            if (root / name).exists() or (root / name).is_symlink()
-        ),
-        root / _SETTINGS_NAME,
-    )
+        if not candidate.exists():
+            return None
+        path = candidate
+    else:
+        path = root / ZOTERO_SETTINGS_NAME
     if path.is_symlink():
         raise ValueError("Zotero settings must not be a symlink")
-    return ZoteroSettings.model_validate(load_document(path)) if path.exists() else None
+    return ZoteroSettings.model_validate(load_document(path))
 
 
 def _library_from_key(api_key_env: str, group_id: str | None) -> tuple[str, str]:
@@ -131,21 +119,15 @@ def _library_from_key(api_key_env: str, group_id: str | None) -> tuple[str, str]
 
 
 def _save_initialized_settings(root: Path, config: ZoteroSettings) -> None:
-    if (root / _SETTINGS_NAME).is_symlink():
+    settings_path = root / ZOTERO_SETTINGS_NAME
+    if settings_path.is_symlink():
         raise ValueError("Zotero settings must not be a symlink")
-    project_file = root / "waterology.toml"
-    if project_file.is_symlink():
-        raise ValueError("Project configuration must not be a symlink")
-    with exclusive_file_lock(root / ".waterology" / "zotero-config.lock"):
-        document = tomlkit.parse(project_file.read_text(encoding="utf-8"))
-        document["zotero"] = {"settings_file": _SETTINGS_NAME}
-        settings_path = root / _SETTINGS_NAME
-        if settings_path.exists():
-            if ZoteroSettings.model_validate(load_document(settings_path)) != config:
-                raise ValueError("Canonical Zotero settings conflict with the configured destination")
-        else:
-            write_document(settings_path, config.model_dump())
-        write_text(project_file, tomlkit.dumps(document))
+    if settings_path.exists():
+        if ZoteroSettings.model_validate(load_document(settings_path)) != config:
+            raise ValueError("Zotero settings conflict with the configured destination")
+    else:
+        write_document(settings_path, config.model_dump())
+    ensure_gitignore_state(root)
 
 
 def initialize_zotero(
@@ -155,12 +137,12 @@ def initialize_zotero(
     group_id: str | None = None,
     api_key_env: str = "ZOTERO_API_KEY",
 ) -> dict:
-    """Resolve the destination and save TOML settings without remote writes."""
+    """Resolve the destination and save standalone .zotero.toml settings without remote writes."""
     if not collection_name.strip():
         raise ValueError("Collection name must not be blank")
-    root = discover_project(start).root
-    with exclusive_file_lock(_directory(start) / "sync.lock"):
-        existing = settings_for(start)
+    root = resolve_workspace_root(start)
+    with exclusive_file_lock(_directory(root) / "sync.lock"):
+        existing = settings_for(root)
         if existing:
             if (
                 existing.collection_name != collection_name
@@ -605,10 +587,10 @@ def sync_references(
                         if hashlib.sha256(payload).hexdigest() != record["pdf_sha256"]:
                             raise ValueError("Pinned PDF bytes changed")
                     elif source.get("pdf_path"):
-                        root = discover_project(start).root
-                        local = root / _portable_project_path(source["pdf_path"])
+                        root = resolve_workspace_root(start)
+                        local = root / portable_project_path(source["pdf_path"])
                         if local.is_symlink() or not local.resolve().is_relative_to(root):
-                            raise ValueError("Local PDF must stay within the project")
+                            raise ValueError("Local PDF must stay within the workspace")
                         with local.open("rb") as stream:
                             payload = stream.read(30_000_001)
                     elif source.get("pdf_url"):
@@ -649,8 +631,14 @@ def sync_references(
 
 
 def reference_status(start: Path) -> list[dict]:
+    root = resolve_workspace_root(start)
+    directory = root / STATE_DIR_NAME / "references"
+    if directory.is_symlink():
+        raise ValueError("Reference state must not be a symlink")
+    if not directory.is_dir():
+        return []
     results = []
-    for path in sorted(_directory(start).glob("ref-*.yaml")):
+    for path in sorted(directory.glob("ref-*.yaml")):
         if path.is_symlink():
             raise ValueError("Reference record must not be a symlink")
         results.append(load_document(path))

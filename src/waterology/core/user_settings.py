@@ -1,6 +1,17 @@
 """Optional personal settings, kept outside distributable runtime assets."""
 
+import os
+import tomllib
+from collections.abc import Mapping
+from pathlib import Path
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from waterology.core.errors import WaterologyError
+
+
+class UserConfigError(WaterologyError):
+    code = "user_config_invalid"
 
 
 class IdentitySettings(BaseModel):
@@ -27,22 +38,11 @@ class WritingSettings(GuidanceSettings):
     papers: tuple[str, ...] = ()
 
 
-class DashboardSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-    profile: str = ""
-    host: str = "127.0.0.1"
-    llm_provider: str = ""
-    openai_base_url: str = ""
-    openai_model: str = ""
-    api_key_env: str = ""
-    torc_password_keychain_service: str = ""
-
-
 class CredentialSettings(BaseModel):
     """Dotenv file that fills missing research API keys. An empty path disables it."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    # This is a user-level location resolved against each user's home directory.
+    # User-level location resolved against each user's home directory.
     file: str = "~/.config/secrets/research.env"  # waterology: allow-abs-path
 
     @field_validator("file")
@@ -54,12 +54,11 @@ class CredentialSettings(BaseModel):
 
 
 class UserSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="ignore", frozen=True)
     identity: IdentitySettings = Field(default_factory=IdentitySettings)
     preferences: GuidanceSettings = Field(default_factory=GuidanceSettings)
     writing: WritingSettings = Field(default_factory=WritingSettings)
     guidance: dict[str, tuple[str, ...]] = Field(default_factory=dict)
-    dashboard: DashboardSettings = Field(default_factory=DashboardSettings)
     credentials: CredentialSettings = Field(default_factory=CredentialSettings)
 
     @field_validator("guidance")
@@ -68,3 +67,25 @@ class UserSettings(BaseModel):
         for paths in values.values():
             GuidanceSettings(files=paths)
         return values
+
+
+def user_config_path(environment: Mapping[str, str] | None = None) -> Path:
+    values = os.environ if environment is None else environment
+    if explicit := values.get("WATEROLOGY_CONFIG"):
+        return Path(explicit).expanduser()
+    if xdg := values.get("XDG_CONFIG_HOME"):
+        return Path(xdg).expanduser() / "waterology" / "config.toml"
+    return Path.home() / ".config" / "waterology" / "config.toml"
+
+
+def load_user_config(path: Path | None = None) -> UserSettings:
+    source = path or user_config_path()
+    if not source.exists():
+        return UserSettings()
+    if source.is_symlink() or not source.is_file():
+        raise UserConfigError(f"User configuration must be a regular file: {source}")
+    try:
+        with source.open("rb") as stream:
+            return UserSettings.model_validate(tomllib.load(stream))
+    except (OSError, tomllib.TOMLDecodeError, ValueError) as error:
+        raise UserConfigError(f"Invalid user configuration: {source}") from error

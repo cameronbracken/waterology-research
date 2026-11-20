@@ -83,6 +83,8 @@ def test_claude_renderer_maps_capabilities(tmp_path: Path) -> None:
         "Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, "
         "mcp__kagi__kagi_search_fetch, mcp__kagi__kagi_extract, "
         "mcp__waterology__research_access, mcp__waterology__literature_search, "
+        "mcp__waterology__literature_decision, mcp__waterology__literature_source_add, "
+        "mcp__waterology__zotero_capture, "
         "mcp__waterology__hf_dataset_info, mcp__waterology__hf_repo_files, "
         "mcp__waterology__hf_repo_read_file"
     )

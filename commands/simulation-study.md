@@ -1,7 +1,7 @@
 ---
-description: 'Alias for the `simulation-study` skill: Design, scaffold, run, and review
-  a Monte Carlo study using the project''s language and toolchain.'
-argument-hint: <estimators and data generating process>
+description: 'Alias for the `simulation-study` skill: Design, implement, run, and
+  evaluate a Monte Carlo simulation study using the project''s language and toolchain.'
+argument-hint: <estimators and data-generating process>
 ---
 
 <!-- Generated from skills/simulation-study/SKILL.md. Do not edit. -->

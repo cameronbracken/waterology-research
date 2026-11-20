@@ -28,13 +28,11 @@ from waterology.core.literature_providers import (
     parse_arxiv_ids,
     validate_rxiv_query,
 )
-from waterology.core.project import (
-    Project,
-    ProjectInitializationError,
-    ProjectNotFoundError,
-    discover_project,
-    project_paths,
-    project_state_lock,
+from waterology.core.workspace import (
+    find_recorded_literature_root,
+    resolve_workspace_root,
+    state_directory,
+    workspace_state_lock,
 )
 
 
@@ -324,32 +322,8 @@ PROVIDERS = (
 )
 
 
-def _optional_project(start: Path) -> Project | None:
-    try:
-        return discover_project(start)
-    except ProjectNotFoundError:
-        return None
-    except ProjectInitializationError:
-        current = start.resolve()
-        if current.is_file():
-            current = current.parent
-        for candidate in (current, *current.parents):
-            paths = project_paths(candidate)
-            if paths.config_file.is_symlink():
-                break
-            if paths.config_file.is_file():
-                if not paths.state.exists() and not paths.state.is_symlink():
-                    return None
-                break
-        raise
-
-
-def _directory(start: Path) -> Path:
-    path = discover_project(start).paths.state / "literature"
-    if path.is_symlink():
-        raise ValueError("Literature directory must not be a symlink")
-    path.mkdir(exist_ok=True)
-    return path
+def _directory(root: Path) -> Path:
+    return state_directory(root, "literature")
 
 
 def normalize_sources(results: list[dict]) -> list[dict]:
@@ -432,7 +406,7 @@ def search_literature(
         parse_arxiv_ids(query, limit)
     elif provider in {"biorxiv", "medrxiv"}:
         validate_rxiv_query(provider, query, after=after, before=before)
-    project = _optional_project(start)
+    recorded_root = find_recorded_literature_root(start)
     record = {
         "schema_version": 1,
         "id": f"search-{uuid4().hex[:16]}",
@@ -442,7 +416,7 @@ def search_literature(
         "before": before,
         "limit": limit,
         "retrieved_at": datetime.now(UTC).isoformat(),
-        "recorded": project is not None,
+        "recorded": recorded_root is not None,
         "status": "complete",
         "sources": [],
         "error": None,
@@ -473,21 +447,23 @@ def search_literature(
     except (OSError, HTTPException, ValueError, TypeError, AttributeError) as error:
         # HTTP exceptions can contain URLs with API keys. Never persist their message.
         record.update(status="unverified", error=type(error).__name__)
-    if project is None:
+    if recorded_root is None:
         return record
-    with project_state_lock(start):
-        write_record(_directory(start) / f"{record['id']}.yaml", record)
+    with workspace_state_lock(recorded_root):
+        write_record(_directory(recorded_root) / f"{record['id']}.yaml", record)
     from waterology.core.zotero import queue_reference, settings_for, sync_references
 
     try:
-        settings = settings_for(start)
+        settings = settings_for(recorded_root)
         if settings and settings.capture == "discovered":
             queued = []
             record["capture_errors"] = []
             for source in record["sources"]:
                 try:
                     queued.append(
-                        queue_reference(start, source, reason=record["id"], sync=False)["id"]
+                        queue_reference(recorded_root, source, reason=record["id"], sync=False)[
+                            "id"
+                        ]
                     )
                 except (OSError, ValueError, TypeError, KeyError) as error:
                     record["capture_errors"].append(
@@ -495,7 +471,7 @@ def search_literature(
                     )
             if queued:
                 record["zotero"] = sync_references(
-                    start, identifiers=queued, limit=min(len(queued), 100)
+                    recorded_root, identifiers=queued, limit=min(len(queued), 100)
                 )
     except (OSError, ValueError, TypeError, KeyError) as error:
         record["zotero"] = {"status": "blocked", "error": type(error).__name__}
@@ -513,10 +489,13 @@ def record_source_decision(
         or any(c not in "0123456789abcdef" for c in search_id[7:])
     ):
         raise ValueError("Invalid search identifier")
-    with project_state_lock(start):
-        path = _directory(start) / f"{search_id}.yaml"
+    root = resolve_workspace_root(start)
+    with workspace_state_lock(root):
+        path = _directory(root) / f"{search_id}.yaml"
         if path.is_symlink():
             raise ValueError("Search record must not be a symlink")
+        if not path.exists():
+            raise ValueError(f"Search record not found: {search_id}")
         search = read_record(path)
         if not any(source_id in (s["id"], s["doi"]) for s in search["sources"]):
             raise ValueError("Source was not in this retrieval")
@@ -528,13 +507,13 @@ def record_source_decision(
             "note": note,
             "recorded_at": datetime.now(UTC).isoformat(),
         }
-        write_record(_directory(start) / f"{record['id']}.yaml", record)
+        write_record(_directory(root) / f"{record['id']}.yaml", record)
     if decision == "include":
         from waterology.core.zotero import queue_reference
 
         source = next(s for s in search["sources"] if source_id in (s["id"], s["doi"]))
         try:
-            record["reference"] = queue_reference(start, source, reason=f"{search_id}: {note}")
+            record["reference"] = queue_reference(root, source, reason=f"{search_id}: {note}")
         except (OSError, ValueError, TypeError, KeyError) as error:
             record["zotero"] = {"status": "blocked", "error": type(error).__name__}
     return record
@@ -543,6 +522,7 @@ def record_source_decision(
 def register_local_source(start: Path, *, title: str, locator: str, note: str) -> dict:
     if not title.strip() or not locator.strip():
         raise ValueError("Supply a title and durable locator")
+    root = resolve_workspace_root(start)
     record = {
         "id": f"source-{uuid4().hex[:16]}",
         "provider": "local",
@@ -552,12 +532,12 @@ def register_local_source(start: Path, *, title: str, locator: str, note: str) -
         "full_text_read": False,
         "recorded_at": datetime.now(UTC).isoformat(),
     }
-    with project_state_lock(start):
-        write_record(_directory(start) / f"{record['id']}.yaml", record)
+    with workspace_state_lock(root):
+        write_record(_directory(root) / f"{record['id']}.yaml", record)
     from waterology.core.zotero import queue_reference
 
     try:
-        record["reference"] = queue_reference(start, record, reason=note or "Source consulted")
+        record["reference"] = queue_reference(root, record, reason=note or "Source consulted")
     except (OSError, ValueError, TypeError, KeyError) as error:
         record["zotero"] = {"status": "blocked", "error": type(error).__name__}
     return record

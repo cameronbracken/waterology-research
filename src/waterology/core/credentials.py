@@ -15,6 +15,7 @@ PROVIDER_VARIABLES = {
     "openalex": "OPENALEX_API_KEY",
     "semantic-scholar": "SEMANTIC_SCHOLAR_API_KEY",
     "core": "CORE_API_KEY",
+    "huggingface": "HF_TOKEN",
 }
 
 
@@ -40,10 +41,10 @@ def last_credential_load() -> CredentialLoad | None:
 
 
 def credentials_file_path() -> Path | None:
-    from waterology.core.profiles import load_machine_config, machine_config_path
+    from waterology.core.user_settings import load_user_config, user_config_path
 
-    config_path = machine_config_path()
-    value = load_machine_config(config_path).credentials.file
+    config_path = user_config_path()
+    value = load_user_config(config_path).credentials.file
     if not value:
         return None
     path = Path(value).expanduser()
@@ -55,12 +56,12 @@ def load_credentials(
 ) -> CredentialLoad:
     """Set provider variables that are missing from the environment. Existing values win."""
     global _last_load
-    from waterology.core.profiles import MachineConfigError
+    from waterology.core.user_settings import UserConfigError
 
     target = os.environ if environment is None else environment
     try:
         source = path or credentials_file_path()
-    except MachineConfigError as error:
+    except UserConfigError as error:
         result = CredentialLoad(None, problem=str(error))
     else:
         result = _load(source, target)

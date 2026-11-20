@@ -1,8 +1,8 @@
 ---
-description: 'Alias for the `autoresearch` skill: Bounded autonomous research and
-  engineering loop through TORC that evaluates committed candidates against a saved
-  objective and constraints.'
-argument-hint: <idea>
+description: 'Alias for the `autoresearch` skill: Run a bounded autonomous research,
+  calibration, or software engineering/optimization loop over Git commits and a protected
+  evaluation benchmark.'
+argument-hint: <objective and target metric>
 ---
 
 <!-- Generated from skills/autoresearch/SKILL.md. Do not edit. -->

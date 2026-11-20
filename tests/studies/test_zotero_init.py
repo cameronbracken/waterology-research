@@ -8,16 +8,11 @@ from typer.testing import CliRunner
 
 from waterology.cli import app
 from waterology.core import zotero
-from waterology.core.config import load_project_config, project_config_toml
-from waterology.core.project import initialize_project
 
 
 @pytest.fixture
 def project(tmp_path):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    initialize_project(tmp_path)
-    path = tmp_path / "waterology.toml"
-    path.write_text("# Preserve this comment\n" + path.read_text())
     return tmp_path
 
 
@@ -35,7 +30,7 @@ def identity(monkeypatch, payload):
     return requests
 
 
-def test_cli_init_resolves_library_and_updates_project(project, monkeypatch):
+def test_cli_init_resolves_library_without_waterology_toml(project, monkeypatch):
     requests = identity(
         monkeypatch,
         {
@@ -45,36 +40,22 @@ def test_cli_init_resolves_library_and_updates_project(project, monkeypatch):
     )
     result = CliRunner().invoke(app, ["zotero", "init", "My collection", "--path", str(project)])
     assert result.exit_code == 0, result.output
+    assert not (project / "waterology.toml").exists()
     settings = tomllib.loads((project / ".zotero.toml").read_text())
     assert settings["library_id"] == "123"
     assert settings["collection_name"] == "My collection"
     assert len(settings["collection_key"]) == 8
+    assert ".waterology/" in (project / ".gitignore").read_text()
     assert requests[0].full_url == "https://api.zotero.org/keys/current"
     assert requests[0].get_header("Zotero-api-key") == "private-fixture-key"
     assert "private-fixture-key" not in result.output
     assert "private-fixture-key" not in (project / ".zotero.toml").read_text()
-    config = load_project_config(project / "waterology.toml")
-    assert config.zotero.settings_file == ".zotero.toml"
-    assert "# Preserve this comment" in (project / "waterology.toml").read_text()
-    assert tomllib.loads(project_config_toml(config))["zotero"] == {"settings_file": ".zotero.toml"}
     monkeypatch.delenv("ZOTERO_API_KEY")
     assert zotero.initialize_zotero(project, "My collection") == settings
     assert len(requests) == 1
     with pytest.raises(ValueError, match="different destination"):
         zotero.initialize_zotero(project, "Another collection")
     assert zotero.settings_for(project).collection_key == settings["collection_key"]
-
-
-@pytest.mark.parametrize("legacy", [".zotero.nt", "zotero.nt"])
-def test_init_migrates_legacy_without_changing_identity(project, legacy):
-    (project / legacy).write_text(
-        "library_id: 00123\ncollection_name: Legacy\ncollection_key: ABCDEFGH\n"
-    )
-    result = zotero.initialize_zotero(project, "Legacy")
-    assert result["library_id"] == "00123"
-    assert result["collection_key"] == "ABCDEFGH"
-    assert (project / legacy).exists()
-    assert zotero.settings_for(project).model_dump() == result
 
 
 @pytest.mark.parametrize(
@@ -86,12 +67,10 @@ def test_init_migrates_legacy_without_changing_identity(project, legacy):
     ],
 )
 def test_rejected_identity_leaves_configuration_unchanged(project, monkeypatch, payload):
-    before = (project / "waterology.toml").read_bytes()
     identity(monkeypatch, payload)
     with pytest.raises(ValueError, match="Could not resolve"):
         zotero.initialize_zotero(project, "Fixture")
     assert not (project / ".zotero.toml").exists()
-    assert (project / "waterology.toml").read_bytes() == before
 
 
 def test_missing_key_is_actionable(project, monkeypatch):
@@ -131,17 +110,6 @@ def test_network_error_does_not_expose_key(project, monkeypatch):
     assert not (project / ".zotero.toml").exists()
 
 
-def test_settings_follow_project_pointer_and_reject_missing_file(project):
-    zotero.configure_zotero(project, {"library_id": "123", "collection_name": "Fixture"})
-    (project / ".zotero.toml").rename(project / "custom.toml")
-    path = project / "waterology.toml"
-    path.write_text(path.read_text() + '\n[zotero]\nsettings_file = "custom.toml"\n')
-    assert zotero.settings_for(project).library_id == "123"
-    (project / "custom.toml").unlink()
-    with pytest.raises(ValueError, match="missing"):
-        zotero.settings_for(project)
-
-
 def test_repeat_init_preserves_settings_comments(project, monkeypatch):
     identity(
         monkeypatch,
@@ -158,7 +126,7 @@ def test_repeat_init_preserves_settings_comments(project, monkeypatch):
     assert path.read_bytes() == before
 
 
-def test_init_rejects_symlink_settings(project, tmp_path):
+def test_init_rejects_symlink_settings(project):
     target = project / "target.toml"
     target.write_text(
         'library_id = "123"\ncollection_name = "Fixture"\ncollection_key = "ABCDEFGH"\n'
