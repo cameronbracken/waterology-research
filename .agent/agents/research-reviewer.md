@@ -5,7 +5,6 @@ description: Critique methods, reasoning, evaluation design, and conclusions in 
   or simulation study, with findings tied to evidence and practical remedies.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

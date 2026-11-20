@@ -35,14 +35,17 @@ agent already coordinating the investigation keeps ownership rather than
 recursively delegating to another coordinator. Direct execution remains valid
 for a small task or when delegation adds no value.
 
-In an initialized Waterology project, build the reference library while
-researching. Use `literature_search`/`waterology discover` for recorded searches,
-with `provider="core"` or `--provider core` for the CORE source and
-`provider="alphaxiv"` or `--provider alphaxiv` for alphaXiv.
-Mark relevant consulted sources included with `source-decision`; this queues
-them for the configured Zotero project collection. For sources found through
-other search tools, use MCP `zotero_capture` or `waterology zotero capture source.yaml`
-as soon as they are read or cited. Include DOI, title, authors, publication date,
+Use `literature_search`/`waterology discover` across scholarly providers
+(`openalex`, `semantic-scholar`, `core`, `alphaxiv`, `alphaxiv-keyword`,
+`arxiv`, `pubmed`, `europepmc`, `biorxiv`, `medrxiv`, `crossref`) and
+`hf_dataset_info`/`hf_repo_files`/`hf_repo_read_file` for Hugging Face Hub
+inspection. Outside an initialized project, discovery still runs and returns
+`recorded: false`. In an initialized Waterology project, searches are recorded
+locally and build the reference library while researching. Mark relevant
+consulted sources included with `source-decision`; this queues them for the
+configured Zotero project collection. For sources found through other search
+tools, use MCP `zotero_capture` or `waterology zotero capture source.yaml` as
+soon as they are read or cited. Include DOI, title, authors, publication date,
 stable URL and a lawful PDF URL or existing project-relative PDF path when known.
 Metadata-only inspection is not full-text reading.
 

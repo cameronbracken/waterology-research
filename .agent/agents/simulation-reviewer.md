@@ -5,7 +5,6 @@ description: Review the statistical design and evidence of Monte Carlo studies a
   Monte Carlo uncertainty, failures, and claims within the inspected scope.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

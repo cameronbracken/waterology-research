@@ -60,7 +60,6 @@ def test_antigravity_renderer_maps_capabilities(tmp_path: Path) -> None:
         "description": "Gather primary evidence.",
         "tools": [
             "read_file",
-            "view_file",
             "grep_search",
             "find_by_name",
             "list_dir",
@@ -82,7 +81,10 @@ def test_claude_renderer_maps_capabilities(tmp_path: Path) -> None:
     assert metadata["name"] == "researcher"
     assert metadata["tools"] == (
         "Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, "
-        "mcp__kagi__kagi_search_fetch, mcp__kagi__kagi_extract"
+        "mcp__kagi__kagi_search_fetch, mcp__kagi__kagi_extract, "
+        "mcp__waterology__research_access, mcp__waterology__literature_search, "
+        "mcp__waterology__hf_dataset_info, mcp__waterology__hf_repo_files, "
+        "mcp__waterology__hf_repo_read_file"
     )
     assert "Generated from agent-definitions/researcher.md" in body
 

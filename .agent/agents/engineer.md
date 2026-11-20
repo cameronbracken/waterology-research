@@ -5,7 +5,6 @@ description: Implement or repair software to a saved specification, or optimize 
   with explicit acceptance checks.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

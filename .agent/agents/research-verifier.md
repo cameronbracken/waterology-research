@@ -5,7 +5,6 @@ description: Check research claims against cited sources and local artifacts. Us
   access limits separately from unsupported or contradicted claims.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

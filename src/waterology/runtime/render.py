@@ -17,7 +17,7 @@ from waterology.runtime.assets import (
 from waterology.runtime.skills import FRONTMATTER, SkillDefinition, load_skills
 
 ANTIGRAVITY_TOOLS = {
-    "read": ("read_file", "view_file", "grep_search", "find_by_name", "list_dir"),
+    "read": ("read_file", "grep_search", "find_by_name", "list_dir"),
     "write": ("write_file", "edit_file"),
     "shell": ("run_command", "manage_task"),
     "web": ("search_web", "read_url_content"),
@@ -31,6 +31,11 @@ CLAUDE_TOOLS = {
         "WebFetch",
         "mcp__kagi__kagi_search_fetch",
         "mcp__kagi__kagi_extract",
+        "mcp__waterology__research_access",
+        "mcp__waterology__literature_search",
+        "mcp__waterology__hf_dataset_info",
+        "mcp__waterology__hf_repo_files",
+        "mcp__waterology__hf_repo_read_file",
     ),
 }
 PI_TOOLS = {

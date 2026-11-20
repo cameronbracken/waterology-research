@@ -216,7 +216,13 @@ def register_workflow_commands(app: typer.Typer):
     @app.command("discover")
     def discover(
         query: str,
-        provider: str = typer.Option("openalex"),
+        provider: str = typer.Option(
+            "openalex",
+            help=(
+                "Scholarly provider: openalex, semantic-scholar, core, alphaxiv, "
+                "alphaxiv-keyword, arxiv, pubmed, europepmc, biorxiv, medrxiv, or crossref."
+            ),
+        ),
         after: str | None = typer.Option(None),
         before: str | None = typer.Option(None),
         limit: int = typer.Option(20, min=1, max=100),
@@ -227,6 +233,51 @@ def register_workflow_commands(app: typer.Typer):
         emit(
             search_literature(
                 path, query, after=after, before=before, limit=limit, provider=provider
+            )
+        )
+
+    @app.command("hf-dataset-info")
+    def hf_dataset_info_command(
+        repo_id: str,
+        revision: str = typer.Option("main"),
+    ):
+        from waterology.core import huggingface
+
+        emit(huggingface.hf_dataset_info(repo_id, revision=revision))
+
+    @app.command("hf-repo-files")
+    def hf_repo_files_command(
+        repo_id: str,
+        repo_type: str = typer.Option("dataset"),
+        revision: str = typer.Option("main"),
+        subpath: str = typer.Option("", "--subpath"),
+        limit: int = typer.Option(200, min=1, max=1000),
+    ):
+        from waterology.core import huggingface
+
+        emit(
+            huggingface.hf_repo_files(
+                repo_id, repo_type=repo_type, revision=revision, path=subpath, limit=limit
+            )
+        )
+
+    @app.command("hf-repo-read-file")
+    def hf_repo_read_file_command(
+        repo_id: str,
+        file_path: str,
+        repo_type: str = typer.Option("dataset"),
+        revision: str = typer.Option("main"),
+        max_bytes: int = typer.Option(65536, min=1, max=262144),
+    ):
+        from waterology.core import huggingface
+
+        emit(
+            huggingface.hf_repo_read_file(
+                repo_id,
+                file_path,
+                repo_type=repo_type,
+                revision=revision,
+                max_bytes=max_bytes,
             )
         )
 

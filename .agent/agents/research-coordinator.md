@@ -5,7 +5,6 @@ description: Own a delegated research investigation using the deep-research work
   synthesis, verification, and review, with durable artifacts and a concise handoff.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

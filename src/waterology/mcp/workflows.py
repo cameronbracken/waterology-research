@@ -117,9 +117,46 @@ def register_workflow_tools(server, bounded_tool):
         limit: int = 20,
         project_path: str = ".",
     ) -> dict:
-        """Query OpenAlex, Semantic Scholar, CORE or alphaXiv once and retain queries, source identities and provider failures."""
+        """Query a scholarly provider (openalex, semantic-scholar, core, alphaxiv, alphaxiv-keyword, arxiv, pubmed, europepmc, biorxiv, medrxiv, or crossref). Records locally when inside an initialized Waterology project and returns unrecorded results otherwise."""
         return search_literature(
             Path(project_path), query, after=after, before=before, limit=limit, provider=provider
+        )
+
+    @bounded_tool(server)
+    def hf_dataset_info(repo_id: str, revision: str = "main") -> dict:
+        """Inspect bounded Hugging Face Hub dataset metadata, configs, features, splits, and license."""
+        from waterology.core import huggingface
+
+        return huggingface.hf_dataset_info(repo_id, revision=revision)
+
+    @bounded_tool(server)
+    def hf_repo_files(
+        repo_id: str,
+        repo_type: str = "dataset",
+        revision: str = "main",
+        path: str = "",
+        limit: int = 200,
+    ) -> dict:
+        """List files and directories at a path in a Hugging Face Hub dataset, model, or space repository."""
+        from waterology.core import huggingface
+
+        return huggingface.hf_repo_files(
+            repo_id, repo_type=repo_type, revision=revision, path=path, limit=limit
+        )
+
+    @bounded_tool(server)
+    def hf_repo_read_file(
+        repo_id: str,
+        file_path: str,
+        repo_type: str = "dataset",
+        revision: str = "main",
+        max_bytes: int = 65536,
+    ) -> dict:
+        """Read a bounded small UTF-8 text file from a Hugging Face Hub repository without downloading binary blobs."""
+        from waterology.core import huggingface
+
+        return huggingface.hf_repo_read_file(
+            repo_id, file_path, repo_type=repo_type, revision=revision, max_bytes=max_bytes
         )
 
     @bounded_tool(server)

@@ -5,7 +5,6 @@ description: Synthesize supplied research notes and sources into research briefs
   disagreements, and gaps while preserving citations and source traceability.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

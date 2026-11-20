@@ -6,7 +6,6 @@ description: Audit reproducibility requirements and recorded reproduction result
   conclusion.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

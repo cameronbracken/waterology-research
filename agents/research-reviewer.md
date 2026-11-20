@@ -4,7 +4,8 @@ description: Critique methods, reasoning, evaluation design, and conclusions in 
   artifacts. Use for an independent assessment of an analysis, research brief, manuscript,
   or simulation study, with findings tied to evidence and practical remedies.
 tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+  mcp__kagi__kagi_extract, mcp__waterology__research_access, mcp__waterology__literature_search,
+  mcp__waterology__hf_dataset_info, mcp__waterology__hf_repo_files, mcp__waterology__hf_repo_read_file
 ---
 
 <!-- Generated from agent-definitions/research-reviewer.md. Do not edit. -->

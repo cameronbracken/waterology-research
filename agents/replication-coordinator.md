@@ -5,7 +5,8 @@ description: Coordinate a delegated replication of a paper, benchmark, claim, or
   or implementation, evidence assessment, and reproducibility audit through the replication
   workflow.
 tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+  mcp__kagi__kagi_extract, mcp__waterology__research_access, mcp__waterology__literature_search,
+  mcp__waterology__hf_dataset_info, mcp__waterology__hf_repo_files, mcp__waterology__hf_repo_read_file
 ---
 
 <!-- Generated from agent-definitions/replication-coordinator.md. Do not edit. -->

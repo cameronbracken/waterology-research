@@ -4,7 +4,8 @@ description: Check research claims against cited sources and local artifacts. Us
   after synthesis to assess evidence support, preserve citation formats, and report
   access limits separately from unsupported or contradicted claims.
 tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+  mcp__kagi__kagi_extract, mcp__waterology__research_access, mcp__waterology__literature_search,
+  mcp__waterology__hf_dataset_info, mcp__waterology__hf_repo_files, mcp__waterology__hf_repo_read_file
 ---
 
 <!-- Generated from agent-definitions/research-verifier.md. Do not edit. -->

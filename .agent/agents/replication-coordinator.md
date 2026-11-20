@@ -6,7 +6,6 @@ description: Coordinate a delegated replication of a paper, benchmark, claim, or
   workflow.
 tools:
 - read_file
-- view_file
 - grep_search
 - find_by_name
 - list_dir

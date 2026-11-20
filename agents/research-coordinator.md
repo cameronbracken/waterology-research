@@ -4,7 +4,8 @@ description: Own a delegated research investigation using the deep-research work
   Use when the parent wants a complete investigation coordinated across evidence gathering,
   synthesis, verification, and review, with durable artifacts and a concise handoff.
 tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch, mcp__kagi__kagi_search_fetch,
-  mcp__kagi__kagi_extract
+  mcp__kagi__kagi_extract, mcp__waterology__research_access, mcp__waterology__literature_search,
+  mcp__waterology__hf_dataset_info, mcp__waterology__hf_repo_files, mcp__waterology__hf_repo_read_file
 ---
 
 <!-- Generated from agent-definitions/research-coordinator.md. Do not edit. -->

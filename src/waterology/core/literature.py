@@ -5,13 +5,37 @@ import os
 import re
 import warnings
 from datetime import UTC, date, datetime
+from http.client import HTTPException
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from waterology.core.atomic import read_record, write_record
-from waterology.core.project import discover_project, project_state_lock
+from waterology.core.literature_providers import (
+    fetch_arxiv,
+    fetch_biorxiv,
+    fetch_crossref,
+    fetch_europepmc,
+    fetch_medrxiv,
+    fetch_pubmed,
+    normalize_arxiv,
+    normalize_biorxiv,
+    normalize_crossref,
+    normalize_europepmc,
+    normalize_medrxiv,
+    normalize_pubmed,
+    parse_arxiv_ids,
+    validate_rxiv_query,
+)
+from waterology.core.project import (
+    Project,
+    ProjectInitializationError,
+    ProjectNotFoundError,
+    discover_project,
+    project_paths,
+    project_state_lock,
+)
 
 
 def fetch_openalex(query: str, *, after: str | None, before: str | None, limit: int) -> dict:
@@ -285,7 +309,39 @@ def normalize_alphaxiv_keyword(results: list[dict], *, after=None, before=None) 
     return normalize_alphaxiv(results, after=after, before=before, provider="alphaxiv-keyword")
 
 
-PROVIDERS = ("openalex", "semantic-scholar", "core", "alphaxiv", "alphaxiv-keyword")
+PROVIDERS = (
+    "openalex",
+    "semantic-scholar",
+    "core",
+    "alphaxiv",
+    "alphaxiv-keyword",
+    "arxiv",
+    "pubmed",
+    "europepmc",
+    "biorxiv",
+    "medrxiv",
+    "crossref",
+)
+
+
+def _optional_project(start: Path) -> Project | None:
+    try:
+        return discover_project(start)
+    except ProjectNotFoundError:
+        return None
+    except ProjectInitializationError:
+        current = start.resolve()
+        if current.is_file():
+            current = current.parent
+        for candidate in (current, *current.parents):
+            paths = project_paths(candidate)
+            if paths.config_file.is_symlink():
+                break
+            if paths.config_file.is_file():
+                if not paths.state.exists() and not paths.state.is_symlink():
+                    return None
+                break
+        raise
 
 
 def _directory(start: Path) -> Path:
@@ -363,11 +419,20 @@ def search_literature(
     if not query.strip() or not 1 <= limit <= 100:
         raise ValueError("Supply a query and limit between 1 and 100")
     if after:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", after):
+            raise ValueError("Publication dates must use YYYY-MM-DD format")
         date.fromisoformat(after)
     if before:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", before):
+            raise ValueError("Publication dates must use YYYY-MM-DD format")
         date.fromisoformat(before)
     if after and before and after > before:
         raise ValueError("Publication date range is reversed")
+    if provider == "arxiv":
+        parse_arxiv_ids(query, limit)
+    elif provider in {"biorxiv", "medrxiv"}:
+        validate_rxiv_query(provider, query, after=after, before=before)
+    project = _optional_project(start)
     record = {
         "schema_version": 1,
         "id": f"search-{uuid4().hex[:16]}",
@@ -377,6 +442,7 @@ def search_literature(
         "before": before,
         "limit": limit,
         "retrieved_at": datetime.now(UTC).isoformat(),
+        "recorded": project is not None,
         "status": "complete",
         "sources": [],
         "error": None,
@@ -388,6 +454,12 @@ def search_literature(
             "core": (fetch_core, "results", normalize_core),
             "alphaxiv": (fetch_alphaxiv, "results", normalize_alphaxiv),
             "alphaxiv-keyword": (fetch_alphaxiv_keyword, "results", normalize_alphaxiv_keyword),
+            "arxiv": (fetch_arxiv, "results", normalize_arxiv),
+            "pubmed": (fetch_pubmed, "results", normalize_pubmed),
+            "europepmc": (fetch_europepmc, "results", normalize_europepmc),
+            "biorxiv": (fetch_biorxiv, "results", normalize_biorxiv),
+            "medrxiv": (fetch_medrxiv, "results", normalize_medrxiv),
+            "crossref": (fetch_crossref, "results", normalize_crossref),
         }[provider]
         payload = (fetcher or fetch)(query, after=after, before=before, limit=limit)
         if not isinstance(payload, dict) or not isinstance(payload.get(results_key), list):
@@ -398,9 +470,11 @@ def search_literature(
             if provider == "openalex"
             else normalize(results, after=after, before=before)
         )
-    except (OSError, ValueError, TypeError, AttributeError) as error:
+    except (OSError, HTTPException, ValueError, TypeError, AttributeError) as error:
         # HTTP exceptions can contain URLs with API keys. Never persist their message.
         record.update(status="unverified", error=type(error).__name__)
+    if project is None:
+        return record
     with project_state_lock(start):
         write_record(_directory(start) / f"{record['id']}.yaml", record)
     from waterology.core.zotero import queue_reference, settings_for, sync_references
