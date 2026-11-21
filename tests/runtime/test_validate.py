@@ -33,7 +33,7 @@ def test_runtime_manifests_have_matching_identity() -> None:
     pi = json.loads(catalog.path("package.json").read_text())
 
     assert claude["name"] == codex["name"] == "waterology"
-    assert claude["version"] == codex["version"] == pi["version"] == "1.0.0"
+    assert claude["version"] == codex["version"] == pi["version"] == "1.0.1"
     assert pi["pi"] == {
         "extensions": ["./pi-extensions"],
         "skills": ["./pi-skills"],
@@ -53,7 +53,7 @@ def test_validation_reports_invalid_pi_package(tmp_path: Path) -> None:
     catalog = copied_catalog(tmp_path)
     package = catalog.path("package.json")
     package.write_text(
-        '{"version":"1.0.0","keywords":["pi-package"],"pi":{"skills":[]},'
+        '{"version":"1.0.1","keywords":["pi-package"],"pi":{"skills":[]},'
         '"pi-subagents":{"agents":[]}}\n',
         encoding="utf-8",
     )

@@ -9,7 +9,9 @@ Load only the skill matching the requested deliverable, and add interaction only
 | Technical, analysis, summary, or benchmark report | [reports](../skills/reports/SKILL.md) | `reports/<topic>-<YYYY-MM-DD>/` default bundle, `resources/earth_tone_plot_template.R`, `scripts/verify_report_bundle.py`, and `references/interactive-reports.md` for Quarto HTML |
 | LaTeX or Beamer PDF build | [compile-latex](../skills/compile-latex/SKILL.md) | `templates/latexmkrc`, `scripts/overfull_boxes.py` |
 | Quarto blog post and WebP media | [publish-blog-post](../skills/publish-blog-post/SKILL.md) | `references/blog-defaults.md` |
-| Prose editing, READMEs, notes, or Markdown delivery | [writing-style](../skills/writing-style/SKILL.md) | `references/scientific-prose.md` |
+| Peer-reviewed paper, journal manuscript, data descriptor, or abstract (default concise) | [scientific-writing](../skills/scientific-writing/SKILL.md) | `references/section-playbook.md` (load at most one of `scientific-writing` or `scientific-writing-detailed`) |
+| Peer-reviewed paper, journal manuscript, data descriptor, or abstract (expanded variant) | [scientific-writing-detailed](../skills/scientific-writing-detailed/SKILL.md) | `references/section-playbook.md` (mutually exclusive with `scientific-writing`) |
+| Non-paper prose, blog posts, walkthroughs, READMEs, notes, or Markdown delivery | [writing-style](../skills/writing-style/SKILL.md) | - |
 
 Coding, environment, and research verification tasks map directly to:
 

@@ -14,7 +14,7 @@ metadata:
 
 # Research Review and Manuscript Narrative
 
-Use [writing-style](../waterology-writing-style/SKILL.md) (`references/scientific-prose.md`) when evaluating prose clarity and claim calibration.
+Use [scientific-writing](../waterology-scientific-writing/SKILL.md) (or [scientific-writing-detailed](../waterology-scientific-writing-detailed/SKILL.md) when requested, never both at once) when evaluating manuscript structure, scientific voice, and claim calibration, and [writing-style](../waterology-writing-style/SKILL.md) for general report prose and Markdown delivery.
 
 ## Choose focus
 

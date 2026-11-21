@@ -21,6 +21,8 @@ EXPECTED_SKILLS = {
     "reports",
     "research-review",
     "research-software-quality",
+    "scientific-writing",
+    "scientific-writing-detailed",
     "setup-environment",
     "simulation-study",
     "sol-pi",
@@ -55,6 +57,47 @@ def test_writing_workflows_use_the_shared_style_skill() -> None:
     )
     for path in consumers:
         assert "writing-style" in path.read_text(encoding="utf-8"), path
+
+    for path in (
+        ROOT / "agent-definitions/reviewer.md",
+        ROOT / "skills/research-review/SKILL.md",
+    ):
+        assert "scientific-writing" in path.read_text(encoding="utf-8"), path
+
+
+def test_scientific_writing_is_separated_from_general_writing_without_author_paper_leaks() -> None:
+    general_skill = ROOT / "skills/writing-style/SKILL.md"
+    concise_skill = ROOT / "skills/scientific-writing/SKILL.md"
+    concise_playbook = ROOT / "skills/scientific-writing/references/section-playbook.md"
+    detailed_skill = ROOT / "skills/scientific-writing-detailed/SKILL.md"
+    detailed_playbook = ROOT / "skills/scientific-writing-detailed/references/section-playbook.md"
+
+    assert not (ROOT / "skills/writing-style/references/scientific-prose.md").exists()
+    for path in (concise_skill, concise_playbook, detailed_skill, detailed_playbook):
+        assert path.is_file(), path
+
+    concise_text = concise_skill.read_text(encoding="utf-8")
+    detailed_text = detailed_skill.read_text(encoding="utf-8")
+    general_text = general_skill.read_text(encoding="utf-8")
+
+    assert "../scientific-writing/SKILL.md" in general_text
+    assert "../scientific-writing-detailed/SKILL.md" in general_text
+    assert "../writing-style/SKILL.md" in concise_text
+    assert "../writing-style/SKILL.md" in detailed_text
+    assert "../scientific-writing-detailed/SKILL.md" in concise_text
+    assert "../scientific-writing/SKILL.md" in detailed_text
+    assert "never both" in concise_text.lower()
+    assert "never both" in detailed_text.lower()
+    assert len(detailed_text.split()) > len(concise_text.split())
+
+    for path in (
+        *sorted((ROOT / "skills/writing-style").rglob("*.md")),
+        *sorted((ROOT / "skills/scientific-writing").rglob("*.md")),
+        *sorted((ROOT / "skills/scientific-writing-detailed").rglob("*.md")),
+    ):
+        text = path.read_text(encoding="utf-8")
+        assert "bracken" not in text.lower(), path
+        assert "doi.org/10." not in text.lower(), path
 
 
 def test_reports_skill_has_no_domain_specific_reservoir_leak_and_earth_tones_match() -> None:

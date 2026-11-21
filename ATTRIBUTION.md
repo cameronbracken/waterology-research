@@ -5,7 +5,7 @@
 ## House defaults, R style, and visual deliverables
 
 - Author: [Cameron Bracken](https://orcid.org/0000-0003-1917-402X).
-- Scope: tool selection (`skills/project-conventions/`), environment defaults (`skills/setup-environment/`), R code style (`skills/r-code-style/`), technical and scientific prose (`skills/writing-style/`), plots and interactive graphics (`skills/figures/`), TikZ flowcharts (`skills/diagrams/`), Markdown and Quarto report bundles (`skills/reports/`), and Quarto blog preparation (`skills/publish-blog-post/`).
+- Scope: tool selection (`skills/project-conventions/`), environment defaults (`skills/setup-environment/`), R code style (`skills/r-code-style/`), scientific manuscript prose (`skills/scientific-writing/` and `skills/scientific-writing-detailed/`), general technical prose (`skills/writing-style/`), plots and interactive graphics (`skills/figures/`), TikZ flowcharts (`skills/diagrams/`), Markdown and Quarto report bundles (`skills/reports/`), and Quarto blog preparation (`skills/publish-blog-post/`).
 - Private values, machine inventories, account settings, and credentials stay outside package assets.
 
 ## Upstream sources
@@ -60,13 +60,6 @@
 - License: Public domain in the United States
 - Adapted elements: compact composition principles in `skills/writing-style/SKILL.md`.
 - Credit string: _Prose principles adapted from William Strunk Jr., The Elements of Style (1918, public domain)._
-
-### Cameron Bracken - published scientific voice
-
-- Authors: Cameron Bracken and coauthors
-- Sources: [10.1002/2015JD023205](https://doi.org/10.1002/2015JD023205), [10.1016/j.renene.2023.119550](https://doi.org/10.1016/j.renene.2023.119550), [10.1029/2024EF005313](https://doi.org/10.1029/2024EF005313), and [10.1038/s41597-025-05097-3](https://doi.org/10.1038/s41597-025-05097-3)
-- Adapted elements: original analysis of section pacing, quantitative claim calibration, scope limits, and reproducibility reporting in `skills/writing-style/references/scientific-prose.md`. No paper passages are copied.
-- Credit string: _Scientific prose guidance informed by an original analysis of Cameron Bracken's published work._
 
 ### obra/superpowers - proportional software quality
 

@@ -78,6 +78,8 @@ def test_primary_entrypoints_are_exposed_for_implicit_invocation() -> None:
         "figures",
         "diagrams",
         "reports",
+        "scientific-writing",
+        "scientific-writing-detailed",
         "writing-style",
         "setup-environment",
         "publish-blog-post",

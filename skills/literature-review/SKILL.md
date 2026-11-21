@@ -12,7 +12,7 @@ metadata:
 
 # Literature Review and Deep Research
 
-Use [writing-style](../writing-style/SKILL.md) for prose and Markdown delivery, and read [source-coverage.md](references/source-coverage.md) to pick the right scholarly, dataset, and web tools.
+Use [writing-style](../writing-style/SKILL.md) for standalone Markdown notes and delivery (or [scientific-writing](../scientific-writing/SKILL.md) when drafting manuscript related-work sections), and read [source-coverage.md](references/source-coverage.md) to pick the right scholarly, dataset, and web tools.
 
 ## 1. Check access and Zotero setup
 

@@ -13,7 +13,7 @@ description: >
 Use [writing-style](../writing-style/SKILL.md) for prose and Markdown delivery. Use this skill whenever asked to make, produce, create, or update an analysis, summary, or benchmark report (preserving an existing report's layout when extending one).
 
 - If an **interactive HTML report** is explicitly requested, also read [interactive-reports.md](references/interactive-reports.md).
-- If a **polished LaTeX PDF manuscript or white paper** is requested, use `rules/quarto-conventions.md` and [compile-latex](../compile-latex/SKILL.md).
+- If a **polished LaTeX PDF manuscript or white paper** is requested, use [scientific-writing](../scientific-writing/SKILL.md), `rules/quarto-conventions.md`, and [compile-latex](../compile-latex/SKILL.md).
 
 ---
 

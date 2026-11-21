@@ -12,7 +12,7 @@ def test_distribution_name_preserves_waterology_cli_and_slim_deps() -> None:
     pixi = tomllib.loads((ROOT / "pixi.toml").read_text())
 
     assert project["project"]["name"] == "waterology-research"
-    assert project["project"]["version"] == "1.0.0"
+    assert project["project"]["version"] == "1.0.1"
     assert project["project"]["scripts"] == {
         "waterology": "waterology.cli:app",
         "waterology-mcp": "waterology.mcp.server:main",
@@ -28,7 +28,7 @@ def test_distribution_name_preserves_waterology_cli_and_slim_deps() -> None:
     for path in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
         manifest = json.loads((ROOT / path).read_text())
         assert manifest["name"] == "waterology"
-        assert manifest["version"] == "1.0.0"
+        assert manifest["version"] == "1.0.1"
         assert manifest["homepage"] == repository
         assert manifest["repository"] == repository
 
@@ -83,7 +83,7 @@ def test_canonical_guidance_has_required_commands() -> None:
 
 def test_pi_package_loads_skills_subagents_and_mcp_extension() -> None:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
-    assert package["version"] == "1.0.0"
+    assert package["version"] == "1.0.1"
     assert "pi-package" in package["keywords"]
     assert package["pi"] == {
         "extensions": ["./pi-extensions"],

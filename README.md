@@ -6,7 +6,7 @@ Research workflows are runtime neutral. Private machine details, accounts, and c
 
 ## What Waterology provides
 
-1. **Consistent conventions and output templates:** Shared language defaults (`project-conventions`, `setup-environment`, `r-code-style`, path-scoped `rules/`), concise technical prose (`writing-style`), standalone Markdown report bundles (`reports/<topic>-<YYYY-MM-DD>/`), earth-tone multi-panel plots (`figures`), and 7-role TikZ flowcharts (`diagrams`).
+1. **Consistent conventions and output templates:** Shared language defaults (`project-conventions`, `setup-environment`, `r-code-style`, path-scoped `rules/`), peer-reviewed manuscript prose (`scientific-writing`), conversational technical prose (`writing-style`), standalone Markdown report bundles (`reports/<topic>-<YYYY-MM-DD>/`), earth-tone multi-panel plots (`figures`), and 7-role TikZ flowcharts (`diagrams`).
 2. **Fast deterministic verifiers:** Standard-library Python checks (`constraints/check-all.py`, `check_tikz_svg.py`, `verify_report_bundle.py`, `check_plotly_layout.py`, `overfull_boxes.py`, `validate_bib.py`, `myst_to_quarto.py`) that catch path leaks, unseeded RNGs, hardcoded numbers, SVG/Plotly text collisions, LaTeX overflow, and fabricated DOIs at zero prompt cost until run.
 3. **Reference and dataset tooling (`wgy` CLI and `waterology-mcp`):** 10 bounded tools covering 11 scholarly providers (`openalex`, `semantic-scholar`, `core`, `alphaxiv`, `alphaxiv-keyword`, `arxiv`, `pubmed`, `europepmc`, `biorxiv`, `medrxiv`, `crossref`), standalone `.zotero.toml` collection sync with local SHA-256 PDF caching, and Hugging Face Hub dataset/file inspection.
 4. **Lightweight autonomous loops:** Git-backed iterative `autoresearch` over a frozen evaluation command and flat `results.yaml` ledger (scaling to native [TORC](https://github.com/NatLabRockies/torc) when distributed or Slurm execution is needed), plus optional [SoL-Pi](https://github.com/NVlabs/SoL-Pi) coding delegation (`sol-pi`).
@@ -14,7 +14,7 @@ Research workflows are runtime neutral. Private machine details, accounts, and c
 ## Layout
 
 ```text
-skills/             17 canonical research, figure, report, and verification skills
+skills/             19 canonical research, figure, report, and verification skills
 agent-definitions/  3 canonical subagents (researcher, reviewer, engineer)
 .agent/agents/      generated Antigravity agents
 agents/             generated Claude Code agents
@@ -117,13 +117,15 @@ wgy hf-repo-read-file cameronbracken/example-dataset README.md
 
 ## Skills, agents, and constraints
 
-### Core skills (17) and command shims
+### Core skills (19) and command shims
 
 | Skill | Command shim | Purpose |
 | --- | --- | --- |
 | `project-conventions` | - | Language/tool defaults, file formats, `light` vs `strict` reproducibility modes, MyST converter |
 | `setup-environment` | - | Pixi, uv, rv, system R on macOS, direnv, and `strict` environment capture |
-| `writing-style` | - | Concise technical prose, scientific writing, and Markdown delivery rules |
+| `scientific-writing` | - | Default concise peer-reviewed manuscript structure, scientific voice, and claim calibration (mutually exclusive with `scientific-writing-detailed`) |
+| `scientific-writing-detailed` | - | Expanded peer-reviewed manuscript writing skill with fuller examples for A/B comparison (load instead of `scientific-writing`, never both) |
+| `writing-style` | - | Conversational yet technically accurate non-paper prose, docs, and Markdown delivery |
 | `research-software-quality` | - | Proportional testing, debugging, verification, and Git worktree cutoff |
 | `figures` | - | Scientific plots, earth-tone styling, multi-panel assembly, and Plotly layout checks |
 | `diagrams` | - | 7-role TikZ flowcharts (`flowchart-tikz.sty`) and `check_tikz_svg.py` overlap verification |

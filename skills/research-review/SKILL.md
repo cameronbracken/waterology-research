@@ -12,7 +12,7 @@ metadata:
 
 # Research Review and Manuscript Narrative
 
-Use [writing-style](../writing-style/SKILL.md) (`references/scientific-prose.md`) when evaluating prose clarity and claim calibration.
+Use [scientific-writing](../scientific-writing/SKILL.md) (or [scientific-writing-detailed](../scientific-writing-detailed/SKILL.md) when requested, never both at once) when evaluating manuscript structure, scientific voice, and claim calibration, and [writing-style](../writing-style/SKILL.md) for general report prose and Markdown delivery.
 
 ## Choose focus
 

@@ -25,7 +25,7 @@ Conventions for Quarto documents/blogs, journal manuscripts, and technical PDF r
   ```
 - **Light theme for print** (PDF, journal, slides); Darkly/Flatly for interactive HTML.
 - Generate heavy analysis and figures in R/Python scripts and import saved outputs rather than embedding slow inline computation.
-- Use TikZ for flowcharts and conceptual diagrams unless Mermaid is explicitly requested ([diagrams](../skills/diagrams/SKILL.md)), [figures](../skills/figures/SKILL.md) for static or interactive plots, and [reports](../skills/reports/SKILL.md) when authoring a report deliverable.
+- Use [scientific-writing](../skills/scientific-writing/SKILL.md) for journal manuscripts and formal white papers, TikZ for flowcharts and conceptual diagrams unless Mermaid is explicitly requested ([diagrams](../skills/diagrams/SKILL.md)), [figures](../skills/figures/SKILL.md) for static or interactive plots, and [reports](../skills/reports/SKILL.md) when authoring a report deliverable.
 - To convert MyST Markdown into Quarto syntax, run `python3 <project-conventions-dir>/scripts/myst_to_quarto.py input.md output.qmd`, then verify citations, cross-references, and rendered output.
 
 ## No hand-typed computed numbers
