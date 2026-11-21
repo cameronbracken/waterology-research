@@ -15,21 +15,6 @@ Run `wgy config path` to print the active user configuration path:
 ```toml
 [credentials]
 file = "~/.config/secrets/research.env"
-
-[identity]
-name = "Example Researcher"
-email = "researcher@example.org"
-git_name = "researcher"
-orcid = ""
-
-[preferences]
-files = []
-
-[writing]
-files = []
-papers = []
-
-[guidance]
 ```
 
 ## Research API credentials for CLI and MCP

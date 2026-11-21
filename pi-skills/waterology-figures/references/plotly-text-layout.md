@@ -44,7 +44,7 @@ and caption from the interactive canvas, enables axis automargins, and reserves
 space for an external legend.
 
 ```r
-source(file.path(waterology_root, "skills", "figure-style", "scripts", "safe_ggplotly.R"))
+source(file.path(waterology_root, "skills", "figures", "scripts", "safe_ggplotly.R"))
 
 static_plot = build_plot(data)
 ggsave("figures/result.png", static_plot, width = 10, height = 6, dpi = 180)
@@ -92,7 +92,7 @@ handles narrow screens.
 Run after Quarto renders the final HTML:
 
 ```bash
-python3 <waterology-root>/skills/figure-style/scripts/check_plotly_layout.py \
+python3 <waterology-root>/skills/figures/scripts/check_plotly_layout.py \
   reports/<slug>/<slug>.html
 ```
 

@@ -30,10 +30,6 @@ def register_user_config_commands(config_app: typer.Typer) -> None:
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             stream.write(
                 "# Private user configuration. Keep outside version control.\n"
-                '[credentials]\nfile = "~/.config/secrets/research.env"\n\n'  # waterology: allow-abs-path
-                '[identity]\nname = ""\nemail = ""\ngit_name = ""\norcid = ""\n\n'
-                "[preferences]\nfiles = []\n\n"
-                "[writing]\nfiles = []\npapers = []\n\n"
-                "[guidance]\n"
+                '[credentials]\nfile = "~/.config/secrets/research.env"\n'  # waterology: allow-abs-path
             )
         typer.echo(f"Created user configuration: {source}")

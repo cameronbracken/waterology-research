@@ -6,6 +6,6 @@ export default function (pi: ExtensionAPI) {
   pi.registerMcpServer("waterology", {
     command: "waterology-mcp",
     description:
-      "Waterology research records: experiments, runs, evidence, studies, literature, and archives",
+      "Waterology reference and dataset tools: scholarly search, Zotero sync, and Hugging Face Hub inspection",
   });
 }

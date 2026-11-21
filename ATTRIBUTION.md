@@ -1,341 +1,97 @@
 # Attribution
 
-## Public house defaults and private context, 2026-10-30
+`waterology` is original work by [Cameron Bracken](https://orcid.org/0000-0003-1917-402X), with methodology and selected components adapted from open-source research and agent projects. This file records active upstream sources and licenses for Waterology 1.0.
 
-- At Cameron Bracken's request, reusable tool choices, coding and prose style,
-  environment workflow, visual preferences, and blog preparation guidance from
-  local configuration were consolidated into canonical skills and rules.
-- Tool selection lives in `skills/project-conventions/references/tool-choices.md`;
-  prose in `skills/writing-style/`; environment and R formatter defaults in
-  `skills/setup-environment/` and `skills/r-code-style/`; blog recipes in
-  `skills/publish-blog-post/references/blog-defaults.md`. Existing visual and
-  document rules retain the shared palette, theme, and layout choices.
-- The scientific prose reference now lists the public papers that informed
-  the package's house style. The paper-source credit below remains applicable.
-- Private values, long-term goals, machine inventories, private paths,
-  account settings, and credentials are excluded from package assets.
-
-## Cameron Bracken - R style and visualization guidance, 2026-10-29
+## House defaults, R style, and visual deliverables
 
 - Author: [Cameron Bracken](https://orcid.org/0000-0003-1917-402X).
-- Source: the author's global agent instructions, sections _R Code Style_
-  and _Visualization_, moved at the author's request, and the author's follow-up
-  request separating data displays, conceptual diagrams, reports, interactive
-  graphics and reports, notes, and code documentation.
-- Waterology files: `skills/r-code-style/SKILL.md`, `skills/data-visualization/`,
-  `skills/diagrams/`, `skills/reports/`, `skills/interactive-graphics/`,
-  `skills/interactive-reports/`, `skills/markdown-notes/`, `skills/documentation/`, and
-  `skills/writing-style/references/markdown-artifacts.md`. The initial broad
-  visualization skill was replaced by these focused entry points. Shared visual
-  design and Markdown delivery live in references; conditional links load only
-  guidance needed for the requested artifact. Existing figure, R, and document
-  conventions route to the matching skills.
+- Scope: tool selection (`skills/project-conventions/`), environment defaults (`skills/setup-environment/`), R code style (`skills/r-code-style/`), technical and scientific prose (`skills/writing-style/`), plots and interactive graphics (`skills/figures/`), TikZ flowcharts (`skills/diagrams/`), Markdown and Quarto report bundles (`skills/reports/`), and Quarto blog preparation (`skills/publish-blog-post/`).
+- Private values, machine inventories, account settings, and credentials stay outside package assets.
 
-## ECC project learning adaptation, 2026-09-05
+## Upstream sources
 
-- Source: [affaan-m/ECC](https://github.com/affaan-m/ECC/tree/e04ea0b9cc8248686edf5ac751cadff550e162b8),
-  commit `e04ea0b9cc8248686edf5ac751cadff550e162b8`.
-- Adapted concepts: project-scoped atomic lessons, evidence retention and
-  improvement proposals from `skills/continuous-learning-v2/SKILL.md`.
-  Checkpoint guidance in `skills/strategic-compact/SKILL.md` informed additions
-  to the existing session-log skill.
-- Waterology files: `skills/project-learning/SKILL.md`, generated `commands/learn.md`,
-  `core/learning.py` and the session-log checkpoint extension. Existing planning,
-  review, research, retrieval and orchestration capabilities were retained.
-- No ECC executable scripts, observer hooks or agent definitions were copied.
+### edwinhu/workflows - methodology
 
-MIT License, copyright (c) 2026 Affaan Mustafa:
+- Author: Edwin Hu
+- Repository: [edwinhu/workflows](https://github.com/edwinhu/workflows)
+- License: MIT (asserted in the project README; cited in good faith)
+- Adapted elements: the `PHILOSOPHY.md` distinction between deterministic constraints and prose conventions, the paired `.md` + `.py` constraint pattern with an auto-discovering `constraints/check-all.py` runner, independent verification (`agent-definitions/reviewer.md`), and fresh evidence before completion claims.
+- Credit string: _Methodology adapted from Edwin Hu, "Workflow Philosophy," edwinhu/workflows (MIT, per README)._
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+### pedrohcgs/claude-code-my-workflow - reproducibility and simulation
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+- Author: Pedro H. C. Sant'Anna
+- Repository: [pedrohcgs/claude-code-my-workflow](https://github.com/pedrohcgs/claude-code-my-workflow)
+- Pinned revisions: `cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6` (passport) and `9d371f0bf8a8bc99569feca3210ef5133af28d33` (review and build tools)
+- License: MIT, Copyright (c) 2026 Pedro H. C. Sant'Anna
+- Adapted elements: the reproducibility passport (`skills/audit-reproducibility/` and `templates/passport.yaml`, extended to Fortran and fixed-width outputs without Stata material), Monte Carlo study design and conventions (`skills/simulation-study/` and `rules/simulation-conventions.md`), simulation critique criteria (`agent-definitions/reviewer.md`), environment snapshots (`skills/setup-environment/`), and the `latexmk` compile workflow (`skills/compile-latex/`). Sant'Anna credits the passport concept to `Imbad0202/academic-research-skills` ("Material Passport").
+- Credit string: _Adapted from pedrohcgs/claude-code-my-workflow (MIT, Copyright 2026 Pedro H. C. Sant'Anna)._
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+### flonat/claude-research - reproducibility audit and bibliography
 
-`waterology` is original work by Cameron Bracken, but its methodology and
-several components are adapted from open-source Claude Code projects. This
-ledger records what was borrowed and from whom. Files that derive from a
-source are credited here; this page is the canonical list.
+- Author: Florian Burnat
+- Repository: [flonat/claude-research](https://github.com/flonat/claude-research)
+- Pinned revision: `e7007d0b1e465ef96de7338599ca04079e83a972`
+- License: MIT, Copyright (c) 2026 Florian Burnat
+- Adapted elements: reproducibility audit checks and script-to-figure pipeline manifests (`skills/audit-reproducibility/`), bibliography and DOI verification through OpenAlex and Crossref (`skills/bib-validate/` and `rules/no-hallucinated-citations.md`), LaTeX box diagnostics (`skills/compile-latex/scripts/overfull_boxes.py` and `constraints/overfull-boxes.py`), and the rule against hardcoded computed numbers (`rules/no-hardcoded-results.md` and `constraints/no-hardcoded-results.py`). `skills/project-conventions/scripts/myst_to_quarto.py` is an original Waterology implementation of the conversion workflow.
+- Credit string: _Adapted from flonat/claude-research (MIT, Copyright 2026 Florian Burnat)._
 
-## Sources
+### companion-inc/feynman - research agents and skills
 
-### edwinhu/workflows — methodology
+- Author: Companion, Inc.
+- Repository: [companion-inc/feynman](https://github.com/companion-inc/feynman)
+- Pinned revisions: `8ad8d5582fc5acb855fb83f972f0f3121d1aa423` and `c8d84cd1939a018a930272f48d16f79da8ec249b`
+- License: MIT, Copyright (c) 2026 Companion, Inc.
+- Adapted elements: primary-source gathering and peer review subagents (`agent-definitions/researcher.md` and `agent-definitions/reviewer.md`), multi-provider literature and ML recipe synthesis (`skills/literature-review/`, incorporating 11-source coverage planning), manuscript and narrative critique (`skills/research-review/`), paper-to-code parity checks (`skills/audit-reproducibility/`), multi-panel figure composition and Plotly layout hygiene (`skills/figures/`), bounded iteration loops (`skills/autoresearch/`), and generated command shims (`commands/`). Product-specific tool names and biology wrappers are replaced with portable runtime conventions for R, Python, Quarto, hydrology, and energy systems.
+- Credit string: _Adapted from Feynman (companion-inc/feynman, MIT)._
 
-- **Author:** Edwin Hu
-- **Repo:** <https://github.com/edwinhu/workflows>
-- **License:** MIT *(asserted in the project README; no standalone `LICENSE`
-  file is present in the repo as of June 2026 — cited in good faith)*
-- **What we adapt:** the `PHILOSOPHY.md` methodology — the
-  *constraints-vs-conventions* distinction and its pass/fail litmus test, the
-  paired `foo.md` + `foo.py` constraint pattern with an auto-discovering
-  `check-all.py` runner, hook-enforced phase gates, independent verification
-  (the implementer never reviews its own work), and "evidence over claims."
-- **Credit string:** *Methodology adapted from Edwin Hu, "Workflow Philosophy,"
-  edwinhu/workflows (MIT, per README).*
+### alphaXiv/OpenResearch (formerly openresearch-cli) - experiment trees and alphaXiv discovery
 
-### pedrohcgs/claude-code-my-workflow — reproducibility + R/simulation
-
-- **Author:** Pedro H. C. Sant'Anna
-- **Repo:** <https://github.com/pedrohcgs/claude-code-my-workflow>
-- **Pinned revisions:** `cb38a277840fd0ee0c0a6ea61ddc2bceb940efc6`
-  (passport), `9d371f0bf8a8bc99569feca3210ef5133af28d33` (review and build tools)
-- **License:** MIT — © 2026 Pedro H. C. Sant'Anna
-- **Original paths:** `.claude/skills/audit-reproducibility/SKILL.md`,
-  `templates/passport-template.yaml`,
-  `.claude/agents/{r-reviewer,sim-reviewer}.md`,
-  `.claude/rules/simulation-conventions.md`, and
-  `.claude/skills/{simulation-study,capture-environment,compile-latex}/SKILL.md`.
-- **What we adapt:** the reproducibility **passport**
-  (`audit-reproducibility` skill and `passport.yaml` schema). The portable
-  version adds Fortran and fixed-width outputs and removes Stata specific
-  material. The Monte Carlo trio
-  (`simulation-study`, `simulation-reviewer` (formerly `sim-reviewer`), and simulation conventions), the
-  `simulation-code-reviewer` (formerly `r-reviewer`), environment capture,
-  and LaTeX compile workflow are also
-  adapted. Stata, economic estimator examples, and product specific control
-  flow are stripped. `r-package-check` was not ported. Simulation reviews now
-  report study-specific checks and evidence limits rather than an unconditional
-  trustworthiness verdict. The simulation workflow and conventions now support
-  project-selected languages, RNG mechanisms, and documented output formats.
-- **Credit string:** *Adapted from pedrohcgs/claude-code-my-workflow (MIT,
-  © 2026 Pedro H. C. Sant'Anna).*
-- **Note:** Sant'Anna credits the "passport" concept itself to
-  `Imbad0202/academic-research-skills` ("Material Passport") — carried forward.
-
-### flonat/claude-research — reproducibility auditor + bibliography
-
-- **Author:** Florian Burnat
-- **Repo:** <https://github.com/flonat/claude-research>
-- **Pinned revision:** `e7007d0b1e465ef96de7338599ca04079e83a972`
-- **License:** MIT — © 2026 Florian Burnat
-- **Original paths:** `.claude/agents/reproducibility-auditor.md`,
-  `skills/pipeline-manifest/SKILL.md`, `skills/shared/overfull-boxes.md`,
-  `rules/doi-verification.md`, and `rules/no-hardcoded-results.md`.
-- **What we adapt:** the `reproducibility-auditor` and its 12-row checklist,
-  pipeline traceability, bibliography and DOI validation through OpenAlex and
-  Crossref, box-specific LaTeX diagnostics, and the no hardcoded results rule.
-  The auditor separates inspection from reproduction evidence review, records
-  applicability, and leaves execution to the calling workflow.
-  The pinned tree no longer contains the roadmap's named `myst_to_quarto.py`,
-  so Waterology implements that recorded conversion contract without copying
-  unavailable source.
-- **Credit string:** *Adapted from flonat/claude-research (MIT, © 2026 Florian
-  Burnat).*
-
-### companion-inc/feynman — research agents, skills, and workflows
-
-- **Author:** Companion, Inc.
-- **Repo:** <https://github.com/companion-inc/feynman>
-- **Pinned revision:** `8ad8d5582fc5acb855fb83f972f0f3121d1aa423`
-- **License:** MIT — © 2026 Companion, Inc. *(standalone `LICENSE` file present)*
-- **Original paths:** `.feynman/agents/{researcher,reviewer,verifier,writer}.md`,
-  `skills/*/SKILL.md`, and `prompts/{audit,autoresearch,compare,deepresearch,
-  draft,lit,log,recipe,replicate,review,summarize,watch}.md`.
-- **What we adapt:** the four research subagents (`researcher`, `research-syntesizer` (formerly `writer`),
-  `research-verifier` (formerly `verifier`), `research-reviewer` (formerly `reviewer`)), the general-research skills (`deep-research`,
-  `literature-review`, `paper-narrative`, `paper-code-audit`,
-  `research-review`, `source-comparison`, `figure-composer`, `figure-style`,
-  `replication`, `pdf-explore`, `eli5`, `ml-training-recipe`, `session-log`,
-  `watch`, `autoresearch`, `source-summarization`), and the matching
-  slash-command workflows
-  (`/deepresearch`, `/lit`, `/review`, `/audit`, `/compare`,
-  `/replicate`, `/recipe`, `/autoresearch`, `/watch`, `/log`, `/summarize`).
-  Feynman's tool names and product assumptions are replaced with capability
-  descriptions that work in Claude Code, Codex, and OpenCode. Durable workflow
-  behavior now lives in canonical skills. The retired `paper-writing` skill
-  and `/draft` command also derived from this source. The researcher adaptation
-  supports local artifact evidence, task-specific coverage, and explicit search
-  limits. The research verifier preserves citation formats and records source
-  access separately from claim support. Replication routing now distinguishes
-  existing deliverable restoration from new implementation, with a single
-  execution owner and audits tied to exact evidence versions. The research reviewer adapts its methods
-  and reasoning checks to the artifact and reports evidence, severity, location,
-  and remedy for each finding.
-  Deep-research source coverage also adapts the user-supplied Feynman Pi
-  checklist `feynman-source-coverage-20261007/deepresearch.md` (2026-10-07):
-  11-source planning, native-tool evidence, topic-specific skips, blocked
-  access, one coverage ledger across direct and delegated runs, and provenance
-  checks. Waterology retains its own workflow, approval gates, and `docs/`
-  artifact paths rather than requiring the installed Feynman prompt.
-  The `commands/` files are generated Claude compatibility shims.
-  A 2026-10-16 review of Feynman at `c8d84cd1939a018a930272f48d16f79da8ec249b` added DOI and
-  arXiv cross-checks in two indexes to the research verifier and a rule against
-  claiming an effect from the most favorable setting to the experiment tree
-  write-up. Changes coupled to the Feynman runtime, such as async subagent
-  workflows and its science database tool, were not adopted.
-  Computational biology model wrappers and Feynman
-  product internal skills are dropped. Figures, papers, and examples are
-  retargeted to the R, Quarto, hydrology, and energy stack.
-- **Credit string:** *Adapted from Feynman (companion-inc/feynman, MIT).*
-
-### alphaXiv/openresearch-cli — experiment tree + research-loop refinements
-
-- **Author:** alphaXiv
-- **Repo:** <https://github.com/alphaXiv/openresearch-cli>
-- **Pinned revision:** `13049867497de8fd5e15253cd818462629edd690`
-- **Replication revision:** `5412465c112b4f81033420db7ff7267ec88106c6`
-- **License:** MIT *(declared in `Cargo.toml`; no standalone `LICENSE` file is
-  present in the repo as of July 2026 — cited in good faith)*
-- **Original paths:** `agent-skills/orx-agent-delegation/SKILL.md`,
-  `agent-skills/orx-experiment-tree/SKILL.md`,
-  `agent-skills/orx-lit-review/SKILL.md`, `SYSTEM_PROMPT.md`, and
-  `src/local/skills.rs` at the replication revision.
-- **What we adapt:** the portable delegation contract for independent task
-  boundaries, standalone briefs, worktree ownership, explicit compute
-  authorization, output paths, and return contracts; the experiment-tree
-  discipline from the `orx` agent
-  skills and system prompt (`skills/autoresearch/references/experiment-tree.md`
-  and `/autoresearch`
-  tree mode) — frozen baseline, fixed run contract, vary-code-not-knobs, one
-  branch for each hypothesis, "stacked bushes" tree shaping, no merge or
-  rebase of branches with recorded results; the multi-hop literature-search
-  protocol from its `lit-review` template (in `/lit`); and the
-  claim-by-claim replication ledger, fixed assessment vocabulary, careful
-  divergence language, and evidence-first report layout from its
-  `reproduce-paper` template (in `/replicate`). Everything coupled to the
-  `orx` CLI, its hosted API, compute backends, evidence database, and the
-  marimo/molab publishing path is dropped; branch mechanics are retargeted
-  to plain git and the R / Stan / hydrology-energy stack.
-- **Credit string:** *Adapted from openresearch-cli (alphaXiv/openresearch-cli,
-  MIT per Cargo.toml).*
-
-### alphaXiv/OpenResearch - connected research workflow design
-
-- **Repository:** <https://github.com/alphaXiv/OpenResearch>
-- **Inspected revision:** `95b2d961966c128b27f9d49753e227791a01c909`
-- **License:** MIT, Copyright (c) 2026 alphaXiv, verified in the current LICENSE.
-- **Design references:** `agent-skills/orx-evidence/SKILL.md`,
-  `agent-skills/orx-lit-review/SKILL.md`, `agent-skills/orx-reports/SKILL.md`,
-  `agent-skills/orx-agent-delegation/SKILL.md` and `ui/src/components/`.
-- **Use:** source comparison informed the connected study, evidence and report
-  plan. New Python services and managed research/engineering contracts are
-  original Waterology implementations. No upstream runtime code or UI assets
-  are copied. Earlier adapted skill content retains its historical credit above.
-- **Update review:** a 2026-10-16 review at
-  `8fc90cf355cda1e89a6aabc02d49a098f159f463` adapted rules from `orx-lit-review` (quote only text that was read,
-  keep preprint and published versions separate), `orx-results` (one
-  representation for each comparison) and `orx-experiment-tree` (nodes only for
-  baselines and hypotheses, correct a misplaced node rather than rerunning it)
-  into `research-syntesizer`, `research-verifier` and
-  `skills/autoresearch/references/experiment-tree.md`. The
-  `alphaXiv/openresearch-cli` URL now redirects to this repository.
-- **alphaXiv discovery:** the `alphaxiv` and `alphaxiv-keyword` providers in
-  `src/waterology/core/literature.py` send the same public alphaXiv requests as
-  `src/client.rs` at `8fc90cf355cda1e89a6aabc02d49a098f159f463`. The Python
-  implementation is original. No Rust source is copied.
-- **Current difference:** OpenResearch now includes OpenAlex discovery. The
-  arXiv-only rationale in the historical roadmap applies to the earlier snapshot.
-
-### VIDA-Lab/Chameleon - dark visualization palette adaptation
-
-- **Authors:** Manusha Karunathilaka, Songheng Zhang, Anthony Tang, Kotaro Hara,
-  Jiannan Li, and Yong Wang.
-- **Paper:** _Chameleon: Automated Color Palette Adaptation for Dark Mode Data
-  Visualizations_, <https://doi.org/10.1145/3786995.3787017>.
-- **Repository:** <https://github.com/VIDA-Lab/Chameleon>, inspected at commit
-  `aa46f01455c8aa8a681b41975084b2ae6a665177`.
-- **License note:** The inspected repository does not include a license file.
-- **What we adapt:** The published Chameleon objective combines luminance
-  contrast consistency, CIEDE2000 color consistency, and adjacent color
-  difference consistency through seeded simulated annealing in LCH space.
-  Waterology implements the described method independently and adds explicit
-  contrast, hue, and chroma constraints for its report palette. No repository
-  source code or notebook cells are copied.
-- **Waterology files:** `src/waterology/core/report_colors.py`, managed report
-  bundles and `rules/quarto-conventions.md`. The retired
-  `skills/paper-writing/SKILL.md` also used this method.
+- Author: alphaXiv
+- Repository: [alphaXiv/OpenResearch](https://github.com/alphaXiv/OpenResearch) (including prior [alphaXiv/openresearch-cli](https://github.com/alphaXiv/openresearch-cli) revisions `13049867497de8fd5e15253cd818462629edd690` and `5412465c112b4f81033420db7ff7267ec88106c6`, and OpenResearch revision `8fc90cf355cda1e89a6aabc02d49a098f159f463`)
+- License: MIT, Copyright (c) 2026 alphaXiv
+- Adapted elements: Git experiment-tree discipline (`skills/autoresearch/references/experiment-tree.md`), multi-hop citation verification rules (`skills/literature-review/` and `agent-definitions/reviewer.md`), and public `alphaxiv` / `alphaxiv-keyword` HTTP request structure in `src/waterology/core/literature.py` (original Python implementation, no Rust or UI code copied).
+- Credit string: _Adapted from alphaXiv/OpenResearch (MIT)._
 
 ### William Strunk Jr. - concise prose principles
 
-- **Author:** William Strunk Jr.
-- **Source:** <https://www.gutenberg.org/ebooks/37134>
-- **License:** Public domain in the United States, as recorded by Project
-  Gutenberg.
-- **What we adapt:** a compact summary of relevant composition principles in
-  `skills/writing-style`. The complete book is not bundled.
-- **Credit string:** *Prose principles adapted from William Strunk Jr., The
-  Elements of Style (1918, public domain).*
+- Author: William Strunk Jr.
+- Source: [The Elements of Style (Project Gutenberg #37134)](https://www.gutenberg.org/ebooks/37134)
+- License: Public domain in the United States
+- Adapted elements: compact composition principles in `skills/writing-style/SKILL.md`.
+- Credit string: _Prose principles adapted from William Strunk Jr., The Elements of Style (1918, public domain)._
 
 ### Cameron Bracken - published scientific voice
 
-- **Author:** Cameron Bracken and coauthors
-- **Sources:** <https://doi.org/10.1002/2015JD023205>,
-  <https://doi.org/10.1016/j.renene.2023.119550>,
-  <https://doi.org/10.1029/2024EF005313>, and
-  <https://doi.org/10.1038/s41597-025-05097-3>
-- **What we adapt:** an original analysis of recurring structure, claim
-  calibration, quantitative scope, limitations, and reproducibility details in
-  four first-author papers. These public examples inform the package's house
-  style; users can supply different examples in local writing settings.
-  No paper passages are copied. Collaborative and
-  publisher editing limits any inference about sole-author style.
-- **Credit string:** *Scientific prose guidance informed by an original
-  analysis of Cameron Bracken's published work.*
+- Authors: Cameron Bracken and coauthors
+- Sources: [10.1002/2015JD023205](https://doi.org/10.1002/2015JD023205), [10.1016/j.renene.2023.119550](https://doi.org/10.1016/j.renene.2023.119550), [10.1029/2024EF005313](https://doi.org/10.1029/2024EF005313), and [10.1038/s41597-025-05097-3](https://doi.org/10.1038/s41597-025-05097-3)
+- Adapted elements: original analysis of section pacing, quantitative claim calibration, scope limits, and reproducibility reporting in `skills/writing-style/references/scientific-prose.md`. No paper passages are copied.
+- Credit string: _Scientific prose guidance informed by an original analysis of Cameron Bracken's published work._
 
 ### obra/superpowers - proportional software quality
 
-- **Author:** Jesse Vincent
-- **Repo:** <https://github.com/obra/superpowers>
-- **Version:** 6.3.0
-- **License:** MIT - Copyright (c) 2025 Jesse Vincent
-- **What we adapt:** evidence-first debugging, focused regression testing,
-  fresh verification before completion claims, risk-based independent review,
-  and Git worktree safety from `systematic-debugging`,
-  `test-driven-development`, `verification-before-completion`,
-  `requesting-code-review`, and `using-git-worktrees`. Waterology replaces the
-  mandatory ceremony with a proportional workflow and a clear worktree cutoff.
-- **Credit string:** *Software quality guidance adapted from Superpowers 6.3.0
-  (obra/superpowers, MIT).*
+- Author: Jesse Vincent
+- Repository: [obra/superpowers](https://github.com/obra/superpowers) (version 6.3.0)
+- License: MIT, Copyright (c) 2025 Jesse Vincent
+- Adapted elements: evidence-first debugging, regression testing, fresh verification before completion claims, risk-based review, and Git worktree isolation in `skills/research-software-quality/SKILL.md`.
+- Credit string: _Software quality guidance adapted from Superpowers 6.3.0 (obra/superpowers, MIT)._
 
-### NatLabRockies/torc - managed execution integration
+### NatLabRockies/torc - native distributed and HPC execution
 
-- **Organization:** National Laboratory of the Rockies
-- **Repo:** <https://github.com/NatLabRockies/torc>
-- **License:** BSD 3-Clause
-- **What we use:** TORC is an optional external integration target. Waterology
-  generates workflow specifications and invokes the public TORC CLI for local,
-  remote worker, and Slurm execution. TORC retains responsibility for
-  scheduling, workers, retries, resource accounting, its TUI, and its
-  dashboard. No TORC source code is copied into this repository.
-- **Credit string:** *Managed execution integrates with TORC
-  (NatLabRockies/torc, BSD 3-Clause).*
+- Organization: National Laboratory of the Rockies
+- Repository: [NatLabRockies/torc](https://github.com/NatLabRockies/torc)
+- License: BSD 3-Clause
+- Use: documented as an external workflow runner in `docs/torc.md`, `skills/project-conventions/`, and `skills/autoresearch/`. No TORC source code is copied.
+- Credit string: _Distributed execution guidance references TORC (NatLabRockies/torc, BSD 3-Clause)._
 
 ### NVlabs/SoL-Pi - SoL-Pi delegation skill
 
-- **Organization:** NVIDIA Corporation and affiliates
-- **Repo:** <https://github.com/NVlabs/SoL-Pi/tree/219568034fa54ed121ede80961655e33dfb9d0e3>,
-  commit `219568034fa54ed121ede80961655e33dfb9d0e3`
-- **License:** MIT - Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES
-- **What we adapt:** `skills/sol-pi/SKILL.md` merges the Claude Code and Codex
-  variants of `examples/sol-pi-skill/*/SKILL.md` into one portable skill. The
-  `sol-pi-run` and `sol-pi-context` launchers, prompt hooks and SoL-Pi
-  extensions are not copied. Users install them from the upstream checkout.
-- **Credit string:** *SoL-Pi delegation skill adapted from NVlabs/SoL-Pi (MIT).*
+- Organization: NVIDIA Corporation and affiliates
+- Repository: [NVlabs/SoL-Pi](https://github.com/NVlabs/SoL-Pi/tree/219568034fa54ed121ede80961655e33dfb9d0e3) (commit `219568034fa54ed121ede80961655e33dfb9d0e3`)
+- License: MIT, Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES
+- Adapted elements: `skills/sol-pi/SKILL.md` merges the Claude Code and Codex variants of `examples/sol-pi-skill/*/SKILL.md` into one portable skill without copying upstream launchers or extensions.
+- Credit string: _SoL-Pi delegation skill adapted from NVlabs/SoL-Pi (MIT)._
 
-### Workflow Run RO-Crate and roc-validator
+## Original to Waterology
 
-- **Authors:** Workflow Run RO-Crate working group; CRS4 roc-validator contributors.
-- **Specifications:** <https://www.researchobject.org/workflow-run-crate/profiles/0.5/>
-- **Validator:** <https://github.com/crs4/rocrate-validator>, release 0.11.4.
-- **License:** Apache-2.0 for the profile specifications and validator.
-- **What we use:** Original metadata generation implementing Process Run 0.5 and
-  Workflow Run 0.5 on RO-Crate 1.1, with the validator invoked as an optional
-  dependency. No upstream implementation or example metadata is copied.
-
-## Original to this plugin
-
-Fortran support (discovery globs, `gfortran` runner, reproducibility header,
-conventions), the Quarto-as-document conventions, and all tuning to the
-hydrology / energy-systems / extremes toolchain are original work.
+Fortran conventions and constraint checks, standalone `.zotero.toml` reference sync (`waterology.core` and `waterology.mcp`), Hugging Face Hub metadata inspection, multi-runtime asset rendering and transactional installation (`waterology.runtime`), TikZ and report-bundle verifiers, and hydrology and energy-systems defaults are original work.

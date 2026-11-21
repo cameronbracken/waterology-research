@@ -70,7 +70,7 @@ def test_doctor_json_reports_runtime_commands_and_extras(monkeypatch, tmp_path: 
 
 def test_doctor_fails_on_invalid_user_config(monkeypatch, tmp_path: Path) -> None:
     config = tmp_path / "config.toml"
-    config.write_text("[identity]\nemail = [123]\n", encoding="utf-8")
+    config.write_text("[credentials]\nfile = [123]\n", encoding="utf-8")
     monkeypatch.setenv("WATEROLOGY_CONFIG", str(config))
 
     result = runner.invoke(app, ["doctor", "--json"])
